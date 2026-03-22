@@ -188,6 +188,15 @@ SALES AUTOMATIONS
 
 opportunity created
 → assign sales owner
+→ calculate start date
+→ calculate expiration date
+
+expired opportunity by date rule
+→ surface status as vencida
+
+expired opportunity reactivated
+→ reset start date
+→ recalculate expiration date
 
 
 

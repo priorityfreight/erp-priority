@@ -1,458 +1,187 @@
 # AI SYSTEM AUDIT
 
-This document audits the AI documentation system used in the ERP project.
+This document tracks the health of the AI governance system for the Priority Logistics ERP repository.
 
-Its purpose is to evaluate:
+It should be updated whenever:
 
-- completeness of AI documentation
-- consistency between documents
-- potential overlaps
-- missing components
-- architecture risks
-
-This document must be updated whenever new AI system files are introduced.
-
+- AI documents are added or removed
+- the canonical schema changes
+- the live frontend module inventory changes
+- major governance drift is discovered
 
 
 --------------------------------------------------
 AUDIT SCOPE
 --------------------------------------------------
 
-The audit covers the entire AI_SYSTEM directory.
+This audit covers the active AI governance files in AI_SYSTEM/:
 
-Included documents:
-
-AI_CONTEXT.md  
-AI_SYSTEM_MAP.md  
-AI_DATABASE_MAP.md  
-AI_DATABASE_RELATION_GRAPH.md  
-AI_TABLE_DICTIONARY.md  
-AI_QUERY_GUIDE.md  
-AI_DEV_RULES.md  
-AI_MODULE_BUILDER.md  
-AI_UI_BUILDER.md  
-AI_DESIGN_SYSTEM.md  
-AI_COMPONENT_LIBRARY.md  
-AI_AUTOMATION_RULES.md  
-
-
-
---------------------------------------------------
-SYSTEM STRUCTURE REVIEW
---------------------------------------------------
-
-The AI system is organized into five documentation layers.
-
-
-
-1 CONTEXT LAYER
-
-Defines overall system architecture.
-
-Files
-
-AI_CONTEXT.md  
-AI_SYSTEM_MAP.md
-
-
-
-2 DATABASE LAYER
-
-Defines database structure and relationships.
-
-Files
-
-AI_DATABASE_MAP.md  
-AI_DATABASE_RELATION_GRAPH.md  
-AI_TABLE_DICTIONARY.md  
-AI_QUERY_GUIDE.md  
-
-
-
-3 DEVELOPMENT RULES LAYER
-
-Defines coding standards and system conventions.
-
-Files
-
-AI_DEV_RULES.md  
-AI_MODULE_BUILDER.md  
-
-
-
-4 USER INTERFACE LAYER
-
-Defines frontend architecture and visual design.
-
-Files
-
-AI_UI_BUILDER.md  
-AI_DESIGN_SYSTEM.md  
-AI_COMPONENT_LIBRARY.md  
-
-
-
-5 AUTOMATION LAYER
-
-Defines automation logic and workflow triggers.
-
-Files
-
-AI_AUTOMATION_RULES.md  
-
+- AI_CONTEXT.md
+- AI_SYSTEM_MAP.md
+- AI_CURRENT_PROJECT_MAP.md
+- AI_MASTER_DATA.md
+- AI_DATABASE_MAP.md
+- AI_DATABASE_RELATION_GRAPH.md
+- AI_TABLE_DICTIONARY.md
+- AI_QUERY_GUIDE.md
+- AI_QUERY_LIBRARY.md
+- AI_DEV_RULES.md
+- AI_MODULE_BUILDER.md
+- AI_UI_BUILDER.md
+- AI_DESIGN_SYSTEM.md
+- AI_COMPONENT_LIBRARY.md
+- AI_AUTOMATION_RULES.md
 
 
 --------------------------------------------------
-DOCUMENT RESPONSIBILITY REVIEW
+CURRENT STATUS
+--------------------------------------------------
+
+Overall status:
+
+Partially aligned, materially improved after Sprint 1 through Sprint 3 remediation.
+
+What is now aligned:
+
+- canonical schema, functions, views, and triggers
+- master data governance for external public datasets
+- AI database governance documents
+- frontend clients, contacts, and opportunities query layer
+- current repo path inventory in the top-level context documents
+
+What still has residual drift:
+
+- UI/design/component documents are more aspirational than descriptive
+- generated Supabase types are not yet restored
+- some planned ERP modules exist only at the database layer
+
+
+--------------------------------------------------
+DOCUMENT HEALTH REVIEW
 --------------------------------------------------
 
 AI_CONTEXT.md
 
-Defines system philosophy and architecture.
-
-Status
-
-Complete.
-
-
+Status:
+Aligned to the live repository and canonical boundaries.
 
 AI_SYSTEM_MAP.md
 
-Defines relationships between AI documentation files.
+Status:
+Aligned to the active AI document set and actual repo paths.
 
-Status
+AI_CURRENT_PROJECT_MAP.md
 
-Complete.
+Status:
+Aligned to the current repository inventory.
 
+Operational note:
+The linked Supabase cloud backend was migrated to the canonical schema and master data contract on 2026-03-22.
 
+AI_MASTER_DATA.md
+
+Status:
+Defines the cross-cutting rules for public datasets and repeatable import pipelines.
 
 AI_DATABASE_MAP.md
-
-Explains database structure and schema organization.
-
-Status
-
-Valid.
-
-
-
 AI_DATABASE_RELATION_GRAPH.md
-
-Defines table relationships and ERP workflow.
-
-Status
-
-Valid.
-
-
-
 AI_TABLE_DICTIONARY.md
-
-Defines all tables and columns.
-
-Status
-
-Critical reference document.
-
-Must remain synchronized with ERP_schema.sql.
-
-
-
 AI_QUERY_GUIDE.md
 
-Defines query patterns and database access rules.
-
-Status
-
-Complete.
-
-
-
-AI_DEV_RULES.md
-
-Defines development and architectural conventions.
-
-Status
-
-Valid.
-
-
-
-AI_MODULE_BUILDER.md
-
-Defines how new ERP modules must be generated.
-
-Status
-
-Valid.
-
-
-
-AI_UI_BUILDER.md
-
-Defines UI structure and navigation layout.
-
-Status
-
-Valid.
-
-
-
-AI_DESIGN_SYSTEM.md
-
-Defines visual design principles.
-
-Status
-
-Valid.
-
-
-
-AI_COMPONENT_LIBRARY.md
-
-Defines reusable UI components.
-
-Status
-
-Valid.
-
-
-
-AI_AUTOMATION_RULES.md
-
-Defines workflow automation logic.
-
-Status
-
-Valid.
-
-
-
---------------------------------------------------
-DUPLICATION ANALYSIS
---------------------------------------------------
-
-The audit checks for overlapping documentation.
-
-Findings
-
-No major duplication detected.
-
-The following documents complement each other:
-
-AI_TABLE_DICTIONARY.md  
-→ defines columns
-
-AI_DATABASE_RELATION_GRAPH.md  
-→ defines relationships
-
-AI_QUERY_GUIDE.md  
-→ defines query behavior
-
-These documents operate at different levels and are not redundant.
-
-
-
---------------------------------------------------
-DOCUMENT DEPENDENCY CHAIN
---------------------------------------------------
-
-The AI system follows this dependency structure.
-
-AI_CONTEXT.md  
-↓  
-AI_SYSTEM_MAP.md  
-↓  
-DATABASE DOCUMENTS  
-↓  
-DEVELOPMENT RULES  
-↓  
-MODULE BUILDER  
-↓  
-UI DOCUMENTS  
-↓  
-AUTOMATION RULES
-
-
-
---------------------------------------------------
-AI CODE GENERATION FLOW
---------------------------------------------------
-
-When the AI generates code it should follow this process.
-
-Step 1
-
-Read AI_CONTEXT.md.
-
-
-
-Step 2
-
-Check database structure.
-
-AI_TABLE_DICTIONARY.md  
-AI_DATABASE_RELATION_GRAPH.md  
-
-
-
-Step 3
-
-Apply query standards.
-
-AI_QUERY_GUIDE.md  
-
-
-
-Step 4
-
-Apply development rules.
-
-AI_DEV_RULES.md  
-
-
-
-Step 5
-
-If building modules.
-
-Follow AI_MODULE_BUILDER.md.
-
-
-
-Step 6
-
-If building UI.
-
-Follow
-
-AI_UI_BUILDER.md  
-AI_DESIGN_SYSTEM.md  
-AI_COMPONENT_LIBRARY.md  
-
-
-
-Step 7
-
-If building automations.
-
-Follow AI_AUTOMATION_RULES.md.
-
-
-
---------------------------------------------------
-ARCHITECTURE RISK REVIEW
---------------------------------------------------
-
-Potential risks identified.
-
-
-
-RISK 1
-
-Database schema may evolve without updating
-AI_TABLE_DICTIONARY.md.
-
-
-
-RISK 2
-
-New modules could be added without updating
-AI_MODULE_BUILDER.md.
-
-
-
-RISK 3
-
-Frontend components could diverge from the
-AI_DESIGN_SYSTEM.
-
-
-
-Mitigation
-
-Documentation updates must be mandatory
-whenever system changes occur.
-
-
-
---------------------------------------------------
-RECOMMENDED FUTURE DOCUMENTS
---------------------------------------------------
-
-The following documents may be added later.
+Status:
+Aligned to the canonical Sprint 1 schema baseline and the post-migration cloud backend.
 
 AI_QUERY_LIBRARY.md
 
-Standard ERP queries for dashboards and reports.
+Status:
+Now documents the live frontend query layer.
 
+AI_DEV_RULES.md
 
+Status:
+Useful and active, but depends on the higher-level docs staying current.
 
-AI_MODULE_TEMPLATES.md
+AI_MODULE_BUILDER.md
 
-Reusable module blueprints.
+Status:
+Useful for new module creation, but must be read with the current project map so planned modules are not mistaken for live ones.
 
+AI_UI_BUILDER.md
+AI_DESIGN_SYSTEM.md
+AI_COMPONENT_LIBRARY.md
 
+Status:
+Target-state guidance.
+These are not reliable descriptions of the current UI by themselves.
 
-AI_SECURITY_RULES.md
+AI_AUTOMATION_RULES.md
 
-Authentication and authorization patterns.
-
-
-
-AI_PERFORMANCE_GUIDE.md
-
-Database and API optimization strategies.
-
-
-
---------------------------------------------------
-AI SYSTEM MATURITY LEVEL
---------------------------------------------------
-
-Current system maturity
-
-Intermediate AI-driven architecture.
-
-
-
-Strengths
-
-Clear documentation separation.  
-Strong database governance.  
-Defined module generation rules.
-
-
-
-Improvement areas
-
-Standard query library.  
-Performance guidelines.  
-Security rule documentation.
-
+Status:
+Conceptually aligned with the trigger-based automation layer, though future validation should continue as automation expands.
 
 
 --------------------------------------------------
-FINAL AUDIT STATUS
+PRIMARY RISKS
 --------------------------------------------------
 
-AI documentation coverage
+1. Database breadth exceeds frontend breadth.
+This is acceptable architecturally, but it remains the biggest source of AI confusion if inventory docs are ignored.
 
-High.
+2. frontend/src/types/supabase.ts is not generated from a live Supabase project.
+Type drift can reappear until generation is restored.
 
-Architecture clarity
+3. UI governance docs still describe a richer shell and component system than the current app implements.
 
-Strong.
-
-Risk level
-
-Low.
-
-The AI system documentation is sufficient
-to support AI-assisted development.
-
+4. The app currently has both "/" and "/dashboard" as user-facing entry points.
 
 
 --------------------------------------------------
-END OF DOCUMENT
+DUPLICATION AND OVERLAP
 --------------------------------------------------
+
+Expected overlap:
+
+- AI_CONTEXT.md defines boundaries
+- AI_CURRENT_PROJECT_MAP.md defines current implementation inventory
+- AI_SYSTEM_MAP.md defines document responsibilities
+
+This overlap is intentional and useful.
+
+Risky overlap:
+
+- AI_UI_BUILDER.md, AI_DESIGN_SYSTEM.md, and AI_COMPONENT_LIBRARY.md can be mistaken for current implementation docs
+
+Mitigation:
+
+- treat them as target-state guidance
+- verify live code before relying on them for inventory
+
+
+--------------------------------------------------
+AUDIT CONCLUSIONS
+--------------------------------------------------
+
+The highest-risk governance failure from the earlier audit was documentation describing a different project than the codebase.
+
+That issue is now substantially reduced.
+
+The remaining high-impact gaps are:
+
+1. regenerate Supabase types from the real project
+2. decide whether "/" or "/dashboard" is the canonical entry point
+3. implement planned modules before exposing them in navigation or presenting them as complete UI areas
+4. continue tightening UI governance docs so target state and live state are clearly separated
+
+
+--------------------------------------------------
+MAINTENANCE RULE
+--------------------------------------------------
+
+Whenever a future audit finds drift, update:
+
+- AI_CONTEXT.md
+- AI_SYSTEM_MAP.md
+- AI_CURRENT_PROJECT_MAP.md
+- the affected specialized document
+
+in the same change set.

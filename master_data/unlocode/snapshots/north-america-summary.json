@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-03-21T20:26:48.456Z",
+  "countries": [
+    {
+      "country_code": "MX",
+      "row_count": 965,
+      "source_page_url": "https://service.unece.org/trade/locode/mx.htm"
+    },
+    {
+      "country_code": "US",
+      "row_count": 20886,
+      "source_page_url": "https://service.unece.org/trade/locode/us.htm"
+    },
+    {
+      "country_code": "CA",
+      "row_count": 3215,
+      "source_page_url": "https://service.unece.org/trade/locode/ca.htm"
+    }
+  ],
+  "total_rows": 25066
+}

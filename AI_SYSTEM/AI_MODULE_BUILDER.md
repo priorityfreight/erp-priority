@@ -22,7 +22,9 @@ database tables
 database functions
 optional triggers
 analytics views
-frontend module
+frontend module when the module is user-facing
+
+Master data and reference modules may be database-first if they are not yet exposed in the UI.
 
 Modules must integrate with existing ERP entities.
 
@@ -62,11 +64,15 @@ Add views to:
 ERP_views.sql
 
 
+Reference datasets that are lookup-only may use a lookup view instead of an aggregated analytics view.
+
+
 5 DOCUMENTATION
 
 Update:
 
 AI_CONTEXT.md
+AI_MASTER_DATA.md when applicable
 AI_DATABASE_MAP.md
 
 
@@ -140,6 +146,42 @@ Example structure
 id uuid primary key
 created_at timestamp
 status text
+
+
+User-facing modules with detail pages must also include a UI information architecture.
+
+Minimum UI structure
+
+page header
+top status control when lifecycle exists
+read-only information sections
+related records tables
+popup edit flows
+
+
+The AI must decide section titles from business meaning, not from database table order.
+
+Example
+
+do not group by arbitrary column sequence
+do group by Company Information, Location Information, Contact Information
+
+
+Location reference rule
+
+If a module captures cities, origins, destinations, ports, airports, or trade lanes, it must reuse the canonical UN/LOCODE lookup pattern:
+
+- browse/select via unlocode_lookup_view
+- typeahead via search_unlocodes()
+- store the selected canonical UN/LOCODE reference, not free text as the primary source of truth
+
+
+Fallback rule
+
+Modules must target the canonical backend path first.
+
+Temporary fallback code is allowed only for rollback safety and must be clearly labeled.
+New module behavior must not depend on fallback-only branches.
 
 
 
@@ -221,6 +263,10 @@ bad
 
 insert into invoices
 
+Master data exception:
+
+bulk import routines may load normalized tables directly during controlled ingestion, but app-facing reads should still use the canonical lookup function or view.
+
 
 
 --------------------------------------------------
@@ -248,6 +294,22 @@ Define module purpose.
 Step 2
 
 Design database table.
+
+
+Step 2.5
+
+Design the page information sections before building forms.
+
+For every user-facing module, define:
+
+main sections
+fields inside each section
+top-level status control if lifecycle exists
+related tables
+popup actions
+
+
+If the section design is not obvious, the AI must present the discovered fields to the user and ask for section confirmation before continuing UI implementation.
 
 
 
@@ -278,6 +340,49 @@ Update AI documentation.
 Step 7
 
 Test module with seed data.
+
+
+--------------------------------------------------
+IMPLEMENTATION GATE
+--------------------------------------------------
+
+Before a module is treated as implemented in the frontend, all of the following must exist:
+
+1. canonical database objects
+2. frontend route files under frontend/app/
+3. query module under frontend/src/lib/db/
+4. navigation entry only after the route is working
+5. AI inventory docs updated
+
+Do not add sidebar links or imports for modules that are still database-only.
+
+
+--------------------------------------------------
+CURRENT BASELINE
+--------------------------------------------------
+
+Current live frontend modules:
+
+- clients
+- contacts
+- opportunities
+- pricing/providers
+
+Current canonical but database-only modules:
+
+- quotations
+- shipments
+- client invoices
+- provider invoices
+- commissions
+
+When creating one of these planned modules, update:
+
+- AI_CONTEXT.md
+- AI_CURRENT_PROJECT_MAP.md
+- AI_QUERY_LIBRARY.md
+
+and only then expose the module in navigation.
 
 
 

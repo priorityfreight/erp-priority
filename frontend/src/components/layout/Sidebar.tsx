@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 type NavItem = {
   href: string
   label: string
-  section: "Dashboard" | "CRM" | "Operations" | "Finance"
+  section: "Dashboard" | "CRM" | "Pricing" | "Master Data"
 }
 
 const navItems: NavItem[] = [
@@ -14,17 +14,17 @@ const navItems: NavItem[] = [
   { href: "/clients", label: "Clients", section: "CRM" },
   { href: "/contacts", label: "Contacts", section: "CRM" },
   { href: "/opportunities", label: "Opportunities", section: "CRM" },
-  { href: "/quotations", label: "Quotations", section: "Operations" },
-  { href: "/shipments", label: "Shipments", section: "Operations" },
-  { href: "/invoices", label: "Invoices", section: "Finance" },
+  { href: "/pricing/providers", label: "Providers", section: "Pricing" },
+  { href: "/master-data", label: "Master Data", section: "Master Data" },
+  {
+    href: "/master-data/sales/service-types",
+    label: "Ventas / Tipos de servicio",
+    section: "Master Data",
+  },
+  { href: "/master-data/unlocode", label: "UN/LOCODE", section: "Master Data" },
 ]
 
-const sectionOrder: NavItem["section"][] = [
-  "Dashboard",
-  "CRM",
-  "Operations",
-  "Finance",
-]
+const sectionOrder: NavItem["section"][] = ["Dashboard", "CRM", "Pricing", "Master Data"]
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -78,4 +78,3 @@ export function Sidebar() {
     </aside>
   )
 }
-

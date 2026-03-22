@@ -164,6 +164,24 @@ completed
 archived
 
 
+InfoSectionCard
+
+Standard read-only section for entity detail pages.
+
+Features
+
+section title
+structured key-value fields
+responsive layout
+
+
+Use for
+
+Company Information
+Location Information
+Contact Information
+
+
 
 --------------------------------------------------
 FORM COMPONENTS
@@ -258,6 +276,15 @@ MODAL COMPONENTS
 Modal
 
 Used for focused tasks.
+
+Primary use cases
+
+edit record
+create related record
+confirm destructive action
+
+
+Core ERP detail pages should prefer Modal for edit/create flows instead of inline forms.
 
 Examples
 

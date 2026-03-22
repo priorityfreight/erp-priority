@@ -172,5 +172,54 @@ System safety > speed of development.
 
 
 --------------------------------------------------
+RULE 10 — UI PATTERN CONSISTENCY
+--------------------------------------------------
+
+When building or modifying user-facing ERP modules, the AI must preserve the standard interaction pattern:
+
+1 information displayed in structured sections
+2 editing through popup modal
+3 related entities shown in tables first
+4 adding related entities through popup modal
+5 top status control outside popup when lifecycle exists
+
+
+The AI must avoid duplicated views where the same record is shown as an editable form and as a read-only summary on the same page.
+
+
+--------------------------------------------------
+RULE 11 — SECTION DEFINITION ESCALATION
+--------------------------------------------------
+
+If the AI cannot confidently determine how to section a page, it must not invent a random layout.
+
+Instead it must:
+
+1 inspect the available fields
+2 present those fields to the user in plain text
+3 request the target sections and field grouping
+4 only then implement the UI
+
+
+This rule applies especially to:
+
+CRM detail pages
+operational records
+master data forms
+modules with mixed commercial and logistics information
+
+
+--------------------------------------------------
+RULE 12 — BACKEND SYNC DISCIPLINE
+--------------------------------------------------
+
+When modifying backend-facing logic, the AI must also follow:
+
+AI_BACKEND_SYNC_RULES.md
+
+The AI must keep canonical SQL, generated types, frontend query modules, and AI docs synchronized in the same change whenever the backend contract moves.
+
+
+--------------------------------------------------
 END OF RULES
 --------------------------------------------------

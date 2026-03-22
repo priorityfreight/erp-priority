@@ -1,141 +1,223 @@
 # CURRENT PROJECT MAP
-SYSTEM INVENTORY
+
+This document describes the repository as it exists today.
+
+Use this file to answer:
+
+- what code is actually present
+- which modules are live
+- which modules are only planned in the database
+- where current structural risks remain
 
 
 --------------------------------------------------
 PROJECT ROOT STRUCTURE
 --------------------------------------------------
 
-List the current root directories and files.
+Current top-level directories:
 
-Example
+- AI_SYSTEM/
+- architecture/
+- backend/
+- database/
+- docs/
+- frontend/
+- master_data/
+- supabase/
+- system_snapshots/
 
-.cursor/
-AI_SYSTEM/
-supabase/
-system_snapshots/
-docs/
+Important note:
 
+Several directories outside frontend/ and supabase/ are placeholders or incomplete.
+The active application work is currently concentrated in:
+
+- frontend/
+- supabase/
+- AI_SYSTEM/
 
 
 --------------------------------------------------
 AI SYSTEM FILES
 --------------------------------------------------
 
-List all AI architecture files.
+Current AI governance files:
 
-Example
+- AI_CONTEXT.md
+- AI_SYSTEM_MAP.md
+- AI_CURRENT_PROJECT_MAP.md
+- AI_MASTER_DATA.md
+- AI_DATABASE_MAP.md
+- AI_DATABASE_RELATION_GRAPH.md
+- AI_TABLE_DICTIONARY.md
+- AI_QUERY_GUIDE.md
+- AI_QUERY_LIBRARY.md
+- AI_DEV_RULES.md
+- AI_BACKEND_SYNC_RULES.md
+- AI_MODULE_BUILDER.md
+- AI_UI_BUILDER.md
+- AI_DESIGN_SYSTEM.md
+- AI_COMPONENT_LIBRARY.md
+- AI_AUTOMATION_RULES.md
+- AI_SYSTEM_AUDIT.md
 
-AI_CONTEXT.md
-AI_DATABASE_MAP.md
-AI_DEV_RULES.md
-AI_MODULE_BUILDER.md
-AI_QUERY_GUIDE.md
-AI_UI_BUILDER.md
-AI_DESIGN_SYSTEM.md
-AI_COMPONENT_LIBRARY.md
-AI_AUTOMATION_RULES.md
+Status summary:
 
-
-
-For each file explain:
-
-purpose
-responsibility
-dependencies
-
-
-
-Example
-
-AI_CONTEXT.md
-
-Purpose:
-Defines overall system architecture.
-
-Used by:
-All AI agents before generating code.
-
+- context and database governance documents are now aligned to the canonical schema
+- master data governance now covers external public datasets
+- the linked Supabase cloud project is already migrated to the canonical backend
+- legacy compatibility remains in code only as temporary rollback safety, but it is no longer the active backend mode
+- AI_QUERY_LIBRARY.md documents the current frontend query layer
+- AI_BACKEND_SYNC_RULES.md defines how SQL, types, query modules, and fallback safety must remain synchronized
+- UI/design/component documents still contain target-state guidance beyond the current implementation
 
 
 --------------------------------------------------
 DATABASE LAYER
 --------------------------------------------------
 
-Location
+Location:
 
-supabase/schema/
+supabase/
 
+Canonical files:
 
+- ERP_schema.sql
+- ERP_functions.sql
+- ERP_triggers.sql
+- ERP_views.sql
+- ERP_policies.sql
+- migrations/20260307000432_initial_erp_schema.sql
+- migrations/20260322093000_canonical_backend_upgrade.sql
+- migrations/20260322101500_dev_observability_policies.sql
+- migrations/20260322113000_remove_legacy_artifacts.sql
 
-List all database files.
+Current database coverage:
 
-ERP_schema.sql
-ERP_functions.sql
-ERP_triggers.sql
-ERP_views.sql
-ERP_policies.sql
+- organization tables
+- master data tables
+- CRM tables
+- commercial tables
+- operations tables
+- finance tables
+- audit and automation logs
 
+The database supports more domains than the current frontend exposes.
 
+Current master data coverage:
 
-For each file describe:
-
-purpose
-tables
-dependencies
-
-
-
-Example
-
-ERP_schema.sql
-
-Purpose:
-Defines database tables for ERP system.
-
-Contains tables for:
-
-prospects
-clients
-opportunities
-quotations
-shipments
-finance
-
+- external_data_sources
+- unlocodes
+- initial UN/LOCODE snapshot assets under master_data/unlocode/
+- live UN/LOCODE rows imported into the linked Supabase cloud project
+- service_transport_types editable sales catalog with seeded defaults
 
 
 --------------------------------------------------
 APPLICATION LAYER
 --------------------------------------------------
 
-Identify current application code structure.
+Frontend framework:
 
-Example
+- Next.js App Router
+- TypeScript
 
-frontend
-components
-modules
+Current route files:
 
+- frontend/app/page.tsx
+- frontend/app/dashboard/page.tsx
+- frontend/app/clients/page.tsx
+- frontend/app/clients/[id]/page.tsx
+- frontend/app/contacts/page.tsx
+- frontend/app/opportunities/page.tsx
+- frontend/app/opportunities/[id]/page.tsx
+- frontend/app/pricing/providers/page.tsx
+- frontend/app/pricing/providers/[id]/page.tsx
+- frontend/app/master-data/page.tsx
+- frontend/app/master-data/sales/service-types/page.tsx
+- frontend/app/master-data/unlocode/page.tsx
 
+Current shared layout files:
 
-List modules that exist in the project.
+- frontend/src/components/layout/AppLayout.tsx
+- frontend/src/components/layout/Sidebar.tsx
+- frontend/src/components/layout/Topbar.tsx
+- frontend/src/components/layout/PageContainer.tsx
 
-crm
-sales
-operations
-finance
+Current shared CRM/UI components:
 
+- frontend/src/components/crm/CrmOverview.tsx
+- frontend/src/components/data/StatusBadge.tsx
+- frontend/src/components/forms/ClientForm.tsx
+- frontend/src/components/master-data/ServiceTransportTypeManager.tsx
 
+Current query layer:
 
-If modules are missing, report it.
+- frontend/src/lib/db/backendMode.ts
+- frontend/src/lib/db/models.ts
+- frontend/src/lib/db/clients.ts
+- frontend/src/lib/db/contacts.ts
+- frontend/src/lib/db/opportunities.ts
+- frontend/src/lib/db/providers.ts
+- frontend/src/lib/db/masterData.ts
+- frontend/src/lib/db/index.ts
 
+Current server-side master data utilities:
+
+- frontend/src/lib/masterData/unlocodeSnapshot.ts
+- frontend/app/api/master-data/unlocodes/route.ts
+
+Current type contract:
+
+- frontend/src/types/supabase.ts
+
+Current implemented frontend modules:
+
+- dashboard shell
+- clients
+- contacts
+- opportunities
+- pricing/providers
+- master data
+- sales service types catalog
+- UN/LOCODE lookup
+
+Pricing module status:
+
+- pricing/providers is now a live route
+- provider detail manages company profile, offered services, terms, and provider contacts
+- provider contacts do not have a standalone route yet; they are managed within the provider detail page
+- the pricing module already depends on canonical master data:
+  UN/LOCODE and sales service transport types
+
+Current data-layer behavior:
+
+- backendMode.ts still auto-detects canonical vs fallback environments
+- the linked cloud backend now resolves as canonical
+- fallback code remains only as temporary rollback safety for local recovery or alternate environments
+- no new module should depend on fallback-only behavior
+
+Clients module status:
+
+- create and update work against the canonical cloud backend
+- list supports search, sorting, pagination, row actions, linked navigation, and modal-based client creation
+- detail supports linked contact creation and linked record deletion
+- extended client profile fields now include website, corporate phone, status, full address, postal code, and city with UN/LOCODE lookup
+- extended client fields persist in Supabase, not just in browser overlay storage
+
+Current missing frontend modules relative to the canonical schema:
+
+- quotations
+- shipments
+- client invoices
+- provider invoices
+- commissions
 
 
 --------------------------------------------------
 ERP WORKFLOW MAP
 --------------------------------------------------
 
-Define the business flow implemented in the system.
+Canonical business flow:
 
 Prospects
 → Clients
@@ -144,104 +226,154 @@ Prospects
 → Shipments
 → Finance
 
+Current frontend support by stage:
+
+Prospects:
+database only
+
+Clients:
+database + frontend
+
+Opportunities:
+database + frontend
+
+Quotations:
+database only
+
+Shipments:
+database only
+
+Finance:
+database only
 
 
-List which database tables support each stage.
+--------------------------------------------------
+QUERY AND VIEW USAGE
+--------------------------------------------------
 
+Current list/query modules use:
 
+clients.ts
 
-Example
+- client_overview_view
+- search_clients()
+- get_client_full()
+- create_client_with_contacts()
+- add_client_logistics_party()
+- delete_client_logistics_party()
+- soft_delete_client()
+- clients table for simple reads and updates
+- clients.account_owner_id is the canonical CRM owner field
+- client_logistics_parties are returned through get_client_full() for the client detail related-data tabs
 
-Clients
+contacts.ts
 
-Table:
-clients
+- client_contacts_view
+- add_contact_to_client()
+- contacts table for simple reads and updates
+- contacts.status is the canonical lifecycle field for contact availability
+- contacts.phone is treated as direct phone for call and WhatsApp links
 
-Related tables:
-opportunities
-activities
+opportunities.ts
 
+- open_opportunities_view
+- create_opportunity()
+- opportunities table for simple reads and updates
+- update_opportunity_status()
+- create_opportunity() inherits salesperson_id from the client owner when omitted
+- opportunity detail target pattern is:
+  top status control
+  popup edit flow
+  opportunity information section
+  opportunity breakdown section
+  dates section
+- origin and destination must be standardized through UN/LOCODE
+- service and transport must use sales master data catalog filtering
+
+masterData.ts
+
+- unlocode_lookup_view
+- search_unlocodes()
+- local snapshot fallback through /api/master-data/unlocodes remains only as temporary rollback safety
+- the canonical UN/LOCODE contract for all modules is:
+  unlocodes + unlocode_lookup_view + search_unlocodes()
+- service_transport_type_lookup_view
+- create_service_transport_type()
+- update_service_transport_type()
+- delete_service_transport_type()
 
 
 --------------------------------------------------
 AUTOMATION LAYER
 --------------------------------------------------
 
-Identify automation logic.
+Current automation logic lives in:
 
-Sources:
+- supabase/ERP_triggers.sql
 
-database triggers
-functions
-scheduled tasks
+Current workflow automations include:
 
+- updated_at maintenance triggers
+- quotation reference generation
+- shipment reference generation
+- shipment creation from approved quotation
+- audit logging
 
-
-Example
-
-Quotation Approved
-→ Trigger
-→ create shipment
-
+Current frontend has no scheduler or background job runner in the repository.
 
 
 --------------------------------------------------
 DEPENDENCY MAP
 --------------------------------------------------
 
-Describe relationships between files.
+Canonical dependency chain:
 
-Example
+ERP_schema.sql
+→ ERP_functions.sql
+→ ERP_triggers.sql
+→ ERP_views.sql
+→ frontend/src/types/supabase.ts
+→ frontend/src/lib/db/
+→ frontend/app/
+
+Governance dependency chain:
 
 AI_CONTEXT.md
-→ referenced by all AI rules
-
-
-
-ERP_functions.sql
-→ depends on ERP_schema.sql
-
-
-
-ERP_triggers.sql
-→ depends on ERP_functions.sql
-
-
-
-ERP_views.sql
-→ depends on ERP_schema.sql
-
+→ AI_SYSTEM_MAP.md
+→ AI_CURRENT_PROJECT_MAP.md
+→ AI database docs
+→ module/UI/automation rules
 
 
 --------------------------------------------------
-SYSTEM RISKS
+CURRENT RISKS
 --------------------------------------------------
 
-The AI must identify potential structural problems.
+1. The database models more modules than the frontend currently exposes.
+This is valid, but AI must not assume those routes already exist.
 
-Examples
+2. frontend/src/types/supabase.ts is generated from the linked canonical Supabase backend.
 
-missing folders
-mixed responsibilities
-duplicate files
-unclear naming
+3. The landing page at frontend/app/page.tsx is separate from the dashboard route.
+The app has both "/" and "/dashboard", which may confuse future navigation work.
 
+4. UI design documents describe a richer system than the live layout currently implements.
 
 
 --------------------------------------------------
 RESTRUCTURE RECOMMENDATIONS
 --------------------------------------------------
 
-Suggest improvements but DO NOT apply them yet.
+High-priority recommendations:
 
+1. Keep frontend/app, frontend/src/lib/db, and supabase/ as the active canonical paths.
+Do not introduce apps/web or other parallel app roots unless a deliberate restructure is approved.
 
+2. Regenerate frontend/src/types/supabase.ts after every schema migration that changes the public contract.
 
-Example
+3. Build quotations, shipments, and finance routes before exposing them in navigation.
 
-move AI files to AI_SYSTEM/
-create apps/web folder
-separate core modules
-
+4. Reconcile the landing page and dashboard into one intentional entry point.
 
 
 --------------------------------------------------

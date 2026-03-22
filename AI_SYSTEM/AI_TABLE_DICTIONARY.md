@@ -1,26 +1,298 @@
 # AI TABLE DICTIONARY
 
-This document defines every database table and column used in the ERP system.
+This document defines the canonical database tables and columns for the Priority Logistics ERP.
 
-The goal is to provide a single source of truth for:
+Canonical source of truth:
 
-- table structure
-- column definitions
-- data types
-- business meaning
+supabase/ERP_schema.sql
 
-All AI agents must reference this document before generating SQL queries or modifying database structures.
-
+All SQL, frontend types, and AI-generated queries must match this document.
 
 
 --------------------------------------------------
-DATABASE OVERVIEW
+TABLE: branches
 --------------------------------------------------
 
-The ERP database follows this lifecycle:
+Purpose
 
-Prospects → Clients → Opportunities → Quotations → Shipments → Invoices → Payments
+Stores operational branches used for ownership and reporting.
 
+Columns
+
+id
+Type: uuid
+Primary key.
+
+name
+Type: text
+Branch display name.
+
+code
+Type: text
+Short branch code.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: roles
+--------------------------------------------------
+
+Purpose
+
+Stores ERP user roles.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+name
+Type: text
+Role name.
+
+description
+Type: text
+Role description.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: users
+--------------------------------------------------
+
+Purpose
+
+Stores ERP users such as salespeople and operators.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+first_name
+Type: text
+User first name.
+
+last_name
+Type: text
+User last name.
+
+email
+Type: text
+Unique user email.
+
+role_id
+Type: uuid
+Foreign key referencing roles.id.
+
+branch_id
+Type: uuid
+Foreign key referencing branches.id.
+
+base_salary
+Type: numeric
+Base salary for commission calculations.
+
+active
+Type: boolean
+Whether the user is active.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: external_data_sources
+--------------------------------------------------
+
+Purpose
+
+Stores provenance metadata for external public datasets imported into the ERP.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+code
+Type: text
+Stable short code for the dataset source.
+
+name
+Type: text
+Display name for the dataset source.
+
+provider
+Type: text
+Publishing organization.
+
+source_url
+Type: text
+Official source URL for the dataset.
+
+license
+Type: text
+License or usage note when known.
+
+refresh_strategy
+Type: text
+How the dataset should be refreshed.
+
+last_imported_at
+Type: timestamptz
+Last successful import timestamp.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: service_transport_types
+--------------------------------------------------
+
+Purpose
+
+Stores editable sales master data that maps a service type to a transport type.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+service_type
+Type: text
+High-level commercial service family such as Maritimo, Terrestre, or Aereo.
+
+transport_type
+Type: text
+Operational transport option available inside the selected service type.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: unlocodes
+--------------------------------------------------
+
+Purpose
+
+Stores normalized UNECE UN/LOCODE location rows for future ERP lookups.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+source_id
+Type: uuid
+Foreign key referencing external_data_sources.id.
+
+country_code
+Type: text
+Two-letter UN/LOCODE country code.
+
+location_code
+Type: text
+Three-character location code within the country.
+
+unlocode
+Type: text
+Combined code such as MXACA or USLAX.
+
+country_name
+Type: text
+Country display name from the UNECE source page.
+
+name
+Type: text
+Official location name.
+
+name_without_diacritics
+Type: text
+Normalized location name from the source.
+
+subdivision_code
+Type: text
+Source subdivision value such as state or province code.
+
+function_classifier
+Type: text
+UNECE function classifier string.
+
+status
+Type: text
+UNECE status code.
+
+change_indicator
+Type: text
+UNECE change indicator.
+
+date_code
+Type: text
+UNECE date column value.
+
+iata_code
+Type: text
+IATA code when present.
+
+coordinates
+Type: text
+Source coordinate string.
+
+remarks
+Type: text
+Source remarks field.
+
+search_text
+Type: text
+Normalized backend search column used for indexed UN/LOCODE lookup and autocomplete.
+
+source_page_url
+Type: text
+Exact UNECE country page used for the row.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
@@ -29,62 +301,49 @@ TABLE: prospects
 
 Purpose
 
-Stores potential customers before they become official clients.
-
+Stores unconverted leads before they become clients.
 
 Columns
 
-id  
-Type: uuid  
-Primary key identifier for the prospect.
+id
+Type: uuid
+Primary key.
 
+company_name
+Type: text
+Prospect company name.
 
-name  
-Type: text  
-Full name of the contact person.
+contact_name
+Type: text
+Primary prospect contact.
 
-
-email  
-Type: text  
+email
+Type: text
 Primary contact email.
 
+phone
+Type: text
+Primary contact phone.
 
-phone  
-Type: text  
-Contact phone number.
+source
+Type: text
+Lead source.
 
+status
+Type: text
+Prospect lifecycle status.
 
-company  
-Type: text  
-Company name associated with the prospect.
+branch_id
+Type: uuid
+Foreign key referencing branches.id.
 
+created_at
+Type: timestamptz
+Creation timestamp.
 
-source  
-Type: text  
-Lead source (website, referral, campaign, etc).
-
-
-status  
-Type: text  
-Current prospect status.
-
-Possible values
-
-new  
-contacted  
-qualified  
-unqualified  
-
-
-created_at  
-Type: timestamp  
-Date the prospect was created.
-
-
-updated_at  
-Type: timestamp  
-Date of the last update.
-
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
@@ -93,60 +352,434 @@ TABLE: clients
 
 Purpose
 
-Represents confirmed customers that were converted from prospects.
-
+Stores confirmed customers served by the ERP.
 
 Columns
 
-id  
-Type: uuid  
+id
+Type: uuid
 Primary key.
 
-
-prospect_id  
-Type: uuid  
+prospect_id
+Type: uuid
 Foreign key referencing prospects.id.
 
-
-name  
-Type: text  
-Client name.
-
-
-email  
-Type: text  
-Primary contact email.
-
-
-phone  
-Type: text  
-Primary contact phone.
-
-
-company  
-Type: text  
+company_name
+Type: text
 Client company name.
 
+industry
+Type: text
+Client industry.
 
-status  
-Type: text  
-Client status.
+country
+Type: text
+Client country.
 
-Possible values
+website
+Type: text
+Primary client website.
 
-active  
-inactive  
+corporate_phone
+Type: text
+Primary client corporate phone.
 
+full_address
+Type: text
+Client address.
 
-created_at  
-Type: timestamp  
-Date client record was created.
+postal_code
+Type: text
+Client postal code.
 
+account_owner_id
+Type: uuid
+Foreign key referencing users.id.
+Canonical seller owner of the client account.
 
-updated_at  
-Type: timestamp  
+city
+Type: text
+Client city label used by the CRM.
+
+city_unlocode
+Type: text
+Selected UN/LOCODE code for the client city.
+
+city_unlocode_id
+Type: uuid
+Foreign key referencing unlocodes.id for the selected client city.
+
+tax_id
+Type: text
+Tax identifier.
+
+search_text
+Type: text
+Normalized indexed search field for canonical client lookup.
+
+status
+Type: text
+Client lifecycle status.
+
+branch_id
+Type: uuid
+Foreign key referencing branches.id.
+
+credit_limit
+Type: numeric
+Approved credit limit.
+
+credit_days
+Type: integer
+Approved payment terms in days.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
 Last update timestamp.
 
+is_deleted
+Type: boolean
+Soft delete flag.
+
+
+--------------------------------------------------
+TABLE: contacts
+--------------------------------------------------
+
+Purpose
+
+Stores people linked to a client account.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+client_id
+Type: uuid
+Foreign key referencing clients.id.
+
+name
+Type: text
+Contact full name.
+
+email
+Type: text
+Contact email.
+
+phone
+Type: text
+Direct contact phone.
+
+linkedin_url
+Type: text
+LinkedIn profile URL.
+
+position
+Type: text
+Job title or role.
+
+status
+Type: text
+Contact employment status.
+
+Allowed values:
+activo, ya_no_trabaja
+
+is_primary
+Type: boolean
+Whether this is the primary contact.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: client_logistics_parties
+--------------------------------------------------
+
+Purpose
+
+Stores consignee, shipper, and AA records linked to a client.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+client_id
+Type: uuid
+Foreign key referencing clients.id.
+
+party_type
+Type: text
+Operational party type. Allowed values:
+shipper
+consignee
+aa
+
+name
+Type: text
+Record name.
+
+full_address
+Type: text
+Address of the consignee / shipper / AA record.
+
+postal_code
+Type: text
+Postal code.
+
+city_unlocode
+Type: text
+Selected UN/LOCODE code for the record location.
+
+city_unlocode_id
+Type: uuid
+Foreign key referencing unlocodes.id for the selected location.
+
+city
+Type: text
+Derived city label from the selected UN/LOCODE.
+
+country
+Type: text
+Derived country label from the selected UN/LOCODE.
+
+contact_name
+Type: text
+Primary contact name for the record.
+
+contact_email
+Type: text
+Primary contact email for the record.
+
+contact_phone
+Type: text
+Primary contact phone for the record.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: providers
+--------------------------------------------------
+
+Purpose
+
+Stores canonical provider company profiles for the Pricing module.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+name
+Type: text
+Provider name.
+
+tax_id
+Type: text
+Provider RFC or tax identifier.
+
+provider_type
+Type: text
+Commercial supplier type such as paqueteria, broker, naviera, or aerolinea.
+
+corporate_phone
+Type: text
+Corporate phone number.
+
+company_email
+Type: text
+Corporate email inbox.
+
+website
+Type: text
+Provider website.
+
+full_address
+Type: text
+Provider address.
+
+postal_code
+Type: text
+Provider postal code.
+
+city_unlocode
+Type: text
+Selected UN/LOCODE used to standardize city and country.
+
+city_unlocode_id
+Type: uuid
+Foreign key referencing unlocodes.id for the selected provider city.
+
+city
+Type: text
+Derived city label from UN/LOCODE.
+
+country
+Type: text
+Derived country label from UN/LOCODE.
+
+credit_active
+Type: boolean
+Whether the provider has active credit terms.
+
+credit_amount
+Type: numeric
+Approved credit amount from the provider.
+
+credit_days
+Type: integer
+Credit days after invoice date.
+
+status
+Type: text
+Provider lifecycle status: en_proceso_de_alta, activo, inactivo.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: provider_contacts
+--------------------------------------------------
+
+Purpose
+
+Stores direct supplier contacts linked to a provider.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+provider_id
+Type: uuid
+Foreign key referencing providers.id.
+
+name
+Type: text
+Contact name.
+
+email
+Type: text
+Contact email.
+
+phone
+Type: text
+Direct phone number for call and WhatsApp links.
+
+linkedin_url
+Type: text
+LinkedIn profile URL.
+
+position
+Type: text
+Role or job title.
+
+status
+Type: text
+Contact lifecycle status: activo, ya_no_trabaja.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: provider_service_offerings
+--------------------------------------------------
+
+Purpose
+
+Stores the service and transport combinations offered by a provider, including service-specific terms.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+provider_id
+Type: uuid
+Foreign key referencing providers.id.
+
+service_transport_type_id
+Type: uuid
+Foreign key referencing service_transport_types.id.
+
+terms_and_conditions
+Type: text
+Terms and conditions for that specific offered service.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: incoterms
+--------------------------------------------------
+
+Purpose
+
+Stores Incoterm master data used by quotations.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+code
+Type: text
+Unique Incoterm code.
+
+description
+Type: text
+Incoterm description.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
@@ -155,56 +788,113 @@ TABLE: opportunities
 
 Purpose
 
-Represents potential deals with a client.
-
+Stores sales opportunities for a client.
 
 Columns
 
-id  
-Type: uuid  
+id
+Type: uuid
 Primary key.
 
-
-client_id  
-Type: uuid  
+client_id
+Type: uuid
 Foreign key referencing clients.id.
 
+salesperson_id
+Type: uuid
+Foreign key referencing users.id.
+Defaults from clients.account_owner_id when not explicitly provided during creation.
 
-title  
-Type: text  
-Short description of the opportunity.
+title
+Type: text
+Opportunity title.
 
+description
+Type: text
+Opportunity details.
 
-description  
-Type: text  
-Detailed opportunity description.
+trade_lane
+Type: text
+Commercial trade lane.
 
+service_type
+Type: text
+Service type requested.
 
-estimated_value  
-Type: numeric  
-Estimated deal value.
+transport_type
+Type: text
+Transport type filtered from the selected service type.
 
+origin
+Type: text
+Shipment origin used during qualification.
 
-status  
-Type: text  
+destination
+Type: text
+Shipment destination used during qualification.
+
+origin_unlocode
+Type: text
+Canonical UN/LOCODE for origin.
+
+origin_unlocode_id
+Type: uuid
+Foreign key referencing unlocodes.id for origin.
+
+destination_unlocode
+Type: text
+Canonical UN/LOCODE for destination.
+
+destination_unlocode_id
+Type: uuid
+Foreign key referencing unlocodes.id for destination.
+
+stage
+Type: text
+Pipeline stage.
+
+status
+Type: text
 Opportunity status.
 
-Possible values
+Allowed values:
+investigando, confirmado, cotizando, aceptado, rechazada, vencida
 
-open  
-won  
-lost  
+expected_profit_usd
+Type: numeric
+Expected profit in USD for one service.
 
+service_quantity
+Type: integer
+Approximate monthly number of services.
 
-created_at  
-Type: timestamp  
-Opportunity creation date.
+estimated_value
+Type: numeric
+Calculated as expected_profit_usd * service_quantity.
 
+probability
+Type: integer
+Close probability percentage.
 
-updated_at  
-Type: timestamp  
-Last update date.
+estimated_close_date
+Type: date
+Expected close date.
 
+start_date
+Type: date
+Lifecycle start date used to calculate expiration.
+
+expiration_date
+Type: date
+Last day of the month, six months after start_date.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
@@ -213,52 +903,132 @@ TABLE: quotations
 
 Purpose
 
-Represents price proposals generated from opportunities.
-
+Stores commercial quotations generated from opportunities.
 
 Columns
 
-id  
-Type: uuid  
+id
+Type: uuid
 Primary key.
 
+client_id
+Type: uuid
+Foreign key referencing clients.id.
 
-opportunity_id  
-Type: uuid  
+opportunity_id
+Type: uuid
 Foreign key referencing opportunities.id.
 
+created_by
+Type: uuid
+Foreign key referencing users.id.
 
-total_amount  
-Type: numeric  
-Total quoted value.
+reference_number
+Type: text
+Unique quotation identifier.
+
+status
+Type: text
+Quotation lifecycle status.
+
+service_type
+Type: text
+Quoted service type.
+
+origin
+Type: text
+Quoted origin.
+
+destination
+Type: text
+Quoted destination.
+
+cargo_type
+Type: text
+Cargo classification.
+
+weight
+Type: numeric
+Quoted weight.
+
+volume
+Type: numeric
+Quoted volume.
+
+incoterm_id
+Type: uuid
+Foreign key referencing incoterms.id.
+
+currency
+Type: text
+Quotation currency.
+
+estimated_cost
+Type: numeric
+Expected provider cost.
+
+estimated_price
+Type: numeric
+Quoted sale price.
+
+expected_profit
+Type: numeric
+Expected profit.
+
+valid_until
+Type: date
+Quotation validity date.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
-currency  
-Type: text  
-Currency used in quotation.
+--------------------------------------------------
+TABLE: quotation_costs
+--------------------------------------------------
 
+Purpose
 
-status  
-Type: text  
-Quotation status.
+Stores provider cost lines attached to a quotation.
 
-Possible values
+Columns
 
-draft  
-sent  
-approved  
-rejected  
+id
+Type: uuid
+Primary key.
 
+quotation_id
+Type: uuid
+Foreign key referencing quotations.id.
 
-created_at  
-Type: timestamp  
-Date quotation was created.
+provider_id
+Type: uuid
+Foreign key referencing providers.id.
 
+service_name
+Type: text
+Provider service label.
 
-updated_at  
-Type: timestamp  
-Last modification timestamp.
+cost
+Type: numeric
+Provider cost amount.
 
+currency
+Type: text
+Cost currency.
+
+notes
+Type: text
+Additional cost notes.
+
+created_at
+Type: timestamptz
+Creation timestamp.
 
 
 --------------------------------------------------
@@ -267,233 +1037,343 @@ TABLE: shipments
 
 Purpose
 
-Represents operational logistics shipments generated from approved quotations.
-
+Stores operational jobs created from approved quotations.
 
 Columns
 
-id  
-Type: uuid  
+id
+Type: uuid
 Primary key.
 
-
-quotation_id  
-Type: uuid  
+quotation_id
+Type: uuid
 Foreign key referencing quotations.id.
 
+client_id
+Type: uuid
+Foreign key referencing clients.id.
 
-origin  
-Type: text  
-Shipment origin location.
+shipment_reference
+Type: text
+Unique shipment identifier.
 
+status
+Type: text
+Shipment lifecycle status.
 
-destination  
-Type: text  
-Shipment destination.
+origin
+Type: text
+Operational origin.
 
+destination
+Type: text
+Operational destination.
 
-shipment_status  
-Type: text  
-Current shipment state.
+booking_number
+Type: text
+Carrier booking number.
 
-Possible values
+departure_date
+Type: date
+Departure date.
 
-pending  
-in_transit  
-delivered  
-cancelled  
+arrival_date
+Type: date
+Arrival date.
 
+delivered_at
+Type: timestamptz
+Delivery timestamp.
 
-departure_date  
-Type: timestamp  
-Shipment departure date.
+created_at
+Type: timestamptz
+Creation timestamp.
 
-
-arrival_date  
-Type: timestamp  
-Shipment arrival date.
-
-
-created_at  
-Type: timestamp  
-Record creation timestamp.
-
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
-TABLE: invoices
+TABLE: shipment_events
 --------------------------------------------------
 
 Purpose
 
-Represents billing records generated after shipment completion.
-
+Stores tracking milestones for shipments.
 
 Columns
 
-id  
-Type: uuid  
+id
+Type: uuid
 Primary key.
 
-
-shipment_id  
-Type: uuid  
+shipment_id
+Type: uuid
 Foreign key referencing shipments.id.
 
+event_type
+Type: text
+Event classification.
 
-total_amount  
-Type: numeric  
-Total invoice amount.
+event_date
+Type: timestamptz
+When the event occurred.
 
+location
+Type: text
+Event location.
 
-currency  
-Type: text  
-Currency used.
+notes
+Type: text
+Event notes.
 
-
-payment_status  
-Type: text  
-Invoice payment status.
-
-Possible values
-
-pending  
-partial  
-paid  
-overdue  
-
-
-issue_date  
-Type: timestamp  
-Invoice creation date.
-
-
-due_date  
-Type: timestamp  
-Payment due date.
-
-
-created_at  
-Type: timestamp  
-Record creation timestamp.
-
+created_at
+Type: timestamptz
+Creation timestamp.
 
 
 --------------------------------------------------
-TABLE: payments
+TABLE: client_invoices
 --------------------------------------------------
 
 Purpose
 
-Stores payments made toward invoices.
-
+Stores accounts receivable invoices billed to clients.
 
 Columns
 
-id  
-Type: uuid  
+id
+Type: uuid
 Primary key.
 
+shipment_id
+Type: uuid
+Foreign key referencing shipments.id.
 
-invoice_id  
-Type: uuid  
-Foreign key referencing invoices.id.
+client_id
+Type: uuid
+Foreign key referencing clients.id.
 
+invoice_number
+Type: text
+Unique invoice number.
 
-amount  
-Type: numeric  
-Payment amount.
+total_amount
+Type: numeric
+Billed amount.
 
+currency
+Type: text
+Invoice currency.
 
-payment_method  
-Type: text  
-Payment method used.
+status
+Type: text
+Invoice status.
 
-Examples
+issue_date
+Type: date
+Issue date.
 
-bank_transfer  
-credit_card  
-cash  
+due_date
+Type: date
+Due date.
 
+created_at
+Type: timestamptz
+Creation timestamp.
 
-payment_date  
-Type: timestamp  
-Date payment was received.
-
-
-reference_number  
-Type: text  
-Transaction or bank reference.
-
-
-created_at  
-Type: timestamp  
-Record creation timestamp.
-
-
-
---------------------------------------------------
-RELATIONSHIP SUMMARY
---------------------------------------------------
-
-prospects  
-→ clients  
-
-
-clients  
-→ opportunities  
-
-
-opportunities  
-→ quotations  
-
-
-quotations  
-→ shipments  
-
-
-shipments  
-→ invoices  
-
-
-invoices  
-→ payments  
-
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
-AI DEVELOPMENT RULES
+TABLE: provider_invoices
 --------------------------------------------------
 
-When the AI generates database queries:
+Purpose
 
-Only use columns defined in this document.
+Stores accounts payable invoices billed by providers.
 
-Do not invent column names.
+Columns
 
-Do not modify column types without updating:
+id
+Type: uuid
+Primary key.
 
-ERP_schema.sql  
-AI_DATABASE_MAP.md  
-AI_DATABASE_RELATION_GRAPH.md  
-AI_TABLE_DICTIONARY.md  
+provider_id
+Type: uuid
+Foreign key referencing providers.id.
 
+shipment_id
+Type: uuid
+Foreign key referencing shipments.id.
+
+invoice_number
+Type: text
+Unique invoice number.
+
+total_amount
+Type: numeric
+Billed amount.
+
+currency
+Type: text
+Invoice currency.
+
+status
+Type: text
+Invoice status.
+
+issue_date
+Type: date
+Issue date.
+
+due_date
+Type: date
+Due date.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
-DATA CONSISTENCY RULES
+TABLE: commissions
 --------------------------------------------------
 
-Primary keys must always use UUID.
+Purpose
 
-Foreign keys must enforce referential integrity.
+Stores expected and realized commission records per shipment.
 
-Every table must contain a created_at timestamp.
+Columns
 
-Every mutable table should include updated_at when applicable.
+id
+Type: uuid
+Primary key.
 
+shipment_id
+Type: uuid
+Foreign key referencing shipments.id.
+
+user_id
+Type: uuid
+Foreign key referencing users.id.
+
+expected_profit
+Type: numeric
+Expected shipment profit.
+
+actual_profit
+Type: numeric
+Actual shipment profit.
+
+commission_percentage
+Type: numeric
+Commission rate.
+
+commission_amount
+Type: numeric
+Commission amount.
+
+status
+Type: text
+Commission status.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------
-END OF DOCUMENT
+TABLE: audit_logs
 --------------------------------------------------
+
+Purpose
+
+Stores row-level audit events for critical business tables.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+table_name
+Type: text
+Changed table name.
+
+record_id
+Type: uuid
+Changed record id.
+
+action
+Type: text
+Database action.
+
+user_id
+Type: uuid
+User that caused the action when available.
+
+payload
+Type: jsonb
+Row snapshot.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+
+--------------------------------------------------
+TABLE: automation_logs
+--------------------------------------------------
+
+Purpose
+
+Stores automation execution results.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+event
+Type: text
+Automation event name.
+
+action
+Type: text
+Automation action performed.
+
+status
+Type: text
+Automation result status.
+
+error_message
+Type: text
+Failure details when applicable.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+
+--------------------------------------------------
+CONSISTENCY RULES
+--------------------------------------------------
+
+1. Do not invent columns outside this document.
+2. Keep the migration file synchronized with the canonical schema.
+3. Keep Supabase-generated frontend types synchronized with this model.
+4. If a relationship changes, update AI_DATABASE_MAP.md and AI_DATABASE_RELATION_GRAPH.md in the same change.
+5. Soft delete applies only to tables that include is_deleted.

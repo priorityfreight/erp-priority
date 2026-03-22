@@ -1,169 +1,219 @@
 # ERP DATABASE MAP
 
-This document describes the structure and relationships of the ERP database.
+This document describes the canonical database structure for the Priority Logistics ERP.
 
-Database Engine:
-PostgreSQL
+Canonical source:
 
-Backend Platform:
-Supabase
+supabase/ERP_schema.sql
 
+Supporting execution files:
+
+supabase/ERP_functions.sql
+supabase/ERP_views.sql
+supabase/ERP_triggers.sql
+supabase/ERP_policies.sql
 
 
 --------------------------------------------------
-CORE TABLES
+CORE DOMAIN TABLES
 --------------------------------------------------
 
+Master Data
+
+external_data_sources
+unlocodes
+service_transport_types
+
+
+CRM
+
+branches
+roles
+users
+prospects
 clients
-Primary entity representing companies or customers.
+contacts
 
-Columns
 
-id (uuid, primary key)
-name (text)
-email (text)
-created_at (timestamp)
-is_deleted (boolean)
+Commercial
 
-Relationships
+providers
+provider_contacts
+provider_service_offerings
+incoterms
+opportunities
+quotations
+quotation_costs
 
-clients.id → contacts.client_id
-clients.id → opportunities.client_id
-clients.id → quotations.client_id
-clients.id → shipments.client_id
 
+Operations
+
+shipments
+shipment_events
+
+
+Finance
+
+client_invoices
+provider_invoices
+commissions
+
+
+Observability
+
+audit_logs
+automation_logs
 
 
 --------------------------------------------------
+PRIMARY BUSINESS FLOW
+--------------------------------------------------
 
-contacts
-People associated with a client.
+Prospect
+ → Client
+ → Opportunity
+ → Quotation
+ → Shipment
+ → Client Invoice
+ → Commission / Profit Review
 
-Columns
 
-id (uuid, primary key)
-client_id (uuid)
-name (text)
-email (text)
-phone (text)
+Support relationships
 
-Relationships
+External Data Source
+ → UN/LOCODE rows
+
+Client
+ → Contacts
+
+Quotation
+ → Provider Costs
+
+Provider
+ → Provider Contacts
+
+Provider
+ → Provider Service Offerings
+
+Shipment
+ → Shipment Events
+
+Shipment
+ → Provider Invoice
+
+
+--------------------------------------------------
+KEY RELATIONSHIPS
+--------------------------------------------------
+
+users.role_id → roles.id
+users.branch_id → branches.id
+
+unlocodes.source_id → external_data_sources.id
+clients.city_unlocode → unlocodes.unlocode (logical reference, not yet a foreign key)
+clients.city_unlocode_id → unlocodes.id
+providers.city_unlocode → unlocodes.unlocode (logical reference, not yet a foreign key)
+providers.city_unlocode_id → unlocodes.id
+opportunities.origin_unlocode → unlocodes.unlocode (logical reference, not yet a foreign key)
+opportunities.origin_unlocode_id → unlocodes.id
+opportunities.destination_unlocode → unlocodes.unlocode (logical reference, not yet a foreign key)
+opportunities.destination_unlocode_id → unlocodes.id
+
+prospects.branch_id → branches.id
+
+clients.prospect_id → prospects.id
+clients.branch_id → branches.id
+clients.account_owner_id → users.id
 
 contacts.client_id → clients.id
 
-
-
---------------------------------------------------
-
-opportunities
-Sales opportunities associated with a client.
-
-Columns
-
-id (uuid, primary key)
-client_id (uuid)
-title (text)
-value (numeric)
-status (text)
-created_at (timestamp)
-
-Relationships
+provider_contacts.provider_id → providers.id
+provider_service_offerings.provider_id → providers.id
+provider_service_offerings.service_transport_type_id → service_transport_types.id
 
 opportunities.client_id → clients.id
-opportunities.id → quotations.opportunity_id
-
-
-
---------------------------------------------------
-
-quotations
-Commercial proposals generated from opportunities.
-
-Columns
-
-id (uuid, primary key)
-client_id (uuid)
-opportunity_id (uuid)
-status (text)
-created_at (timestamp)
-
-Relationships
+opportunities.salesperson_id → users.id
 
 quotations.client_id → clients.id
 quotations.opportunity_id → opportunities.id
+quotations.created_by → users.id
+quotations.incoterm_id → incoterms.id
 
+quotation_costs.quotation_id → quotations.id
+quotation_costs.provider_id → providers.id
 
-
---------------------------------------------------
-
-shipments
-Operational logistics records.
-
-Columns
-
-id (uuid, primary key)
-client_id (uuid)
-origin (text)
-destination (text)
-status (text)
-created_at (timestamp)
-
-Relationships
-
+shipments.quotation_id → quotations.id
 shipments.client_id → clients.id
 
+shipment_events.shipment_id → shipments.id
+
+client_invoices.shipment_id → shipments.id
+client_invoices.client_id → clients.id
+
+provider_invoices.provider_id → providers.id
+provider_invoices.shipment_id → shipments.id
+
+commissions.shipment_id → shipments.id
+commissions.user_id → users.id
 
 
 --------------------------------------------------
-BUSINESS FLOW RELATIONSHIPS
+DEPENDENCY CHAIN
 --------------------------------------------------
 
-Client Lifecycle
+Level 1
 
-client
- → contacts
- → opportunities
- → quotations
- → shipments
-
-
-
-Sales Flow
-
-client
- → opportunity
- → quotation
- → approved quotation
- → shipment
+branches
+roles
+external_data_sources
+incoterms
+providers
 
 
+Level 2
 
-Operational Flow
-
-shipment
-
-pending
-in_transit
-delivered
-
+users
+unlocodes
+service_transport_types
+prospects
+provider_contacts
+provider_service_offerings
 
 
---------------------------------------------------
-AUTOMATION LAYER
---------------------------------------------------
+Level 3
 
-Triggers
+clients
 
-quotation_approval_trigger
 
-Event
+Level 4
 
-quotation status changes to "approved"
+contacts
+opportunities
 
-Action
 
-create shipment automatically
+Level 5
 
+quotations
+
+
+Level 6
+
+quotation_costs
+shipments
+
+
+Level 7
+
+shipment_events
+client_invoices
+provider_invoices
+commissions
+
+
+Level 8
+
+audit_logs
+automation_logs
 
 
 --------------------------------------------------
@@ -171,89 +221,92 @@ DATABASE FUNCTIONS
 --------------------------------------------------
 
 create_client_with_contacts()
+Creates a client and optional contacts in one transaction.
 
-Creates client and contacts in one transaction.
+add_contact_to_client()
+Adds a contact to an existing client.
 
-
+add_client_logistics_party()
+Adds a consignee / shipper / AA record to an existing client.
 
 create_opportunity()
+Creates a new sales opportunity.
 
-Creates a new opportunity.
+update_opportunity_status()
+Updates opportunity lifecycle status.
 
-
+Opportunity lifecycle statuses:
+investigando
+confirmado
+cotizando
+aceptado
+rechazada
+vencida
 
 convert_opportunity_to_quotation()
-
-Creates quotation from opportunity.
-
-
+Creates a quotation from an opportunity.
 
 approve_quotation()
-
-Approves quotation and triggers shipment creation.
-
-
+Approves a quotation.
 
 create_shipment()
+Creates a shipment from a quotation.
 
-Creates shipment manually.
-
-
+update_shipment_status()
+Updates shipment lifecycle status.
 
 mark_shipment_delivered()
-
-Updates shipment status.
-
-
+Marks a shipment as delivered.
 
 get_client_full()
+Returns a full client profile with related records.
 
-Returns aggregated client information.
+delete_client_logistics_party()
+Deletes a consignee / shipper / AA record from a client.
 
+soft_delete_client()
+Soft deletes a client record.
+
+search_clients()
+Searches active clients by company, website, country, or city.
+The canonical implementation uses clients.search_text plus ranked matching and active-client filtering.
+
+search_unlocodes()
+Searches UN/LOCODE rows by code, name, country, subdivision, or IATA code through the canonical reusable lookup contract.
+The backend implementation uses hybrid indexing: B-tree for exact and filterable fields, plus pg_trgm-backed search_text matching for partial lookup.
+
+create_provider()
+Creates a provider with the canonical pricing company fields.
+
+add_contact_to_provider()
+Adds a contact to an existing provider.
+
+get_provider_full()
+Returns a provider profile with related contacts and offered services.
+
+search_providers()
+Searches provider rows by name, type, city, country, or company email.
+
+create_service_transport_type()
+Creates a sales master data row for service type and transport type.
+
+update_service_transport_type()
+Updates a sales master data row for service type and transport type.
+
+delete_service_transport_type()
+Deletes a sales master data row for service type and transport type.
 
 
 --------------------------------------------------
-DEPENDENCY MAP
+ANALYTICS VIEWS
 --------------------------------------------------
-
-Level 1
-
-clients
-
-
-
-Level 2
-
-contacts
-opportunities
-shipments
-
-
-
-Level 3
-
-quotations
-
-
-
-Dependency Chain
-
-clients
- → opportunities
- → quotations
- → shipments
-
-
-
---------------------------------------------------
-ANALYTICS LAYER
---------------------------------------------------
-
-Views
 
 client_overview_view
+Client summary view including canonical account owner reference and display name.
+The canonical implementation must use aggregated joins, not repeated per-client correlated subqueries, once CRM volume grows.
 sales_pipeline_view
 open_opportunities_view
+Canonical opportunity list and summary view with client, service, transport, owner, lane, values, and effective lifecycle status.
 quotation_summary_view
 active_shipments_view
 delivered_shipments_view
@@ -261,17 +314,30 @@ client_revenue_view
 monthly_sales_view
 shipment_activity_view
 client_contacts_view
+provider_overview_view
+provider_contacts_view
+provider_service_offering_view
+service_transport_type_lookup_view
 
 
+--------------------------------------------------
+AUTOMATION LAYER
+--------------------------------------------------
 
-Views depend on
+quotation_approved_trigger
+When a quotation becomes approved, create a shipment automatically.
 
-clients
-contacts
-opportunities
-quotations
-shipments
+shipment_reference_trigger
+Generates shipment references before insert.
 
+quotation_reference_trigger
+Generates quotation references before insert.
+
+audit triggers
+Write insert, update, and delete activity to audit_logs.
+
+opportunity lifecycle automation
+Calculates estimated value, start date, expiration date, and expired lifecycle behavior.
 
 
 --------------------------------------------------
@@ -280,31 +346,8 @@ MODIFICATION SAFETY RULE
 
 Before modifying any table:
 
-check dependent tables
-check views
-check functions
-check triggers
-
-If dependencies exist, migration must preserve compatibility.
-
-
-
---------------------------------------------------
-AI QUERY RULE
---------------------------------------------------
-
-For analytics queries:
-
-prefer views
-
-For transactional operations:
-
-prefer database functions
-
-Avoid raw table modifications when a function exists.
-
-
-
---------------------------------------------------
-END OF DATABASE MAP
---------------------------------------------------
+1. Check foreign key dependencies.
+2. Check affected functions, views, and triggers.
+3. Update AI_TABLE_DICTIONARY.md.
+4. Update AI_DATABASE_RELATION_GRAPH.md.
+5. Keep the migration file synchronized with the canonical schema.

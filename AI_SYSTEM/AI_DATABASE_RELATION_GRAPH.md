@@ -1,309 +1,292 @@
 # AI DATABASE RELATION GRAPH
 
-This document defines the relational structure of the ERP database.
+This document defines the canonical relational model for the Priority Logistics ERP.
 
-Its purpose is to help developers and AI agents understand:
+It must remain synchronized with:
 
-- how tables are connected
-- the ERP business workflow
-- table dependencies
-- foreign key relationships
-- module ownership of data
-
-This file must be updated whenever new tables are introduced into the ERP system.
-
+supabase/ERP_schema.sql
 
 
 --------------------------------------------------
 ERP BUSINESS MODEL
 --------------------------------------------------
 
-The ERP follows a logistics and sales pipeline lifecycle:
+Primary revenue flow
 
 Prospects
 → Clients
 → Opportunities
 → Quotations
 → Shipments
-→ Invoices
-→ Payments
+→ Client Invoices
+→ Commissions
 
-This represents the full revenue lifecycle of the organization.
 
+Operational support flow
+
+Providers
+→ Quotation Costs
+→ Provider Invoices
 
 
 --------------------------------------------------
-MAIN DATABASE ENTITY RELATIONSHIP DIAGRAM
+MAIN ENTITY RELATIONSHIP DIAGRAM
 --------------------------------------------------
 
 ```mermaid
 erDiagram
+    BRANCHES ||--o{ USERS : assigns
+    EXTERNAL_DATA_SOURCES ||--o{ UNLOCODES : feeds
+    BRANCHES ||--o{ PROSPECTS : receives
+    BRANCHES ||--o{ CLIENTS : owns
+    ROLES ||--o{ USERS : classifies
 
-PROSPECTS {
-    uuid id
-    text name
-    text email
-    text phone
-    text company
-    text source
-    timestamp created_at
-}
+    PROSPECTS ||--o| CLIENTS : converts_to
+    CLIENTS ||--o{ CONTACTS : has
+    CLIENTS ||--o{ OPPORTUNITIES : creates
+    USERS ||--o{ OPPORTUNITIES : owns
 
-CLIENTS {
-    uuid id
-    uuid prospect_id
-    text name
-    text email
-    text phone
-    text company
-    text status
-    timestamp created_at
-}
+    OPPORTUNITIES ||--o{ QUOTATIONS : generates
+    CLIENTS ||--o{ QUOTATIONS : receives
+    USERS ||--o{ QUOTATIONS : creates
+    INCOTERMS ||--o{ QUOTATIONS : applies_to
 
-OPPORTUNITIES {
-    uuid id
-    uuid client_id
-    text title
-    numeric estimated_value
-    text status
-    timestamp created_at
-}
+    PROVIDERS ||--o{ QUOTATION_COSTS : supplies
+    QUOTATIONS ||--o{ QUOTATION_COSTS : contains
 
-QUOTATIONS {
-    uuid id
-    uuid opportunity_id
-    numeric total_amount
-    text currency
-    text status
-    timestamp created_at
-}
+    QUOTATIONS ||--o{ SHIPMENTS : converts_to
+    CLIENTS ||--o{ SHIPMENTS : ships_for
+    SHIPMENTS ||--o{ SHIPMENT_EVENTS : tracks
 
-SHIPMENTS {
-    uuid id
-    uuid quotation_id
-    text origin
-    text destination
-    text shipment_status
-    timestamp created_at
-}
+    SHIPMENTS ||--o{ CLIENT_INVOICES : bills
+    CLIENTS ||--o{ CLIENT_INVOICES : owes
 
-INVOICES {
-    uuid id
-    uuid shipment_id
-    numeric total_amount
-    text currency
-    text payment_status
-    timestamp created_at
-}
+    PROVIDERS ||--o{ PROVIDER_INVOICES : invoices
+    SHIPMENTS ||--o{ PROVIDER_INVOICES : incurs
 
-PAYMENTS {
-    uuid id
-    uuid invoice_id
-    numeric amount
-    text payment_method
-    timestamp payment_date
-}
+    SHIPMENTS ||--o{ COMMISSIONS : yields
+    USERS ||--o{ COMMISSIONS : earns
+```
 
 
+--------------------------------------------------
+FOREIGN KEY DEFINITIONS
+--------------------------------------------------
 
-PROSPECTS ||--o{ CLIENTS : converted_to
-CLIENTS ||--o{ OPPORTUNITIES : owns
-OPPORTUNITIES ||--o{ QUOTATIONS : generates
-QUOTATIONS ||--o{ SHIPMENTS : creates
-SHIPMENTS ||--o{ INVOICES : billed_by
-INVOICES ||--o{ PAYMENTS : paid_with
+users.role_id
+references roles.id
 
-⸻
+users.branch_id
+references branches.id
 
-ERP PIPELINE FLOW
+unlocodes.source_id
+references external_data_sources.id
 
-The ERP follows this operational pipeline:
+clients.city_unlocode
+logically references unlocodes.unlocode
 
-Prospects
-↓
-Clients
-↓
-Opportunities
-↓
-Quotations
-↓
-Shipments
-↓
-Invoices
-↓
-Payments
+clients.city_unlocode_id
+references unlocodes.id
 
-Each stage represents a transition in the business lifecycle.
+providers.city_unlocode
+logically references unlocodes.unlocode
 
-⸻
+providers.city_unlocode_id
+references unlocodes.id
 
-TABLE RELATIONSHIP DEFINITIONS
+opportunities.origin_unlocode
+logically references unlocodes.unlocode
 
-Prospects → Clients
+opportunities.origin_unlocode_id
+references unlocodes.id
 
-A prospect represents a potential customer.
-Once qualified, the prospect is converted into a client.
+opportunities.destination_unlocode
+logically references unlocodes.unlocode
 
-One prospect may convert into one client.
+opportunities.destination_unlocode_id
+references unlocodes.id
 
-Clients → Opportunities
-
-Clients may create multiple sales opportunities.
-
-Each opportunity represents a potential business deal.
-
-Opportunities → Quotations
-
-Opportunities generate quotations for pricing and negotiation.
-
-An opportunity may produce multiple quotations.
-
-Quotations → Shipments
-
-When a quotation is approved, it becomes an operational shipment.
-
-Each shipment is tied to an approved quotation.
-
-Shipments → Invoices
-
-Shipments generate invoices once services are delivered.
-
-Invoices → Payments
-
-Invoices may receive one or more payments until fully settled.
-
-⸻
-
-FOREIGN KEY RELATIONSHIPS
+prospects.branch_id
+references branches.id
 
 clients.prospect_id
 references prospects.id
 
+clients.branch_id
+references branches.id
+
+contacts.client_id
+references clients.id
+
+client_logistics_parties.client_id
+references clients.id
+
+client_logistics_parties.city_unlocode_id
+references unlocodes.id
+
+provider_contacts.provider_id
+references providers.id
+
+provider_service_offerings.provider_id
+references providers.id
+
+provider_service_offerings.service_transport_type_id
+references service_transport_types.id
+
 opportunities.client_id
+references clients.id
+
+opportunities.salesperson_id
+references users.id
+
+quotations.client_id
 references clients.id
 
 quotations.opportunity_id
 references opportunities.id
 
+quotations.created_by
+references users.id
+
+quotations.incoterm_id
+references incoterms.id
+
+quotation_costs.quotation_id
+references quotations.id
+
+quotation_costs.provider_id
+references providers.id
+
 shipments.quotation_id
 references quotations.id
 
-invoices.shipment_id
+shipments.client_id
+references clients.id
+
+shipment_events.shipment_id
 references shipments.id
 
-payments.invoice_id
-references invoices.id
+client_invoices.shipment_id
+references shipments.id
 
-⸻
+client_invoices.client_id
+references clients.id
 
+provider_invoices.provider_id
+references providers.id
+
+provider_invoices.shipment_id
+references shipments.id
+
+commissions.shipment_id
+references shipments.id
+
+commissions.user_id
+references users.id
+
+
+--------------------------------------------------
 DATABASE CREATION ORDER
+--------------------------------------------------
 
-To avoid dependency errors, database tables must be created in the following order:
+1. branches
+2. roles
+3. external_data_sources
+4. users
+5. unlocodes
+6. prospects
+7. clients
+8. contacts
+9. providers
+10. provider_contacts
+11. provider_service_offerings
+12. incoterms
+13. opportunities
+14. quotations
+15. quotation_costs
+16. shipments
+17. shipment_events
+18. client_invoices
+19. provider_invoices
+20. commissions
+21. audit_logs
+22. automation_logs
 
-1 prospects
-2 clients
-3 opportunities
-4 quotations
-5 shipments
-6 invoices
-7 payments
 
-This order ensures foreign keys reference existing tables.
+--------------------------------------------------
+MODULE OWNERSHIP
+--------------------------------------------------
 
-⸻
+MASTER DATA MODULE
 
-ERP MODULE OWNERSHIP
+external_data_sources
+unlocodes
+service_transport_types
+
 
 CRM MODULE
 
+branches
+roles
+users
 prospects
 clients
+contacts
+
 
 SALES MODULE
 
+providers
+provider_contacts
+provider_service_offerings
 opportunities
 quotations
+quotation_costs
+incoterms
+
 
 OPERATIONS MODULE
 
 shipments
+shipment_events
+
 
 FINANCE MODULE
 
-invoices
-payments
+client_invoices
+provider_invoices
+commissions
 
-⸻
 
+OBSERVABILITY MODULE
+
+audit_logs
+automation_logs
+
+
+--------------------------------------------------
 AUTOMATION DEPENDENCIES
-
-Several ERP automations rely on these relationships.
-
-Example automations:
+--------------------------------------------------
 
 Quotation Approved
 → create shipment
 
-Shipment Delivered
-→ generate invoice
+Shipment status updated
+→ reflected in shipment activity views
 
-Invoice Paid
-→ update financial metrics
+Insert / update / delete on core commercial tables
+→ write audit log entries
 
-These automations are implemented using database triggers and functions.
 
-⸻
+--------------------------------------------------
+INTEGRITY RULES
+--------------------------------------------------
 
-DATA INTEGRITY RULES
-
-All tables must enforce relational integrity.
-
-Rules:
-
-Clients must reference a valid prospect.
-
-Opportunities must reference a valid client.
-
-Quotations must reference a valid opportunity.
-
-Shipments must reference a valid quotation.
-
-Invoices must reference a valid shipment.
-
-Payments must reference a valid invoice.
-
-⸻
-
-DATABASE NORMALIZATION GUIDELINES
-
-The ERP follows these normalization principles:
-
-Primary keys must use UUID.
-
-All foreign keys must be explicitly defined.
-
-Avoid redundant data duplication across tables.
-
-Business logic must be implemented in database functions when possible.
-
-⸻
-
-AI DATABASE DEVELOPMENT RULES
-
-When adding new tables or relationships, the AI must:
-
-1 maintain relational integrity
-2 define proper foreign keys
-3 update ERP_schema.sql
-4 update AI_DATABASE_MAP.md
-5 update AI_DATABASE_RELATION_GRAPH.md
-
-⸻
-
-VERSIONING
-
-Whenever the database model changes:
-
-update this document
-update schema files
-create a system snapshot
+1. The client lifecycle starts with prospects and only then becomes clients.
+2. A quotation must always belong to both a client and an opportunity.
+3. A shipment must always belong to a quotation and a client.
+4. Client invoices must reference the billed client.
+5. Provider invoices must reference the billed provider.
+6. Commissions must always reference a shipment and a user.
+7. Any new relationship must be added to this graph and the table dictionary in the same change.
+8. External public datasets must define provenance through external_data_sources.

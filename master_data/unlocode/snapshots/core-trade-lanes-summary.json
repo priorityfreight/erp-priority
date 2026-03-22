@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-03-22T20:27:47.899Z",
+  "countries": [
+    {
+      "country_code": "MX",
+      "row_count": 965,
+      "source_page_url": "https://service.unece.org/trade/locode/mx.htm"
+    },
+    {
+      "country_code": "US",
+      "row_count": 20886,
+      "source_page_url": "https://service.unece.org/trade/locode/us.htm"
+    },
+    {
+      "country_code": "CA",
+      "row_count": 3215,
+      "source_page_url": "https://service.unece.org/trade/locode/ca.htm"
+    },
+    {
+      "country_code": "ES",
+      "row_count": 4766,
+      "source_page_url": "https://service.unece.org/trade/locode/es.htm"
+    },
+    {
+      "country_code": "CN",
+      "row_count": 1679,
+      "source_page_url": "https://service.unece.org/trade/locode/cn.htm"
+    },
+    {
+      "country_code": "DE",
+      "row_count": 10010,
+      "source_page_url": "https://service.unece.org/trade/locode/de.htm"
+    },
+    {
+      "country_code": "IT",
+      "row_count": 5797,
+      "source_page_url": "https://service.unece.org/trade/locode/it.htm"
+    },
+    {
+      "country_code": "FR",
+      "row_count": 14378,
+      "source_page_url": "https://service.unece.org/trade/locode/fr.htm"
+    },
+    {
+      "country_code": "AT",
+      "row_count": 1388,
+      "source_page_url": "https://service.unece.org/trade/locode/at.htm"
+    },
+    {
+      "country_code": "DK",
+      "row_count": 753,
+      "source_page_url": "https://service.unece.org/trade/locode/dk.htm"
+    }
+  ],
+  "total_rows": 63837
+}

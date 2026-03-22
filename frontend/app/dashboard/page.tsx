@@ -1,8 +1,5 @@
+import { CrmOverview } from "@/components/crm/CrmOverview"
+
 export default function Dashboard() {
-    return (
-      <div>
-        <h1>Dashboard</h1>
-        <p>Welcome to Priority Logistics ERP</p>
-      </div>
-    )
-  }
+  return <CrmOverview />
+}
