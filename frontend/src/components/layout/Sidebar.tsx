@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { href: "/opportunities", label: "Opportunities", section: "CRM" },
   { href: "/pricing/providers", label: "Providers", section: "Pricing" },
   { href: "/master-data", label: "Master Data", section: "Master Data" },
+  { href: "/master-data/users", label: "Usuarios", section: "Master Data" },
   {
     href: "/master-data/sales/service-types",
     label: "Ventas / Tipos de servicio",

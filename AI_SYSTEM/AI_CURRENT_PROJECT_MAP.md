@@ -66,6 +66,8 @@ Status summary:
 - master data governance now covers external public datasets
 - the linked Supabase cloud project is already migrated to the canonical backend
 - legacy compatibility remains in code only as temporary rollback safety, but it is no longer the active backend mode
+- route access is now protected by login before homepage
+- current auth implementation uses Supabase Auth sessions plus public.users active-profile validation
 - AI_QUERY_LIBRARY.md documents the current frontend query layer
 - AI_BACKEND_SYNC_RULES.md defines how SQL, types, query modules, and fallback safety must remain synchronized
 - UI/design/component documents still contain target-state guidance beyond the current implementation
@@ -100,6 +102,7 @@ Current database coverage:
 - operations tables
 - finance tables
 - audit and automation logs
+- auth-linked ERP user directory through users.auth_user_id
 
 The database supports more domains than the current frontend exposes.
 
@@ -123,8 +126,10 @@ Frontend framework:
 
 Current route files:
 
+- frontend/app/login/page.tsx
 - frontend/app/page.tsx
 - frontend/app/dashboard/page.tsx
+- frontend/app/master-data/users/page.tsx
 - frontend/app/clients/page.tsx
 - frontend/app/clients/[id]/page.tsx
 - frontend/app/contacts/page.tsx
@@ -142,13 +147,16 @@ Current shared layout files:
 - frontend/src/components/layout/Sidebar.tsx
 - frontend/src/components/layout/Topbar.tsx
 - frontend/src/components/layout/PageContainer.tsx
+- frontend/proxy.ts
 
 Current shared CRM/UI components:
 
 - frontend/src/components/crm/CrmOverview.tsx
 - frontend/src/components/data/StatusBadge.tsx
 - frontend/src/components/forms/ClientForm.tsx
+- frontend/src/components/forms/UserForm.tsx
 - frontend/src/components/master-data/ServiceTransportTypeManager.tsx
+- frontend/src/components/master-data/UsersManager.tsx
 
 Current query layer:
 
@@ -160,6 +168,9 @@ Current query layer:
 - frontend/src/lib/db/providers.ts
 - frontend/src/lib/db/masterData.ts
 - frontend/src/lib/db/index.ts
+- frontend/src/lib/auth.ts
+- frontend/src/lib/supabase/server.ts
+- frontend/src/lib/db/users.ts
 
 Current server-side master data utilities:
 
@@ -172,7 +183,9 @@ Current type contract:
 
 Current implemented frontend modules:
 
+- login access gate
 - dashboard shell
+- master data users
 - clients
 - contacts
 - opportunities

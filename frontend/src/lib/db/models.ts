@@ -72,12 +72,23 @@ export type ClientLogisticsParty = {
 
 export type User = {
   id: string
+  auth_user_id?: string | null
   first_name: string
   last_name: string
   email: string
+  phone?: string | null
+  username?: string | null
+  role_id?: string | null
+  role_name?: string | null
   active: boolean
   created_at: string
   updated_at: string | null
+}
+
+export type UserRole = {
+  id: string
+  name: string
+  description: string | null
 }
 
 export type Opportunity = {

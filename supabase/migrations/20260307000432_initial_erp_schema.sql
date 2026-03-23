@@ -13,7 +13,7 @@ create table branches (
 
 create table roles (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
+  name text not null unique,
   description text,
   created_at timestamptz not null default now(),
   updated_at timestamptz
@@ -21,9 +21,12 @@ create table roles (
 
 create table users (
   id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid unique references auth.users(id) on delete set null,
   first_name text,
   last_name text,
   email text not null unique,
+  phone text,
+  username text,
   role_id uuid references roles(id),
   branch_id uuid references branches(id),
   base_salary numeric,
@@ -31,6 +34,11 @@ create table users (
   created_at timestamptz not null default now(),
   updated_at timestamptz
 );
+
+create index idx_users_role_id on users(role_id);
+create index idx_users_branch_id on users(branch_id);
+create index idx_users_active on users(active);
+create unique index idx_users_username_unique on users(lower(username));
 
 create table external_data_sources (
   id uuid primary key default gen_random_uuid(),

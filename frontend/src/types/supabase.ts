@@ -1759,6 +1759,7 @@ export type Database = {
       users: {
         Row: {
           active: boolean
+          auth_user_id: string | null
           base_salary: number | null
           branch_id: string | null
           created_at: string | null
@@ -1766,11 +1767,14 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          phone: string | null
           role_id: string | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           active?: boolean
+          auth_user_id?: string | null
           base_salary?: number | null
           branch_id?: string | null
           created_at?: string | null
@@ -1778,11 +1782,14 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          phone?: string | null
           role_id?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           active?: boolean
+          auth_user_id?: string | null
           base_salary?: number | null
           branch_id?: string | null
           created_at?: string | null
@@ -1790,8 +1797,10 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          phone?: string | null
           role_id?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: [
           {
@@ -2389,6 +2398,19 @@ export type Database = {
         }
         Returns: string
       }
+      create_erp_user_profile: {
+        Args: {
+          p_active?: boolean
+          p_auth_user_id?: string
+          p_email: string
+          p_first_name: string
+          p_last_name?: string
+          p_phone?: string
+          p_role_name?: string
+          p_username?: string
+        }
+        Returns: string
+      }
       create_opportunity: {
         Args: {
           p_client_id: string
@@ -2441,13 +2463,34 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
+      erp_current_role_name: { Args: never; Returns: string }
+      erp_is_admin: { Args: never; Returns: boolean }
+      erp_is_authenticated_active_user: { Args: never; Returns: boolean }
       generate_reference: { Args: { prefix: string }; Returns: string }
       get_client_full: { Args: { p_client_id: string }; Returns: Json }
+      get_current_erp_user: {
+        Args: never
+        Returns: {
+          active: boolean
+          auth_user_id: string
+          branch_id: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string
+          role_id: string
+          role_name: string
+          username: string
+        }[]
+      }
       get_provider_full: { Args: { p_provider_id: string }; Returns: Json }
+      link_current_auth_user: { Args: never; Returns: string }
       mark_shipment_delivered: {
         Args: { p_shipment_id: string }
         Returns: undefined
       }
+      resolve_login_identity: { Args: { p_login: string }; Returns: string }
       resolve_unlocode_reference: {
         Args: { p_unlocode?: string; p_unlocode_id?: string }
         Returns: {
@@ -2554,6 +2597,20 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
       soft_delete_client: { Args: { p_client_id: string }; Returns: undefined }
       sync_expired_opportunities: { Args: never; Returns: number }
+      update_erp_user_profile: {
+        Args: {
+          p_active?: boolean
+          p_auth_user_id?: string
+          p_email: string
+          p_first_name: string
+          p_last_name?: string
+          p_phone?: string
+          p_role_name?: string
+          p_user_id: string
+          p_username?: string
+        }
+        Returns: string
+      }
       update_opportunity_status: {
         Args: { p_opportunity_id: string; p_status: string }
         Returns: undefined

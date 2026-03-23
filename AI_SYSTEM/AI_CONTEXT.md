@@ -35,7 +35,9 @@ CURRENT IMPLEMENTATION STATUS
 
 Implemented in the live frontend:
 
+- login access gate
 - dashboard shell
+- master data users
 - clients
 - client detail
 - contacts
@@ -102,6 +104,7 @@ AI_SYSTEM/
 
 Current live route files:
 
+- frontend/app/login/page.tsx
 - frontend/app/page.tsx
 - frontend/app/dashboard/page.tsx
 - frontend/app/clients/page.tsx
@@ -112,6 +115,7 @@ Current live route files:
 - frontend/app/pricing/providers/page.tsx
 - frontend/app/pricing/providers/[id]/page.tsx
 - frontend/app/master-data/page.tsx
+- frontend/app/master-data/users/page.tsx
 - frontend/app/master-data/unlocode/page.tsx
 
 Current shared layout components:
@@ -120,6 +124,7 @@ Current shared layout components:
 - frontend/src/components/layout/Sidebar.tsx
 - frontend/src/components/layout/Topbar.tsx
 - frontend/src/components/layout/PageContainer.tsx
+- frontend/proxy.ts
 
 Current database modules:
 
@@ -128,6 +133,7 @@ Current database modules:
 - frontend/src/lib/db/opportunities.ts
 - frontend/src/lib/db/providers.ts
 - frontend/src/lib/db/masterData.ts
+- frontend/src/lib/db/users.ts
 
 
 --------------------------------------------------
@@ -139,6 +145,10 @@ Organization:
 - branches
 - roles
 - users
+- users is the ERP profile directory, not the password store
+- passwords and sessions are handled by Supabase Auth
+- roles are currently:
+  Ventas, Pricing, Operaciones, Admin
 
 CRM:
 
@@ -245,6 +255,10 @@ Opportunities
 
 Master Data
 
+- Users directory is an admin-only submodule under Master Data
+- the users module manages:
+  name, role, email, phone, username, password provisioning, active/inactive status
+- password creation and updates must be executed through a protected server path using the service role key
 - UN/LOCODE lookup uses unlocode_lookup_view and search_unlocodes()
 - the canonical UN/LOCODE contract for all modules is:
   unlocodes + unlocode_lookup_view + search_unlocodes()
@@ -441,3 +455,9 @@ For AI generation in this repository:
 - trust the canonical SQL and aligned AI database docs for domain truth
 - trust AI_CURRENT_PROJECT_MAP.md for what exists in code right now
 - treat quotations, shipments, and finance UI as planned work until implemented
+- access to all live ERP routes is protected before homepage through the login gate
+- login accepts username or email plus password
+- only users with an active ERP profile in public.users may continue past login
+- public.users stores profile, role, username, phone, and active status
+- passwords must never be stored in public.users or any other ERP business table
+- first-user bootstrap currently requires creating the auth user in Supabase Auth and activating the matching public.users profile

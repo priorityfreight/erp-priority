@@ -79,6 +79,9 @@ references roles.id
 users.branch_id
 references branches.id
 
+users.auth_user_id
+references auth.users.id
+
 unlocodes.source_id
 references external_data_sources.id
 

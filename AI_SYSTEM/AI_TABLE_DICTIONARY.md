@@ -77,13 +77,18 @@ TABLE: users
 
 Purpose
 
-Stores ERP users such as salespeople and operators.
+Stores ERP user profiles such as salespeople, pricing users, operators, and admins.
+Passwords are not stored here; Supabase Auth is the credential source of truth.
 
 Columns
 
 id
 Type: uuid
 Primary key.
+
+auth_user_id
+Type: uuid
+Links the ERP profile to auth.users.id for secure login and session enforcement.
 
 first_name
 Type: text
@@ -96,6 +101,14 @@ User last name.
 email
 Type: text
 Unique user email.
+
+phone
+Type: text
+Corporate or direct phone for the ERP user profile.
+
+username
+Type: text
+Unique ERP login username used as the preferred identifier on the login screen.
 
 role_id
 Type: uuid
@@ -111,7 +124,7 @@ Base salary for commission calculations.
 
 active
 Type: boolean
-Whether the user is active.
+Whether the user is active. Inactive users must not pass the protected login gate.
 
 created_at
 Type: timestamptz

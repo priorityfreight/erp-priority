@@ -29,6 +29,14 @@ Compatibility support:
 - frontend/src/lib/db/models.ts defines normalized frontend-facing shapes across those modes
 - all fallback branches are temporary rollback safety only and must not become the default implementation target
 
+Auth/session support:
+
+- frontend/src/lib/auth.ts resolves username-or-email login and reads the current ERP profile
+- frontend/src/lib/supabaseClient.ts uses the browser SSR client so authenticated queries share the current session
+- frontend/src/lib/supabase/server.ts is the server-side companion for protected access
+- frontend/proxy.ts blocks route access when there is no valid session or no active ERP user profile
+- frontend/app/api/admin/users/route.ts provisions auth credentials and ERP user profiles through an admin-only server path
+
 frontend/src/lib/db/clients.ts
 
 Exports:
@@ -138,6 +146,22 @@ Uses:
 
 - unlocode_lookup_view
 - search_unlocodes()
+
+
+frontend/src/lib/db/users.ts
+
+Exports:
+
+- getUsers()
+- getUserRoles()
+
+Uses:
+
+- users
+- roles
+- get_current_erp_user()
+- create_erp_user_profile()
+- update_erp_user_profile()
 - unlocode_country_summary_view
 - /api/master-data/unlocodes snapshot fallback as temporary rollback safety when canonical master data is unavailable
 - service_transport_type_lookup_view

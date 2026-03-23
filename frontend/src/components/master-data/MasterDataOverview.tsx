@@ -3,6 +3,13 @@ import { PageContainer } from "@/components/layout/PageContainer"
 
 const submodules = [
   {
+    title: "Usuarios",
+    href: "/master-data/users",
+    status: "Live",
+    coverage: "Admin-only ERP access directory",
+    notes: "Administra usuarios del ERP, rol, username, estatus y aprovisionamiento de acceso.",
+  },
+  {
     title: "Ventas / Tipos de servicio",
     href: "/master-data/sales/service-types",
     status: "Live",
@@ -42,7 +49,7 @@ export function MasterDataOverview() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
               Active Submodules
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">2</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">3</div>
           </div>
           <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
@@ -57,7 +64,7 @@ export function MasterDataOverview() {
               Initial Scope
             </div>
             <div className="mt-2 text-sm font-medium text-[#111827]">
-              UN/LOCODE y catalogos editables de ventas
+              UN/LOCODE, usuarios y catalogos editables
             </div>
           </div>
         </section>

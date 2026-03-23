@@ -49,6 +49,11 @@ APPROVED BUSINESS FUNCTIONS
 
 Use these functions for writes and workflow actions:
 
+resolve_login_identity()
+link_current_auth_user()
+get_current_erp_user()
+create_erp_user_profile()
+update_erp_user_profile()
 create_client_with_contacts()
 add_contact_to_client()
 add_client_logistics_party()
@@ -83,6 +88,18 @@ For creates, updates, workflow state changes, and soft deletes:
 prefer database functions.
 
 Avoid direct frontend inserts, updates, or deletes when a function already exists.
+
+
+Auth-specific rules:
+
+- passwords must be handled only by Supabase Auth
+- public.users is the ERP profile directory, not a password table
+- login may accept username or email, but password validation must still go through Supabase Auth
+- protected routes must validate both session presence and active ERP profile status before allowing access
+- inactive users must be redirected back to login
+- direct anonymous access to ERP business tables must be blocked by RLS
+- user provisioning with password setup must run through a protected server path that uses the service role key
+- only Admin users may create or update ERP user profiles
 
 
 Contact-specific rules:

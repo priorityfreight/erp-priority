@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { usePathname } from "next/navigation"
 import { Sidebar } from "./Sidebar"
 import { Topbar } from "./Topbar"
 
@@ -9,6 +10,12 @@ type AppLayoutProps = {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname()
+
+  if (pathname === "/login") {
+    return <>{children}</>
+  }
+
   return (
     <div className="flex min-h-screen bg-[#F9FAFB] text-[#111827]">
       <Sidebar />
@@ -19,4 +26,3 @@ export function AppLayout({ children }: AppLayoutProps) {
     </div>
   )
 }
-

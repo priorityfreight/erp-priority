@@ -108,6 +108,7 @@ KEY RELATIONSHIPS
 
 users.role_id → roles.id
 users.branch_id → branches.id
+users.auth_user_id → auth.users.id
 
 unlocodes.source_id → external_data_sources.id
 clients.city_unlocode → unlocodes.unlocode (logical reference, not yet a foreign key)
@@ -222,6 +223,28 @@ DATABASE FUNCTIONS
 
 create_client_with_contacts()
 Creates a client and optional contacts in one transaction.
+
+resolve_login_identity()
+Resolves a username or email login value into the canonical email used by Supabase Auth.
+This function exists only to support username-based ERP login without storing passwords in public.users.
+
+link_current_auth_user()
+Links the current Supabase Auth identity to the matching ERP user profile by email when allowed.
+
+get_current_erp_user()
+Returns the active ERP user profile for the current authenticated session.
+
+create_erp_user_profile()
+Creates an ERP user profile from the admin-managed users directory.
+
+update_erp_user_profile()
+Updates an ERP user profile from the admin-managed users directory.
+
+erp_is_authenticated_active_user()
+Security helper used by RLS to allow access only to authenticated active ERP users.
+
+erp_is_admin()
+Security helper used by RLS for admin-only tables and writes.
 
 add_contact_to_client()
 Adds a contact to an existing client.

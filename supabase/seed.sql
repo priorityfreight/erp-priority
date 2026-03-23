@@ -1,3 +1,15 @@
+insert into roles (
+  name,
+  description
+)
+values
+  ('Ventas', 'Commercial CRM and client ownership users'),
+  ('Pricing', 'Provider and pricing users'),
+  ('Operaciones', 'Operational shipment users'),
+  ('Admin', 'ERP administrators')
+on conflict (name) do update
+set description = excluded.description;
+
 insert into external_data_sources (
   code,
   name,
