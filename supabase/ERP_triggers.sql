@@ -628,7 +628,7 @@ begin
       tg_table_name,
       old.id,
       tg_op,
-      auth.uid(),
+      public.erp_current_user_id(),
       to_jsonb(old)
     );
 
@@ -646,7 +646,7 @@ begin
     tg_table_name,
     new.id,
     tg_op,
-    auth.uid(),
+    public.erp_current_user_id(),
     to_jsonb(new)
   );
 

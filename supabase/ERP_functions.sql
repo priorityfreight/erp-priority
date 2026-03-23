@@ -37,6 +37,20 @@ as $$
   limit 1;
 $$;
 
+create or replace function erp_current_user_id()
+returns uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select u.id
+  from public.users u
+  where u.auth_user_id = auth.uid()
+    and u.active = true
+  limit 1;
+$$;
+
 create or replace function erp_is_admin()
 returns boolean
 language sql
