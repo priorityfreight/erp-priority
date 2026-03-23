@@ -161,26 +161,104 @@ order by country_code asc;
 -- =========================================
 
 create or replace view quotation_summary_view as
+with charge_totals as (
+  select
+    qc.quotation_id,
+    count(*) as total_charge_lines,
+    coalesce(sum(coalesce(qc.purchase_amount, qc.cost, 0)), 0) as total_purchase_amount,
+    coalesce(sum(coalesce(qc.sale_amount, 0)), 0) as total_sale_amount,
+    coalesce(sum(coalesce(qc.profit_amount, coalesce(qc.sale_amount, 0) - coalesce(qc.purchase_amount, qc.cost, 0))), 0) as total_profit_amount
+  from quotation_costs qc
+  group by qc.quotation_id
+)
 select
   q.id,
   q.reference_number,
   q.status,
   q.service_type,
+  q.transport_type,
+  q.operation_type,
   q.origin,
+  q.origin_unlocode,
   q.destination,
+  q.destination_unlocode,
+  q.pickup_address,
+  q.delivery_address,
+  q.commodities,
+  q.quantity,
+  q.weight,
+  q.volume,
+  q.required_quote_date,
+  q.purchase_valid_until,
+  q.sales_valid_until,
+  q.target_rate,
+  q.pricing_owner_id,
+  concat_ws(' ', pu.first_name, pu.last_name) as pricing_owner_name,
+  q.created_by,
+  concat_ws(' ', cu.first_name, cu.last_name) as created_by_name,
+  q.incoterm_id,
+  i.code as incoterm_code,
+  q.rejection_reason_id,
+  rr.reason as rejection_reason,
+  q.rejection_notes,
+  q.cancellation_notes,
   q.currency,
-  q.estimated_cost,
-  q.estimated_price,
-  q.expected_profit,
+  coalesce(ct.total_purchase_amount, q.estimated_cost, 0) as estimated_cost,
+  coalesce(ct.total_sale_amount, q.estimated_price, 0) as estimated_price,
+  coalesce(ct.total_profit_amount, q.expected_profit, 0) as expected_profit,
+  coalesce(ct.total_charge_lines, 0) as total_charge_lines,
   q.created_at,
+  q.updated_at,
   c.id as client_id,
   c.company_name as client_name,
   o.id as opportunity_id,
-  o.title as opportunity_title
+  o.title as opportunity_title,
+  o.salesperson_id,
+  concat_ws(' ', su.first_name, su.last_name) as salesperson_name
 from quotations q
 join clients c on c.id = q.client_id
 join opportunities o on o.id = q.opportunity_id
+left join incoterms i on i.id = q.incoterm_id
+left join users pu on pu.id = q.pricing_owner_id
+left join users cu on cu.id = q.created_by
+left join users su on su.id = o.salesperson_id
+left join quotation_rejection_reasons rr on rr.id = q.rejection_reason_id
+left join charge_totals ct on ct.quotation_id = q.id
 where c.is_deleted = false;
+
+create or replace view crm_quotations_view as
+select *
+from quotation_summary_view
+where status in (
+  'borrador',
+  'pendiente',
+  'cotizando',
+  'lista_para_enviar',
+  'enviada',
+  'cancelada',
+  'rechazada',
+  'renegociar_tarifa',
+  'aceptada'
+);
+
+create or replace view pricing_quotations_view as
+select *
+from quotation_summary_view
+where status in (
+  'pendiente',
+  'cotizando',
+  'lista_para_enviar',
+  'renegociar_tarifa'
+);
+
+create or replace view quotation_rejection_reason_lookup_view as
+select
+  id,
+  reason,
+  created_at,
+  updated_at
+from quotation_rejection_reasons
+order by reason asc;
 
 
 -- =========================================

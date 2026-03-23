@@ -52,6 +52,11 @@ before update on sales_accounting_concepts
 for each row
 execute function set_updated_at();
 
+create trigger set_quotation_reference_counters_updated_at
+before update on quotation_reference_counters
+for each row
+execute function set_updated_at();
+
 create trigger set_prospects_updated_at
 before update on prospects
 for each row
@@ -99,6 +104,16 @@ execute function set_updated_at();
 
 create trigger set_quotations_updated_at
 before update on quotations
+for each row
+execute function set_updated_at();
+
+create trigger set_quotation_rejection_reasons_updated_at
+before update on quotation_rejection_reasons
+for each row
+execute function set_updated_at();
+
+create trigger set_quotation_cargo_lines_updated_at
+before update on quotation_cargo_lines
 for each row
 execute function set_updated_at();
 
@@ -455,7 +470,71 @@ execute function apply_opportunity_computed_fields();
 
 
 -- =========================================
--- 1.7 PROVIDER COMPUTED FIELDS
+-- 1.7 QUOTATION COMPUTED FIELDS
+-- =========================================
+
+create or replace function apply_quotation_computed_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  origin_reference record;
+  destination_reference record;
+begin
+  if nullif(btrim(coalesce(new.origin_unlocode, '')), '') is not null then
+    new.origin_unlocode := upper(btrim(new.origin_unlocode));
+  else
+    new.origin_unlocode := null;
+  end if;
+
+  if nullif(btrim(coalesce(new.destination_unlocode, '')), '') is not null then
+    new.destination_unlocode := upper(btrim(new.destination_unlocode));
+  else
+    new.destination_unlocode := null;
+  end if;
+
+  if new.origin_unlocode is null and new.origin_unlocode_id is null then
+    new.origin := null;
+  else
+    select *
+    into origin_reference
+    from resolve_unlocode_reference(new.origin_unlocode, new.origin_unlocode_id);
+
+    if origin_reference is not null then
+      new.origin_unlocode_id := origin_reference.resolved_id;
+      new.origin_unlocode := origin_reference.resolved_unlocode;
+      new.origin := origin_reference.resolved_city;
+    end if;
+  end if;
+
+  if new.destination_unlocode is null and new.destination_unlocode_id is null then
+    new.destination := null;
+  else
+    select *
+    into destination_reference
+    from resolve_unlocode_reference(new.destination_unlocode, new.destination_unlocode_id);
+
+    if destination_reference is not null then
+      new.destination_unlocode_id := destination_reference.resolved_id;
+      new.destination_unlocode := destination_reference.resolved_unlocode;
+      new.destination := destination_reference.resolved_city;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_quotation_computed_fields on quotations;
+
+create trigger set_quotation_computed_fields
+before insert or update on quotations
+for each row
+execute function apply_quotation_computed_fields();
+
+
+-- =========================================
+-- 1.8 PROVIDER COMPUTED FIELDS
 -- =========================================
 
 create or replace function apply_provider_location_fields()
@@ -529,7 +608,7 @@ language plpgsql
 as $$
 begin
   if new.reference_number is null then
-    new.reference_number := generate_reference('QT');
+    new.reference_number := next_quotation_reference(new.service_type);
   end if;
 
   return new;
@@ -561,35 +640,35 @@ execute function set_shipment_reference();
 
 
 -- =========================================
--- 3. QUOTATION APPROVAL AUTOMATION
+-- 3. QUOTATION TOTALS SYNC
 -- =========================================
 
-create or replace function create_shipment_from_quotation()
+create or replace function sync_quotation_totals_from_cost_lines()
 returns trigger
 language plpgsql
 as $$
+declare
+  quotation_id_value uuid;
 begin
-  if new.status = 'approved' and coalesce(old.status, '') <> 'approved' then
-    begin
-      perform create_shipment(new.id);
+  quotation_id_value := case
+    when tg_op = 'DELETE' then old.quotation_id
+    else new.quotation_id
+  end;
 
-      insert into automation_logs (event, action, status)
-      values ('quotation_approved', 'create_shipment', 'success');
-    exception
-      when others then
-        insert into automation_logs (event, action, status, error_message)
-        values ('quotation_approved', 'create_shipment', 'failed', sqlerrm);
-    end;
+  if quotation_id_value is not null then
+    perform recalculate_quotation_totals(quotation_id_value);
   end if;
 
-  return new;
+  return case when tg_op = 'DELETE' then old else new end;
 end;
 $$;
 
-create trigger quotation_approved_trigger
-after update on quotations
+drop trigger if exists quotation_cost_totals_trigger on quotation_costs;
+
+create trigger quotation_cost_totals_trigger
+after insert or update or delete on quotation_costs
 for each row
-execute function create_shipment_from_quotation();
+execute function sync_quotation_totals_from_cost_lines();
 
 
 -- =========================================
@@ -689,6 +768,11 @@ after insert or update or delete on sales_accounting_concepts
 for each row
 execute function audit_trigger();
 
+create trigger audit_quotation_rejection_reasons
+after insert or update or delete on quotation_rejection_reasons
+for each row
+execute function audit_trigger();
+
 create trigger audit_opportunities
 after insert or update or delete on opportunities
 for each row
@@ -696,6 +780,16 @@ execute function audit_trigger();
 
 create trigger audit_quotations
 after insert or update or delete on quotations
+for each row
+execute function audit_trigger();
+
+create trigger audit_quotation_costs
+after insert or update or delete on quotation_costs
+for each row
+execute function audit_trigger();
+
+create trigger audit_quotation_cargo_lines
+after insert or update or delete on quotation_cargo_lines
 for each row
 execute function audit_trigger();
 

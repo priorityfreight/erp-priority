@@ -221,7 +221,6 @@ Clients module status:
 
 Current missing frontend modules relative to the canonical schema:
 
-- quotations
 - shipments
 - client invoices
 - provider invoices
@@ -253,7 +252,7 @@ Opportunities:
 database + frontend
 
 Quotations:
-database only
+database + frontend
 
 Shipments:
 database only
@@ -318,6 +317,48 @@ masterData.ts
 - create_sales_accounting_concept()
 - update_sales_accounting_concept()
 - delete_sales_accounting_concept()
+- quotation_rejection_reason_lookup_view
+- create_quotation_rejection_reason()
+- update_quotation_rejection_reason()
+- delete_quotation_rejection_reason()
+
+quotations.ts
+
+- crm_quotations_view
+- pricing_quotations_view
+- quotation_summary_view
+- create_quotation_from_opportunity()
+- take_quotation_for_pricing()
+- update_quotation_status()
+- create_quotation_cost_line()
+- update_quotation_cost_line()
+- delete_quotation_cost_line()
+- create_quotation_cargo_line()
+- update_quotation_cargo_line()
+- delete_quotation_cargo_line()
+- create_booking_from_quotation()
+- getProviderPricingCandidates() via providers.ts for pricing-side sourcing suggestions
+- quotations table for scoped detail updates on common commercial fields
+- quotation_costs table for related charge line reads
+- quotation_cargo_lines table for service-specific consolidation detail rows
+- quote creation starts from opportunity detail via popup
+- CRM and Pricing each expose a dedicated quotations list
+- pricing quotations page exposes the live operational flow:
+  borrador -> capture route and load information in CRM
+  pendiente -> Tomar
+  cotizando -> Proveedores + Cargos
+  lista_para_enviar -> review captured purchases
+  renegociar_tarifa -> show sales comment + target rate and recapture cost
+- quotation detail follows the live visual rule:
+  status block at top
+  popup edit flow
+  sectioned information layout
+  route section separated from load information
+  related charge lines as table first, popup create/edit second
+  related cargo lines as table first, popup create/edit second when the service requires them
+  client-facing document route under frontend/app/quotations/[id]/document/page.tsx
+  provider-facing internal request route under frontend/app/quotations/[id]/pricing-request/page.tsx
+  accepted quotations expose a manual Create booking action
 
 
 --------------------------------------------------
@@ -333,7 +374,7 @@ Current workflow automations include:
 - updated_at maintenance triggers
 - quotation reference generation
 - shipment reference generation
-- shipment creation from approved quotation
+- quotation totals sync from charge lines
 - audit logging
 
 Current frontend has no scheduler or background job runner in the repository.
@@ -388,7 +429,7 @@ Do not introduce apps/web or other parallel app roots unless a deliberate restru
 
 2. Regenerate frontend/src/types/supabase.ts after every schema migration that changes the public contract.
 
-3. Build quotations, shipments, and finance routes before exposing them in navigation.
+3. Build shipments and finance routes before exposing them in navigation.
 
 4. Reconcile the landing page and dashboard into one intentional entry point.
 

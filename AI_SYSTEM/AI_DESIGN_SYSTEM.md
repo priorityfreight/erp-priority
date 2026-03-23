@@ -3,7 +3,7 @@
 This document defines the visual design system for the ERP interface.
 
 The goal is to create a clean, modern, and intuitive interface that feels
-similar to modern operating systems like macOS.
+corporate, premium, and aligned with Priority Freight Intelligence.
 
 The interface must prioritize clarity, simplicity, and usability.
 
@@ -13,8 +13,8 @@ The interface must prioritize clarity, simplicity, and usability.
 DESIGN PHILOSOPHY
 --------------------------------------------------
 
-Minimal
-Clean
+Corporate
+Confident
 Readable
 Consistent
 
@@ -59,12 +59,13 @@ TYPOGRAPHY
 
 Primary Font
 
-Inter
+Avenir Next
 
 Fallback
 
-system-ui
-sans-serif
+Segoe UI
+Helvetica
+Arial
 
 
 
@@ -100,65 +101,48 @@ Text should always prioritize readability.
 COLOR SYSTEM
 --------------------------------------------------
 
-Use a minimal color palette.
+Use the corporate Priority palette.
 
+Primary Background
 
+Navy
+#0B1F3B
 
-Primary
+Primary Accent
 
-#2563EB
+Burgundy
+#800020
 
+Accent Gradient
 
+Burgundy Light
+#B33A5B
 
-Background
+Technology Accent
 
-#F9FAFB
+Gray
+#909EAE
 
+Text Light
 
-
-Card Background
-
-#FFFFFF
-
-
-
-Text Primary
-
-#111827
-
-
+Light Gray
+#E5E5E5
 
 Text Secondary
 
-#6B7280
+Soft Gray
+#CFCFCF
 
+Cards inside the ERP should typically use bright, premium surfaces over a dark shell:
 
+App shell
+dark navy gradient
 
-Border
+Primary cards
+soft white / light steel
 
-#E5E7EB
-
-
-
-Success
-
-#16A34A
-
-
-
-Warning
-
-#F59E0B
-
-
-
-Error
-
-#DC2626
-
-
-
-Avoid excessive colors.
+Status accents
+use business meaning colors without overwhelming the corporate palette
 
 
 
@@ -194,19 +178,19 @@ Rounded corners create a modern look.
 
 Default
 
-8px
+16px
 
 Cards
 
-12px
+24px to 30px
 
 Buttons
 
-8px
+16px to 22px
 
 Modals
 
-16px
+24px to 32px
 
 
 
@@ -243,7 +227,7 @@ BUTTON DESIGN
 
 Primary Button
 
-Filled with primary color.
+Filled with burgundy gradient.
 
 Example
 
@@ -253,7 +237,7 @@ Example
 
 Secondary Button
 
-Outline style.
+Glass / outline style over the current surface.
 
 
 

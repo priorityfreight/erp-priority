@@ -53,6 +53,13 @@ Sidebar
 Topbar
 Main Workspace
 
+Corporate implementation:
+
+- branded dark shell
+- shared Priority lockup
+- translucent topbar
+- bright premium content card
+
 
 
 PageContainer
@@ -100,6 +107,13 @@ Shipments
 Analytics
 Settings
 
+Must support:
+
+- shared brand lockup
+- grouped module sections
+- burgundy active item treatment
+- dark navy base
+
 
 
 Topbar
@@ -110,6 +124,12 @@ Search
 Notifications
 User profile
 Quick actions
+
+Must support:
+
+- compact brand lockup on constrained layouts
+- corporate eyebrow + page title
+- user identity cluster
 
 
 

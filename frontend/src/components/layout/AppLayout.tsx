@@ -17,11 +17,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F9FAFB] text-[#111827]">
+    <div className="relative flex min-h-screen bg-transparent text-[#111827]">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(179,58,91,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(144,158,174,0.14),_transparent_24%)]" />
       <Sidebar />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="relative flex min-h-screen flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 p-6 lg:p-10">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">{children}</main>
       </div>
     </div>
   )

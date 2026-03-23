@@ -140,10 +140,15 @@ opportunities.incoterm_id → incoterms.id
 quotations.client_id → clients.id
 quotations.opportunity_id → opportunities.id
 quotations.created_by → users.id
+quotations.pricing_owner_id → users.id
 quotations.incoterm_id → incoterms.id
+quotations.rejection_reason_id → quotation_rejection_reasons.id
 
 quotation_costs.quotation_id → quotations.id
 quotation_costs.provider_id → providers.id
+quotation_costs.sales_accounting_concept_id → sales_accounting_concepts.id
+
+quotation_cargo_lines.quotation_id → quotations.id
 
 shipments.quotation_id → quotations.id
 shipments.client_id → clients.id
@@ -201,7 +206,10 @@ quotations
 
 Level 6
 
+quotation_rejection_reasons
+quotation_reference_counters
 quotation_costs
+quotation_cargo_lines
 shipments
 
 
@@ -269,10 +277,43 @@ rechazada
 vencida
 
 convert_opportunity_to_quotation()
-Creates a quotation from an opportunity.
+Compatibility wrapper around create_quotation_from_opportunity().
+
+create_quotation_from_opportunity()
+Creates a quotation from an opportunity using the Wave 1 canonical contract.
+
+request_quotation_pricing()
+Moves a quotation from CRM draft capture into the pricing pending queue.
 
 approve_quotation()
-Approves a quotation.
+Compatibility alias that marks a quotation as aceptada.
+
+take_quotation_for_pricing()
+Assigns the quotation to a pricing owner and moves it to cotizando.
+
+update_quotation_status()
+Handles the canonical quotation lifecycle transitions.
+
+create_quotation_cost_line()
+Adds a provider/accounting-concept charge line to a quotation.
+
+update_quotation_cost_line()
+Updates a quotation charge line and recalculates totals.
+
+delete_quotation_cost_line()
+Deletes a quotation charge line and recalculates totals.
+
+create_quotation_cargo_line()
+Adds a service-specific cargo or consolidation line to a quotation.
+
+update_quotation_cargo_line()
+Updates a quotation cargo line.
+
+delete_quotation_cargo_line()
+Deletes a quotation cargo line.
+
+create_booking_from_quotation()
+Creates or returns the shipment for an accepted quotation.
 
 create_shipment()
 Creates a shipment from a quotation.
@@ -336,6 +377,8 @@ sales_pipeline_view
 open_opportunities_view
 Canonical opportunity list and summary view with client, service, transport, owner, lane, values, and effective lifecycle status.
 quotation_summary_view
+crm_quotations_view
+pricing_quotations_view
 active_shipments_view
 delivered_shipments_view
 client_revenue_view
@@ -352,14 +395,14 @@ service_transport_type_lookup_view
 AUTOMATION LAYER
 --------------------------------------------------
 
-quotation_approved_trigger
-When a quotation becomes approved, create a shipment automatically.
-
 shipment_reference_trigger
 Generates shipment references before insert.
 
 quotation_reference_trigger
-Generates quotation references before insert.
+Generates quotation references before insert using the service-type counter contract.
+
+quotation_cost_totals_trigger
+Recalculates estimated cost, sale, and profit from quotation charge lines.
 
 audit triggers
 Write insert, update, and delete activity to audit_logs.

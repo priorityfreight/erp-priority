@@ -48,6 +48,32 @@ values
   ('COURIER', 'Courier')
 on conflict (service_type, transport_type) do nothing;
 
+insert into quotation_reference_counters (
+  service_type,
+  prefix,
+  last_value
+)
+values
+  ('AIR', 'QPRIAIR', 0),
+  ('FCL', 'QPRIFCL', 0),
+  ('LCL', 'QPRILCL', 0),
+  ('FTL', 'QPRIFTL', 0),
+  ('LTL', 'QPRILTL', 0),
+  ('COURIER', 'QPRICOU', 0)
+on conflict (service_type) do update
+set prefix = excluded.prefix;
+
+insert into quotation_rejection_reasons (
+  reason
+)
+values
+  ('Tarifa fuera de presupuesto'),
+  ('Proveedor sin disponibilidad'),
+  ('Cliente cancelo la solicitud'),
+  ('Transit time no cumple'),
+  ('Condiciones comerciales no aceptadas')
+on conflict (reason) do nothing;
+
 insert into incoterms (
   code,
   description

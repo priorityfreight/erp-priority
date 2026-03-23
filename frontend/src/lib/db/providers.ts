@@ -14,6 +14,12 @@ import type {
   UpdateProviderServiceOffering,
 } from "./models"
 
+export type ProviderPricingCandidate = {
+  provider: Provider
+  service_offering: ProviderServiceOffering
+  contacts: ProviderContactWithProvider[]
+}
+
 const PROVIDER_COLUMNS =
   "id,name,tax_id,provider_type,corporate_phone,company_email,website,full_address,postal_code,city_unlocode,city_unlocode_id,city,country,credit_active,credit_amount,credit_days,status,created_at,updated_at"
 const PROVIDER_SUMMARY_COLUMNS =
@@ -126,6 +132,106 @@ export async function getProviderSummaries(query?: string): Promise<ProviderSumm
     total_contacts: Number(row.total_contacts ?? 0),
     total_service_offerings: Number(row.total_service_offerings ?? 0),
   }))
+}
+
+export async function getProviderPricingCandidates(params: {
+  serviceType: string | null
+  transportType: string | null
+}): Promise<ProviderPricingCandidate[]> {
+  const normalizedServiceType = params.serviceType?.trim()
+  const normalizedTransportType = params.transportType?.trim()
+
+  if (!normalizedServiceType) {
+    return []
+  }
+
+  const serviceType = normalizedServiceType
+
+  async function loadOfferings(matchTransport: boolean) {
+    let request = supabase
+      .from("provider_service_offering_view")
+      .select(PROVIDER_SERVICE_COLUMNS)
+      .eq("service_type", serviceType)
+
+    if (matchTransport && normalizedTransportType) {
+      request = request.eq("transport_type", normalizedTransportType)
+    }
+
+    const { data, error } = await request.order("provider_name", { ascending: true })
+
+    if (error) {
+      throw error
+    }
+
+    return ((data ?? []) as Record<string, unknown>[]).map((row) => mapProviderServiceOffering(row))
+  }
+
+  let serviceOfferings = await loadOfferings(true)
+  if (serviceOfferings.length === 0 && normalizedTransportType) {
+    serviceOfferings = await loadOfferings(false)
+  }
+
+  if (serviceOfferings.length === 0) {
+    return []
+  }
+
+  const providerIds = Array.from(new Set(serviceOfferings.map((item) => item.provider_id)))
+
+  const [providersResult, contactsResult] = await Promise.all([
+    supabase
+      .from("providers")
+      .select(PROVIDER_COLUMNS)
+      .in("id", providerIds)
+      .eq("status", "activo")
+      .order("name", { ascending: true }),
+    supabase
+      .from("provider_contacts_view")
+      .select(
+        "id,provider_id,name,email,phone,linkedin_url,position,status,created_at,updated_at,provider_name"
+      )
+      .in("provider_id", providerIds)
+      .eq("status", "activo")
+      .order("created_at", { ascending: false }),
+  ])
+
+  if (providersResult.error) {
+    throw providersResult.error
+  }
+
+  if (contactsResult.error) {
+    throw contactsResult.error
+  }
+
+  const providers = ((providersResult.data ?? []) as Record<string, unknown>[]).map((row) =>
+    mapProvider(row)
+  )
+  const contacts = ((contactsResult.data ?? []) as Record<string, unknown>[]).map((row) =>
+    mapProviderContact(row)
+  )
+
+  const providerMap = new Map(providers.map((provider) => [provider.id, provider]))
+  const contactsByProvider = new Map<string, ProviderContactWithProvider[]>()
+
+  for (const contact of contacts) {
+    const current = contactsByProvider.get(contact.provider_id) ?? []
+    current.push(contact)
+    contactsByProvider.set(contact.provider_id, current)
+  }
+
+  return serviceOfferings
+    .map((serviceOffering) => {
+      const provider = providerMap.get(serviceOffering.provider_id)
+      if (!provider) {
+        return null
+      }
+
+      return {
+        provider,
+        service_offering: serviceOffering,
+        contacts: contactsByProvider.get(serviceOffering.provider_id) ?? [],
+      }
+    })
+    .filter((candidate): candidate is ProviderPricingCandidate => candidate !== null)
 }
 
 export async function getProviderFull(id: string): Promise<ProviderFullPayload | null> {

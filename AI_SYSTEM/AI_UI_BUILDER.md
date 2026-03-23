@@ -7,7 +7,7 @@ Goal
 Create an interface that is extremely intuitive.
 A new user should understand how to use the system in minutes.
 
-The interface should feel similar to modern operating systems like macOS.
+The interface should feel like a corporate command center for freight intelligence.
 
 Users should navigate visually, not through complex menus.
 
@@ -70,6 +70,13 @@ Notifications
 User profile
 Quick actions
 
+Visual direction:
+
+- dark translucent surface
+- strong page title hierarchy
+- compact brand lockup on constrained layouts
+- user identity clearly visible
+
 
 
 MAIN WORKSPACE
@@ -82,7 +89,14 @@ Content area where modules are displayed.
 SIDEBAR DESIGN
 --------------------------------------------------
 
-Sidebar must use icons and short labels.
+Sidebar must use short labels, strong grouping, and visible brand presence.
+
+Sidebar visual direction:
+
+- dark navy shell
+- burgundy active state
+- soft gray section labels
+- embedded brand lockup near the top
 
 Example modules
 
@@ -103,12 +117,21 @@ MODULE STRUCTURE
 
 Every module must follow the same structure.
 
+Corporate shell rule:
+
+1 branded outer shell
+2 elevated page header block
+3 bright premium content surface inside
+4 burgundy reserved for primary actions
+5 gray tones used for technology / intelligence cues
+
 
 
 HEADER
 
 Title
 Primary action button
+Corporate eyebrow label when appropriate
 
 Example
 
@@ -167,6 +190,11 @@ Contact Information
 
 
 If a module has status as a core follow-up field, the status selector must stay visible in the page header area, outside the popup.
+
+Brand rule:
+
+When a route uses branding, it must reuse the shared Priority brand component or official assets.
+Do not invent different logos or palettes per module.
 
 
 Status is treated as the main operational control, not as a secondary form field.

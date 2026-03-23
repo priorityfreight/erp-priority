@@ -24,6 +24,13 @@ const submodules = [
     notes: "Administra concepto, servicio, operacion, IVA y clave SAT para ventas.",
   },
   {
+    title: "Ventas / Motivos de rechazo",
+    href: "/master-data/sales/quotation-rejection-reasons",
+    status: "Live",
+    coverage: "Catalogo editable para rechazo de cotizaciones",
+    notes: "Permite clasificar de forma consistente por que el cliente o pricing rechaza una cotizacion.",
+  },
+  {
     title: "UN/LOCODE",
     href: "/master-data/unlocode",
     status: "Live",
@@ -56,7 +63,7 @@ export function MasterDataOverview() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
               Active Submodules
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">4</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">5</div>
           </div>
           <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">

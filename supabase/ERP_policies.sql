@@ -316,12 +316,16 @@ alter table provider_service_offerings enable row level security;
 alter table opportunities enable row level security;
 alter table quotations enable row level security;
 alter table quotation_costs enable row level security;
+alter table quotation_cargo_lines enable row level security;
+alter table quotation_rejection_reasons enable row level security;
 alter table providers force row level security;
 alter table provider_contacts force row level security;
 alter table provider_service_offerings force row level security;
 alter table opportunities force row level security;
 alter table quotations force row level security;
 alter table quotation_costs force row level security;
+alter table quotation_cargo_lines force row level security;
+alter table quotation_rejection_reasons force row level security;
 
 create policy "active_select_providers"
 on providers
@@ -446,6 +450,48 @@ with check (public.erp_is_authenticated_active_user());
 
 create policy "active_delete_quotation_costs"
 on quotation_costs
+for delete
+using (public.erp_is_authenticated_active_user());
+
+create policy "active_select_quotation_cargo_lines"
+on quotation_cargo_lines
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "active_insert_quotation_cargo_lines"
+on quotation_cargo_lines
+for insert
+with check (public.erp_is_authenticated_active_user());
+
+create policy "active_update_quotation_cargo_lines"
+on quotation_cargo_lines
+for update
+using (public.erp_is_authenticated_active_user())
+with check (public.erp_is_authenticated_active_user());
+
+create policy "active_delete_quotation_cargo_lines"
+on quotation_cargo_lines
+for delete
+using (public.erp_is_authenticated_active_user());
+
+create policy "active_select_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "active_insert_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for insert
+with check (public.erp_is_authenticated_active_user());
+
+create policy "active_update_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for update
+using (public.erp_is_authenticated_active_user())
+with check (public.erp_is_authenticated_active_user());
+
+create policy "active_delete_quotation_rejection_reasons"
+on quotation_rejection_reasons
 for delete
 using (public.erp_is_authenticated_active_user());
 

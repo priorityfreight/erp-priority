@@ -30,6 +30,8 @@ client_overview_view
 sales_pipeline_view
 open_opportunities_view
 quotation_summary_view
+crm_quotations_view
+pricing_quotations_view
 active_shipments_view
 delivered_shipments_view
 client_revenue_view
@@ -60,6 +62,16 @@ add_client_logistics_party()
 create_opportunity()
 update_opportunity_status()
 convert_opportunity_to_quotation()
+create_quotation_from_opportunity()
+take_quotation_for_pricing()
+update_quotation_status()
+create_quotation_cost_line()
+update_quotation_cost_line()
+delete_quotation_cost_line()
+create_quotation_cargo_line()
+update_quotation_cargo_line()
+delete_quotation_cargo_line()
+create_booking_from_quotation()
 approve_quotation()
 create_shipment()
 update_shipment_status()
@@ -128,6 +140,33 @@ Opportunity-specific write rules:
 - incoterm_id must come from the canonical incoterms catalog
 - origin and destination must use UN/LOCODE-backed values
 - estimated_value must be backend-calculated from expected_profit_usd * service_quantity
+
+
+Quotation-specific write rules:
+
+- create quotations from opportunities through create_quotation_from_opportunity()
+- convert_opportunity_to_quotation() remains only as a compatibility wrapper around create_quotation_from_opportunity()
+- use request_quotation_pricing() to hand a quotation from CRM draft capture into pricing
+- use take_quotation_for_pricing() when pricing ownership is taken from the pending queue
+- use update_quotation_status() for lifecycle transitions
+- use create_quotation_cost_line(), update_quotation_cost_line(), and delete_quotation_cost_line() for charge lines
+- use create_quotation_cargo_line(), update_quotation_cargo_line(), and delete_quotation_cargo_line() for service-specific cargo detail lines
+- quotation references must be backend-generated from the service-type counter contract:
+  QPRIAIR, QPRIFCL, QPRILCL, QPRIFTL, QPRILTL, QPRICOU
+- accepted quotations are no longer auto-converted into shipments
+- accepted quotations may create shipments only through create_booking_from_quotation()
+- CRM list screens should use crm_quotations_view
+- Pricing list screens should use pricing_quotations_view
+- detail screens may read quotation_summary_view plus related quotation_costs rows
+- detail screens may read quotation_summary_view plus related quotation_costs and quotation_cargo_lines rows
+- pricing purchase options should be grouped by option_label
+- pricing screens should treat purchase capture and sale capture as separate responsibilities
+- CRM screens may update sale_amount through update_quotation_cost_line() while preserving purchase-side fields
+- CRM should not change purchase_amount values captured by pricing
+- client-facing commercial documents must hide provider and purchase fields
+- provider-facing internal pricing request documents must not expose commercial sale amounts
+- pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view
+- pricing screens should surface target_rate and sales feedback when status = renegociar_tarifa
 - expiration_date must be backend-calculated from start_date
 - expired opportunities must surface as vencida
 - if salesperson_id is omitted, create_opportunity() must inherit clients.account_owner_id

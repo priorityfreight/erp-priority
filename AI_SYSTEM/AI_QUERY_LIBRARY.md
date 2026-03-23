@@ -148,6 +148,70 @@ Uses:
 - search_unlocodes()
 
 
+frontend/src/lib/db/quotations.ts
+
+Exports:
+
+- getQuotations()
+- getQuotationById()
+- getQuotationChargeLines()
+- getQuotationCargoLines()
+- createQuotation()
+- updateQuotation()
+- requestQuotationPricing()
+- takeQuotationForPricing()
+- updateQuotationStatus()
+- createQuotationChargeLine()
+- updateQuotationChargeLine()
+- deleteQuotationChargeLine()
+- createQuotationCargoLine()
+- updateQuotationCargoLine()
+- deleteQuotationCargoLine()
+- createBookingFromQuotation()
+
+Uses:
+
+- crm_quotations_view
+- pricing_quotations_view
+- quotation_summary_view
+- quotations
+- quotation_costs
+- quotation_cargo_lines
+- shipments
+- create_quotation_from_opportunity()
+- request_quotation_pricing()
+- take_quotation_for_pricing()
+- update_quotation_status()
+- create_quotation_cost_line()
+- update_quotation_cost_line()
+- delete_quotation_cost_line()
+- create_quotation_cargo_line()
+- update_quotation_cargo_line()
+- delete_quotation_cargo_line()
+- create_booking_from_quotation()
+
+Quotation current rules:
+
+- quote creation starts from opportunity detail via popup
+- CRM quotation detail uses popup edit flow, not inline full-page editing
+- CRM keeps quotations in borrador while route and load capture is incomplete
+- CRM must hand the quotation to pricing through request_quotation_pricing()
+- charge lines are shown as table-first related data
+- cargo lines are shown as table-first related data when the service uses consolidation lines
+- the client-facing document route lives at frontend/app/quotations/[id]/document/page.tsx
+- the internal pricing-request document route lives at frontend/app/quotations/[id]/pricing-request/page.tsx
+- the document hides provider and purchase values
+- accepted quotations expose a manual Create booking action
+- pricing quotations page opens provider sourcing suggestions from provider_service_offering_view and provider_contacts_view
+- pricing quotations page can capture provider-side purchase lines before moving the quotation to lista_para_enviar
+- provider-side purchase lines may store multiple commercial options through option_label
+- pricing captures purchase only; sales-side sale capture remains a later commercial step
+- CRM quotation detail can capture sale_amount per line once pricing returns the quotation as lista_para_enviar
+- CRM may mark the quotation as enviada after at least one option has complete sale amounts
+- enviada quotations expose the commercial document and accepted quotations expose Create booking
+- renegociar_tarifa must surface target_rate and sales comments back to pricing
+
+
 frontend/src/lib/db/users.ts
 
 Exports:
@@ -263,6 +327,9 @@ Current approved patterns in the live frontend:
 - client_overview_view
 - client_contacts_view
 - open_opportunities_view
+- crm_quotations_view
+- pricing_quotations_view
+- quotation_summary_view
 - provider_overview_view
 - provider_contacts_view
 - provider_service_offering_view
@@ -279,6 +346,12 @@ Current scale-safe behavior:
 - add_contact_to_client()
 - add_client_logistics_party()
 - create_opportunity()
+- create_quotation_from_opportunity()
+- take_quotation_for_pricing()
+- update_quotation_status()
+- create_quotation_cost_line()
+- update_quotation_cost_line()
+- delete_quotation_cost_line()
 - create_provider()
 - add_contact_to_provider()
 - get_client_full()
@@ -296,7 +369,6 @@ CURRENT GAPS
 
 No live query modules exist yet for:
 
-- quotations
 - shipments
 - client invoices
 - provider invoices
@@ -304,7 +376,6 @@ No live query modules exist yet for:
 
 AI must not import or reference:
 
-- frontend/src/lib/db/quotations.ts
 - frontend/src/lib/db/shipments.ts
 - frontend/src/lib/db/invoices.ts
 

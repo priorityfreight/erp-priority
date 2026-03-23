@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, type ReactNode } from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
+  createQuotation,
   deleteOpportunity,
   getClients,
   getIncoterms,
@@ -21,6 +22,7 @@ import {
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { Modal } from "@/components/data/Modal"
 import { OpportunityForm, type OpportunityFormValues } from "@/components/forms/OpportunityForm"
+import { QuotationForm, type QuotationFormValues } from "@/components/forms/QuotationForm"
 import { PageContainer } from "@/components/layout/PageContainer"
 
 const statusOptions = [
@@ -96,6 +98,8 @@ export default function OpportunityDetailPage() {
   const [savingStatus, setSavingStatus] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showQuoteModal, setShowQuoteModal] = useState(false)
+  const [creatingQuote, setCreatingQuote] = useState(false)
   const [formValues, setFormValues] = useState<OpportunityFormValues>({
     clientId: "",
     salespersonId: "",
@@ -110,6 +114,17 @@ export default function OpportunityDetailPage() {
     expectedProfitUsd: "",
     serviceQuantity: "",
     description: "",
+  })
+  const [quoteFormValues, setQuoteFormValues] = useState<QuotationFormValues>({
+    pickupAddress: "",
+    deliveryAddress: "",
+    commodities: "",
+    quantity: "",
+    weight: "",
+    volume: "",
+    requiredQuoteDate: "",
+    purchaseValidUntil: "",
+    salesValidUntil: "",
   })
   const [status, setStatus] = useState("investigando")
 
@@ -294,6 +309,47 @@ export default function OpportunityDetailPage() {
     }
   }
 
+  async function handleCreateQuotation() {
+    if (!details) {
+      return
+    }
+
+    try {
+      setCreatingQuote(true)
+      const quotationId = await createQuotation({
+        opportunity_id: details.opportunity.id,
+        pickup_address: quoteFormValues.pickupAddress.trim() || null,
+        delivery_address: quoteFormValues.deliveryAddress.trim() || null,
+        commodities: quoteFormValues.commodities.trim() || null,
+        quantity: quoteFormValues.quantity ? Number(quoteFormValues.quantity) : null,
+        weight: quoteFormValues.weight ? Number(quoteFormValues.weight) : null,
+        volume: quoteFormValues.volume ? Number(quoteFormValues.volume) : null,
+        required_quote_date: quoteFormValues.requiredQuoteDate || null,
+        purchase_valid_until: quoteFormValues.purchaseValidUntil || null,
+        sales_valid_until: quoteFormValues.salesValidUntil || null,
+      })
+
+      setShowQuoteModal(false)
+      setQuoteFormValues({
+        pickupAddress: "",
+        deliveryAddress: "",
+        commodities: "",
+        quantity: "",
+        weight: "",
+        volume: "",
+        requiredQuoteDate: "",
+        purchaseValidUntil: "",
+        salesValidUntil: "",
+      })
+      router.push(`/quotations/${quotationId}`)
+    } catch (error) {
+      console.error(error)
+      alert("No se pudo crear la cotizacion")
+    } finally {
+      setCreatingQuote(false)
+    }
+  }
+
   if (!opportunityId) {
     return (
       <PageContainer title="Opportunity" description="Invalid opportunity id.">
@@ -369,6 +425,13 @@ export default function OpportunityDetailPage() {
             className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
           >
             Editar informacion
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowQuoteModal(true)}
+            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
+          >
+            Cotizar
           </button>
           <button
             type="button"
@@ -492,6 +555,50 @@ export default function OpportunityDetailPage() {
             onSubmit={handleSave}
             submitLabel="Guardar cambios"
             loading={saving}
+          />
+        </Modal>
+      ) : null}
+
+      {showQuoteModal ? (
+        <Modal
+          title="Crear cotizacion"
+          description="La cotizacion nace desde esta oportunidad y arrastra su informacion comercial principal."
+          onClose={() => {
+            setShowQuoteModal(false)
+            setQuoteFormValues({
+              pickupAddress: "",
+              deliveryAddress: "",
+              commodities: "",
+              quantity: "",
+              weight: "",
+              volume: "",
+              requiredQuoteDate: "",
+              purchaseValidUntil: "",
+              salesValidUntil: "",
+            })
+          }}
+        >
+          <QuotationForm
+            title="Nueva cotizacion"
+            description="Completa detalles de carga y fechas; la ficha base se toma desde la oportunidad."
+            values={quoteFormValues}
+            clientName={opportunity.clients?.company_name || null}
+            origin={opportunity.origin}
+            destination={opportunity.destination}
+            serviceType={opportunity.service_type}
+            transportType={opportunity.transport_type}
+            operationType={opportunity.operation_type}
+            incotermCode={opportunity.incoterm_code || null}
+            createdAt={new Date().toISOString()}
+            onChange={(field, value) => {
+              setQuoteFormValues((current) => ({
+                ...current,
+                [field]: value,
+              }))
+            }}
+            onSubmit={handleCreateQuotation}
+            submitLabel="Crear cotizacion"
+            loading={creatingQuote}
           />
         </Modal>
       ) : null}

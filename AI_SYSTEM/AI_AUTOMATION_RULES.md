@@ -21,9 +21,9 @@ EVENT
 
 Example
 
-Quotation approved
-→ if amount > 0
-→ create shipment
+Quotation charge lines changed
+→ recalculate totals
+→ keep header cost / sale / profit aligned
 
 
 
@@ -51,7 +51,7 @@ Examples
 
 new client created
 opportunity updated
-quotation approved
+quotation cost line changed
 shipment delivered
 
 
@@ -70,15 +70,20 @@ Triggered when status fields change.
 
 Example
 
-status pending → approved
+status investigando → cotizando
 
 
 
 Example automation
 
-quotation approved
-→ create shipment
-→ notify operations
+quotation cost line changed
+→ recalculate quotation totals
+
+quotation accepted
+→ expose create booking action
+→ wait for manual booking creation
+→ do not auto-create shipment by trigger
+→ refresh commercial summary
 
 
 
@@ -160,11 +165,10 @@ Automations can chain actions.
 
 Example
 
-quotation approved
+quotation accepted
 
-→ create shipment  
-→ assign operations team  
-→ notify logistics  
+→ expose create booking action
+→ notify operations when booking is created
 → update dashboard
 
 
@@ -202,8 +206,8 @@ expired opportunity reactivated
 
 QUOTATION AUTOMATIONS
 
-quotation approved
-→ create shipment
+quotation cost line changed
+→ recalculate quotation totals
 
 
 
@@ -226,7 +230,7 @@ All actions must use database functions.
 
 Example
 
-select create_shipment()
+select recalculate_quotation_totals()
 
 
 
@@ -300,7 +304,7 @@ handle_module_event()
 
 Example
 
-handle_quotation_approved()
+handle_quotation_totals_sync()
 
 
 

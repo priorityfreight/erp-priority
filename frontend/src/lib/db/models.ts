@@ -132,6 +132,128 @@ export type OpportunityWithClient = Opportunity & {
   salesperson_name?: string | null
 }
 
+export type QuotationStatus =
+  | "borrador"
+  | "pendiente"
+  | "cotizando"
+  | "lista_para_enviar"
+  | "enviada"
+  | "cancelada"
+  | "rechazada"
+  | "renegociar_tarifa"
+  | "aceptada"
+
+export type Quotation = {
+  id: string
+  client_id: string
+  opportunity_id: string
+  created_by: string | null
+  pricing_owner_id: string | null
+  reference_number: string | null
+  status: QuotationStatus
+  service_type: string | null
+  transport_type: string | null
+  operation_type: string | null
+  incoterm_id: string | null
+  incoterm_code?: string | null
+  origin: string | null
+  origin_unlocode: string | null
+  origin_unlocode_id?: string | null
+  destination: string | null
+  destination_unlocode: string | null
+  destination_unlocode_id?: string | null
+  pickup_address: string | null
+  delivery_address: string | null
+  commodities: string | null
+  quantity: number | null
+  weight: number | null
+  volume: number | null
+  required_quote_date: string | null
+  purchase_valid_until: string | null
+  sales_valid_until: string | null
+  rejection_reason_id: string | null
+  rejection_reason?: string | null
+  rejection_notes: string | null
+  cancellation_notes: string | null
+  target_rate: number | null
+  currency: string
+  estimated_cost: number | null
+  estimated_price: number | null
+  expected_profit: number | null
+  total_charge_lines?: number
+  created_at: string
+  updated_at: string | null
+}
+
+export type QuotationSummary = Quotation & {
+  client_name: string | null
+  opportunity_title: string | null
+  salesperson_id: string | null
+  salesperson_name: string | null
+  pricing_owner_name: string | null
+  created_by_name: string | null
+}
+
+export type QuotationChargeLine = {
+  id: string
+  quotation_id: string
+  option_label: string
+  provider_id: string | null
+  provider_name?: string | null
+  sales_accounting_concept_id: string | null
+  accounting_concept?: string | null
+  service_name: string
+  cost: number
+  purchase_amount: number | null
+  sale_amount: number | null
+  profit_amount: number | null
+  vat_rate: number
+  currency: string
+  notes: string | null
+  created_at: string
+}
+
+export type QuotationCargoLine = {
+  id: string
+  quotation_id: string
+  load_type: string
+  commodities: string | null
+  piece_count: number | null
+  width: number | null
+  length: number | null
+  height: number | null
+  weight: number | null
+  freight_class: string | null
+  cbm: number | null
+  volumetric_weight_kg: number | null
+  sort_order: number
+  created_at: string
+  updated_at: string | null
+}
+
+export type Shipment = {
+  id: string
+  quotation_id: string
+  client_id: string
+  shipment_reference: string | null
+  status: string
+  origin: string | null
+  destination: string | null
+  booking_number: string | null
+  departure_date: string | null
+  arrival_date: string | null
+  delivered_at: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export type QuotationRejectionReason = {
+  id: string
+  reason: string
+  created_at: string
+  updated_at: string | null
+}
+
 export type Provider = {
   id: string
   name: string
@@ -314,6 +436,93 @@ export type NewClientLogisticsParty = Pick<
     >
   >
 export type UpdateOpportunity = Partial<Opportunity>
+export type NewQuotation = {
+  opportunity_id: string
+  pickup_address?: string | null
+  delivery_address?: string | null
+  commodities?: string | null
+  quantity?: number | null
+  weight?: number | null
+  volume?: number | null
+  required_quote_date?: string | null
+  purchase_valid_until?: string | null
+  sales_valid_until?: string | null
+}
+export type UpdateQuotation = Partial<
+  Pick<
+    Quotation,
+    | "pickup_address"
+    | "delivery_address"
+    | "commodities"
+    | "quantity"
+    | "weight"
+    | "volume"
+    | "required_quote_date"
+    | "purchase_valid_until"
+    | "sales_valid_until"
+    | "target_rate"
+    | "rejection_reason_id"
+    | "rejection_notes"
+    | "cancellation_notes"
+  >
+>
+export type NewQuotationChargeLine = Pick<QuotationChargeLine, "quotation_id"> &
+  Partial<
+    Pick<
+      QuotationChargeLine,
+      | "option_label"
+      | "provider_id"
+      | "sales_accounting_concept_id"
+      | "purchase_amount"
+      | "sale_amount"
+      | "vat_rate"
+      | "notes"
+    >
+  >
+export type UpdateQuotationChargeLine = Partial<
+  Pick<
+    QuotationChargeLine,
+    | "option_label"
+    | "provider_id"
+    | "sales_accounting_concept_id"
+    | "purchase_amount"
+    | "sale_amount"
+    | "vat_rate"
+    | "notes"
+  >
+>
+export type NewQuotationCargoLine = Pick<QuotationCargoLine, "quotation_id" | "load_type"> &
+  Partial<
+    Pick<
+      QuotationCargoLine,
+      | "commodities"
+      | "piece_count"
+      | "width"
+      | "length"
+      | "height"
+      | "weight"
+      | "freight_class"
+      | "cbm"
+      | "volumetric_weight_kg"
+      | "sort_order"
+    >
+  >
+export type UpdateQuotationCargoLine = Partial<
+  Pick<
+    QuotationCargoLine,
+    | "load_type"
+    | "commodities"
+    | "piece_count"
+    | "width"
+    | "length"
+    | "height"
+    | "weight"
+    | "freight_class"
+    | "cbm"
+    | "volumetric_weight_kg"
+    | "sort_order"
+  >
+>
 export type NewProvider = Pick<Provider, "name"> &
   Partial<
     Pick<
@@ -357,3 +566,5 @@ export type NewSalesAccountingConcept = Pick<
   "concept" | "service_type" | "operation_type" | "vat_rate" | "sat_code"
 >
 export type UpdateSalesAccountingConcept = NewSalesAccountingConcept
+export type NewQuotationRejectionReason = Pick<QuotationRejectionReason, "reason">
+export type UpdateQuotationRejectionReason = NewQuotationRejectionReason

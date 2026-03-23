@@ -732,21 +732,95 @@ $$;
 
 
 -- =========================================
--- 6. CONVERT OPPORTUNITY TO QUOTATION
+-- 6. QUOTATION HELPERS
 -- =========================================
 
-create or replace function convert_opportunity_to_quotation(
+create or replace function next_quotation_reference(
+  p_service_type text
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_service_type text;
+  resolved_prefix text;
+  next_value bigint;
+begin
+  normalized_service_type := upper(btrim(coalesce(p_service_type, '')));
+
+  update quotation_reference_counters
+  set
+    last_value = last_value + 1,
+    updated_at = now()
+  where service_type = normalized_service_type
+  returning prefix, last_value
+  into resolved_prefix, next_value;
+
+  if resolved_prefix is null then
+    raise exception 'Unsupported quotation service type: %', p_service_type;
+  end if;
+
+  return resolved_prefix || '-' || lpad(next_value::text, 6, '0');
+end;
+$$;
+
+create or replace function recalculate_quotation_totals(
+  p_quotation_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  total_purchase numeric;
+  total_sale numeric;
+  total_profit numeric;
+begin
+  select
+    coalesce(sum(coalesce(qc.purchase_amount, qc.cost, 0)), 0),
+    coalesce(sum(coalesce(qc.sale_amount, 0)), 0),
+    coalesce(sum(coalesce(qc.profit_amount, coalesce(qc.sale_amount, 0) - coalesce(qc.purchase_amount, qc.cost, 0))), 0)
+  into total_purchase, total_sale, total_profit
+  from quotation_costs qc
+  where qc.quotation_id = p_quotation_id;
+
+  update quotations
+  set
+    estimated_cost = total_purchase,
+    estimated_price = case when total_sale = 0 then null else total_sale end,
+    expected_profit = case when total_sale = 0 and total_purchase = 0 then null else total_profit end
+  where id = p_quotation_id;
+end;
+$$;
+
+create or replace function create_quotation_from_opportunity(
   p_opportunity_id uuid,
+  p_pickup_address text default null,
+  p_delivery_address text default null,
+  p_commodities text default null,
+  p_required_quote_date date default null,
+  p_purchase_valid_until date default null,
+  p_sales_valid_until date default null,
+  p_quantity integer default null,
+  p_weight numeric default null,
+  p_volume numeric default null,
   p_created_by uuid default null
 )
 returns uuid
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   new_quotation_id uuid;
   opportunity_row opportunities%rowtype;
+  resolved_created_by uuid;
 begin
+  perform sync_expired_opportunities();
+
   select *
   into opportunity_row
   from opportunities
@@ -756,50 +830,526 @@ begin
     raise exception 'Opportunity % not found', p_opportunity_id;
   end if;
 
+  if nullif(btrim(coalesce(opportunity_row.service_type, '')), '') is null then
+    raise exception 'Opportunity % must define a service type before quoting', p_opportunity_id;
+  end if;
+
+  resolved_created_by := coalesce(p_created_by, erp_current_user_id(), opportunity_row.salesperson_id);
+
   insert into quotations (
     client_id,
     opportunity_id,
     created_by,
     status,
     service_type,
+    transport_type,
+    operation_type,
     origin,
-    destination
+    origin_unlocode,
+    origin_unlocode_id,
+    destination,
+    destination_unlocode,
+    destination_unlocode_id,
+    pickup_address,
+    delivery_address,
+    commodities,
+    quantity,
+    weight,
+    volume,
+    incoterm_id,
+    required_quote_date,
+    purchase_valid_until,
+    sales_valid_until
   )
   values (
     opportunity_row.client_id,
     opportunity_row.id,
-    p_created_by,
-    'draft',
+    resolved_created_by,
+    'borrador',
     opportunity_row.service_type,
+    opportunity_row.transport_type,
+    opportunity_row.operation_type,
     opportunity_row.origin,
-    opportunity_row.destination
+    opportunity_row.origin_unlocode,
+    opportunity_row.origin_unlocode_id,
+    opportunity_row.destination,
+    opportunity_row.destination_unlocode,
+    opportunity_row.destination_unlocode_id,
+    nullif(btrim(coalesce(p_pickup_address, '')), ''),
+    nullif(btrim(coalesce(p_delivery_address, '')), ''),
+    nullif(btrim(coalesce(p_commodities, '')), ''),
+    p_quantity,
+    p_weight,
+    p_volume,
+    opportunity_row.incoterm_id,
+    p_required_quote_date,
+    p_purchase_valid_until,
+    p_sales_valid_until
   )
   returning id into new_quotation_id;
 
   update opportunities
   set status = 'cotizando'
-  where id = p_opportunity_id;
+  where id = p_opportunity_id
+    and status not in ('aceptado', 'rechazada', 'vencida');
 
   return new_quotation_id;
 end;
 $$;
 
-
--- =========================================
--- 6. APPROVE QUOTATION
--- =========================================
-
-create or replace function approve_quotation(
+create or replace function request_quotation_pricing(
   p_quotation_id uuid
 )
 returns void
 language plpgsql
 security definer
+set search_path = public
 as $$
 begin
   update quotations
-  set status = 'approved'
+  set status = 'pendiente'
   where id = p_quotation_id;
+end;
+$$;
+
+create or replace function convert_opportunity_to_quotation(
+  p_opportunity_id uuid,
+  p_created_by uuid default null
+)
+returns uuid
+language sql
+security definer
+set search_path = public
+as $$
+  select create_quotation_from_opportunity(
+    p_opportunity_id => p_opportunity_id,
+    p_created_by => p_created_by
+  );
+$$;
+
+create or replace function take_quotation_for_pricing(
+  p_quotation_id uuid,
+  p_pricing_owner_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_pricing_owner_id uuid;
+begin
+  resolved_pricing_owner_id := coalesce(p_pricing_owner_id, erp_current_user_id());
+
+  if resolved_pricing_owner_id is null then
+    raise exception 'Pricing owner is required';
+  end if;
+
+  update quotations
+  set
+    pricing_owner_id = resolved_pricing_owner_id,
+    status = 'cotizando'
+  where id = p_quotation_id;
+end;
+$$;
+
+create or replace function update_quotation_status(
+  p_quotation_id uuid,
+  p_status text,
+  p_rejection_reason_id uuid default null,
+  p_rejection_notes text default null,
+  p_cancellation_notes text default null,
+  p_target_rate numeric default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_status text;
+begin
+  normalized_status := lower(btrim(coalesce(p_status, '')));
+
+  if normalized_status = '' then
+    raise exception 'Quotation status is required';
+  end if;
+
+  if normalized_status = 'rechazada' and p_rejection_reason_id is null then
+    raise exception 'A rejection reason is required when rejecting a quotation';
+  end if;
+
+  if normalized_status = 'renegociar_tarifa' and p_target_rate is null then
+    raise exception 'A target rate is required when requesting renegotiation';
+  end if;
+
+  update quotations
+  set
+    status = normalized_status,
+    rejection_reason_id = case when normalized_status = 'rechazada' then p_rejection_reason_id else null end,
+    rejection_notes = case
+      when normalized_status in ('rechazada', 'renegociar_tarifa') then nullif(btrim(coalesce(p_rejection_notes, '')), '')
+      else null
+    end,
+    cancellation_notes = case when normalized_status = 'cancelada' then nullif(btrim(coalesce(p_cancellation_notes, '')), '') else null end,
+    target_rate = case when normalized_status = 'renegociar_tarifa' then p_target_rate else null end
+  where id = p_quotation_id;
+end;
+$$;
+
+create or replace function approve_quotation(
+  p_quotation_id uuid
+)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  select update_quotation_status(
+    p_quotation_id => p_quotation_id,
+    p_status => 'aceptada'
+  );
+$$;
+
+create or replace function create_quotation_cost_line(
+  p_quotation_id uuid,
+  p_option_label text default 'Opcion 1',
+  p_provider_id uuid default null,
+  p_sales_accounting_concept_id uuid default null,
+  p_purchase_amount numeric default null,
+  p_sale_amount numeric default null,
+  p_vat_rate numeric default null,
+  p_notes text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_line_id uuid;
+  concept_row sales_accounting_concepts%rowtype;
+begin
+  if p_sales_accounting_concept_id is not null then
+    select *
+    into concept_row
+    from sales_accounting_concepts
+    where id = p_sales_accounting_concept_id;
+
+    if not found then
+      raise exception 'Sales accounting concept % not found', p_sales_accounting_concept_id;
+    end if;
+  end if;
+
+  insert into quotation_costs (
+    quotation_id,
+    option_label,
+    provider_id,
+    sales_accounting_concept_id,
+    service_name,
+    cost,
+    purchase_amount,
+    sale_amount,
+    profit_amount,
+    vat_rate,
+    notes
+  )
+  values (
+    p_quotation_id,
+    coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), 'Opcion 1'),
+    p_provider_id,
+    p_sales_accounting_concept_id,
+    coalesce(concept_row.concept, 'Cargo'),
+    coalesce(p_purchase_amount, 0),
+    p_purchase_amount,
+    p_sale_amount,
+    case
+      when p_sale_amount is null or p_purchase_amount is null then null
+      else p_sale_amount - p_purchase_amount
+    end,
+    coalesce(p_vat_rate, concept_row.vat_rate, 0),
+    nullif(btrim(coalesce(p_notes, '')), '')
+  )
+  returning id into new_line_id;
+
+  perform recalculate_quotation_totals(p_quotation_id);
+
+  return new_line_id;
+end;
+$$;
+
+create or replace function update_quotation_cost_line(
+  p_id uuid,
+  p_option_label text default 'Opcion 1',
+  p_provider_id uuid default null,
+  p_sales_accounting_concept_id uuid default null,
+  p_purchase_amount numeric default null,
+  p_sale_amount numeric default null,
+  p_vat_rate numeric default null,
+  p_notes text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  quotation_id_value uuid;
+  concept_row sales_accounting_concepts%rowtype;
+begin
+  select quotation_id
+  into quotation_id_value
+  from quotation_costs
+  where id = p_id;
+
+  if quotation_id_value is null then
+    raise exception 'Quotation cost line % not found', p_id;
+  end if;
+
+  if p_sales_accounting_concept_id is not null then
+    select *
+    into concept_row
+    from sales_accounting_concepts
+    where id = p_sales_accounting_concept_id;
+
+    if not found then
+      raise exception 'Sales accounting concept % not found', p_sales_accounting_concept_id;
+    end if;
+  end if;
+
+  update quotation_costs
+  set
+    option_label = coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), option_label),
+    provider_id = p_provider_id,
+    sales_accounting_concept_id = p_sales_accounting_concept_id,
+    service_name = coalesce(concept_row.concept, service_name),
+    cost = coalesce(p_purchase_amount, cost),
+    purchase_amount = p_purchase_amount,
+    sale_amount = p_sale_amount,
+    profit_amount = case
+      when p_sale_amount is null or p_purchase_amount is null then null
+      else p_sale_amount - p_purchase_amount
+    end,
+    vat_rate = coalesce(p_vat_rate, concept_row.vat_rate, vat_rate),
+    notes = nullif(btrim(coalesce(p_notes, '')), '')
+  where id = p_id;
+
+  perform recalculate_quotation_totals(quotation_id_value);
+end;
+$$;
+
+create or replace function delete_quotation_cost_line(
+  p_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  quotation_id_value uuid;
+begin
+  select quotation_id
+  into quotation_id_value
+  from quotation_costs
+  where id = p_id;
+
+  delete from quotation_costs
+  where id = p_id;
+
+  if quotation_id_value is not null then
+    perform recalculate_quotation_totals(quotation_id_value);
+  end if;
+end;
+$$;
+
+create or replace function create_quotation_cargo_line(
+  p_quotation_id uuid,
+  p_load_type text,
+  p_commodities text default null,
+  p_piece_count integer default null,
+  p_width numeric default null,
+  p_length numeric default null,
+  p_height numeric default null,
+  p_weight numeric default null,
+  p_freight_class text default null,
+  p_cbm numeric default null,
+  p_volumetric_weight_kg numeric default null,
+  p_sort_order integer default 1
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_id uuid;
+begin
+  insert into quotation_cargo_lines (
+    quotation_id,
+    load_type,
+    commodities,
+    piece_count,
+    width,
+    length,
+    height,
+    weight,
+    freight_class,
+    cbm,
+    volumetric_weight_kg,
+    sort_order
+  )
+  values (
+    p_quotation_id,
+    nullif(btrim(coalesce(p_load_type, '')), ''),
+    nullif(btrim(coalesce(p_commodities, '')), ''),
+    p_piece_count,
+    p_width,
+    p_length,
+    p_height,
+    p_weight,
+    nullif(btrim(coalesce(p_freight_class, '')), ''),
+    p_cbm,
+    p_volumetric_weight_kg,
+    coalesce(p_sort_order, 1)
+  )
+  returning id into new_id;
+
+  return new_id;
+end;
+$$;
+
+create or replace function update_quotation_cargo_line(
+  p_id uuid,
+  p_load_type text,
+  p_commodities text default null,
+  p_piece_count integer default null,
+  p_width numeric default null,
+  p_length numeric default null,
+  p_height numeric default null,
+  p_weight numeric default null,
+  p_freight_class text default null,
+  p_cbm numeric default null,
+  p_volumetric_weight_kg numeric default null,
+  p_sort_order integer default 1
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update quotation_cargo_lines
+  set
+    load_type = nullif(btrim(coalesce(p_load_type, '')), ''),
+    commodities = nullif(btrim(coalesce(p_commodities, '')), ''),
+    piece_count = p_piece_count,
+    width = p_width,
+    length = p_length,
+    height = p_height,
+    weight = p_weight,
+    freight_class = nullif(btrim(coalesce(p_freight_class, '')), ''),
+    cbm = p_cbm,
+    volumetric_weight_kg = p_volumetric_weight_kg,
+    sort_order = coalesce(p_sort_order, 1)
+  where id = p_id;
+end;
+$$;
+
+create or replace function delete_quotation_cargo_line(
+  p_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from quotation_cargo_lines
+  where id = p_id;
+end;
+$$;
+
+create or replace function create_booking_from_quotation(
+  p_quotation_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_status text;
+  shipment_id uuid;
+begin
+  select status
+  into current_status
+  from quotations
+  where id = p_quotation_id;
+
+  if current_status is null then
+    raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if current_status <> 'aceptada' then
+    raise exception 'Quotation % must be aceptada before booking', p_quotation_id;
+  end if;
+
+  shipment_id := create_shipment(p_quotation_id);
+  return shipment_id;
+end;
+$$;
+
+create or replace function create_quotation_rejection_reason(
+  p_reason text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_id uuid;
+begin
+  insert into quotation_rejection_reasons (
+    reason
+  )
+  values (
+    nullif(btrim(coalesce(p_reason, '')), '')
+  )
+  returning id into new_id;
+
+  return new_id;
+end;
+$$;
+
+create or replace function update_quotation_rejection_reason(
+  p_id uuid,
+  p_reason text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update quotation_rejection_reasons
+  set reason = nullif(btrim(coalesce(p_reason, '')), '')
+  where id = p_id;
+end;
+$$;
+
+create or replace function delete_quotation_rejection_reason(
+  p_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from quotation_rejection_reasons
+  where id = p_id;
 end;
 $$;
 

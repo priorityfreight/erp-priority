@@ -363,32 +363,82 @@ create index idx_opportunities_status_expiration_date
   on opportunities(status, expiration_date);
 create index idx_opportunities_title_trgm on opportunities using gin(title gin_trgm_ops);
 
+create table quotation_rejection_reasons (
+  id uuid primary key default gen_random_uuid(),
+  reason text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table quotation_reference_counters (
+  service_type text primary key,
+  prefix text not null unique,
+  last_value bigint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint quotation_reference_counters_allowed_service_type
+    check (service_type in ('AIR', 'FCL', 'LCL', 'FTL', 'LTL', 'COURIER'))
+);
+
 create table quotations (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references clients(id),
   opportunity_id uuid not null references opportunities(id),
   created_by uuid references users(id),
+  pricing_owner_id uuid references users(id),
   reference_number text unique,
-  status text not null default 'draft',
+  status text not null default 'borrador',
   service_type text,
+  transport_type text,
+  operation_type text,
   origin text,
+  origin_unlocode text,
+  origin_unlocode_id uuid references unlocodes(id),
   destination text,
+  destination_unlocode text,
+  destination_unlocode_id uuid references unlocodes(id),
+  pickup_address text,
+  delivery_address text,
+  commodities text,
   cargo_type text,
+  quantity integer,
   weight numeric,
   volume numeric,
   incoterm_id uuid references incoterms(id),
+  required_quote_date date,
+  purchase_valid_until date,
+  sales_valid_until date,
+  rejection_reason_id uuid references quotation_rejection_reasons(id),
+  rejection_notes text,
+  cancellation_notes text,
+  target_rate numeric,
   currency text not null default 'USD',
   estimated_cost numeric,
   estimated_price numeric,
   expected_profit numeric,
   valid_until date,
   created_at timestamptz not null default now(),
-  updated_at timestamptz
+  updated_at timestamptz,
+  constraint quotations_allowed_status
+    check (
+      status in (
+        'borrador',
+        'pendiente',
+        'cotizando',
+        'lista_para_enviar',
+        'enviada',
+        'cancelada',
+        'rechazada',
+        'renegociar_tarifa',
+        'aceptada'
+      )
+    )
 );
 
 create index idx_quotations_client_id on quotations(client_id);
 create index idx_quotations_opportunity_id on quotations(opportunity_id);
 create index idx_quotations_status on quotations(status);
+create index idx_quotations_pricing_owner_id on quotations(pricing_owner_id);
 create index idx_quotations_client_created_at on quotations(client_id, created_at desc);
 create index idx_quotations_opportunity_created_at
   on quotations(opportunity_id, created_at desc);
@@ -397,16 +447,46 @@ create index idx_quotations_status_created_at on quotations(status, created_at d
 create table quotation_costs (
   id uuid primary key default gen_random_uuid(),
   quotation_id uuid not null references quotations(id) on delete cascade,
+  option_label text not null default 'Opcion 1',
   provider_id uuid references providers(id),
+  sales_accounting_concept_id uuid references sales_accounting_concepts(id),
   service_name text not null,
   cost numeric not null,
+  purchase_amount numeric,
+  sale_amount numeric,
+  profit_amount numeric,
+  vat_rate numeric not null default 0,
   currency text not null default 'USD',
   notes text,
   created_at timestamptz not null default now()
 );
 
 create index idx_quotation_costs_quotation_id on quotation_costs(quotation_id);
+create index idx_quotation_costs_quotation_option_label on quotation_costs(quotation_id, option_label);
 create index idx_quotation_costs_provider_id on quotation_costs(provider_id);
+
+create table quotation_cargo_lines (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references quotations(id) on delete cascade,
+  load_type text not null,
+  commodities text,
+  piece_count integer,
+  width numeric,
+  length numeric,
+  height numeric,
+  weight numeric,
+  freight_class text,
+  cbm numeric,
+  volumetric_weight_kg numeric,
+  sort_order integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_quotation_cargo_lines_quotation_id
+  on quotation_cargo_lines(quotation_id);
+create index idx_quotation_cargo_lines_quotation_sort_order
+  on quotation_cargo_lines(quotation_id, sort_order asc);
 
 
 -- =========================================================

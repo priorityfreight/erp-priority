@@ -221,5 +221,28 @@ The AI must keep canonical SQL, generated types, frontend query modules, and AI 
 
 
 --------------------------------------------------
+RULE 13 — CORPORATE BRAND CONSISTENCY
+--------------------------------------------------
+
+When modifying user-facing ERP screens, the AI must preserve the active corporate brand system.
+
+Current corporate palette:
+
+- Navy #0B1F3B
+- Burgundy #800020
+- Burgundy light #B33A5B
+- Gray #909EAE
+- Light gray #E5E5E5
+- Soft gray #CFCFCF
+
+Current brand assets:
+
+- shared Priority mark
+- shared Priority lockup / wordmark
+
+The AI must not introduce unrelated palettes, random gradients, or inconsistent logo treatments once the corporate brand has been established.
+
+
+--------------------------------------------------
 END OF RULES
 --------------------------------------------------

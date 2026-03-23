@@ -987,29 +987,63 @@ created_by
 Type: uuid
 Foreign key referencing users.id.
 
+pricing_owner_id
+Type: uuid
+Foreign key referencing users.id.
+
 reference_number
 Type: text
-Unique quotation identifier.
+Unique quotation identifier generated from the service-type sequence contract.
 
 status
 Type: text
 Quotation lifecycle status.
+Allowed values:
+borrador, pendiente, cotizando, lista_para_enviar, enviada, cancelada, rechazada, renegociar_tarifa, aceptada
 
 service_type
 Type: text
 Quoted service type.
 
+transport_type
+Type: text
+Quoted transport type.
+
+operation_type
+Type: text
+Import or Export.
+
 origin
 Type: text
 Quoted origin.
+
+origin_unlocode
+Type: text
+Canonical UN/LOCODE for origin.
 
 destination
 Type: text
 Quoted destination.
 
-cargo_type
+destination_unlocode
 Type: text
-Cargo classification.
+Canonical UN/LOCODE for destination.
+
+pickup_address
+Type: text
+Pickup full address captured on the quotation.
+
+delivery_address
+Type: text
+Delivery full address captured on the quotation.
+
+commodities
+Type: text
+Commodity notes for the quote.
+
+quantity
+Type: integer
+Approximate quantity for the quotation.
 
 weight
 Type: numeric
@@ -1022,6 +1056,34 @@ Quoted volume.
 incoterm_id
 Type: uuid
 Foreign key referencing incoterms.id.
+
+required_quote_date
+Type: date
+Requested date to return the quotation.
+
+purchase_valid_until
+Type: date
+Provider-side purchase validity.
+
+sales_valid_until
+Type: date
+Customer-facing sales validity.
+
+rejection_reason_id
+Type: uuid
+Foreign key referencing quotation_rejection_reasons.id.
+
+rejection_notes
+Type: text
+Free-text notes when a quotation is rejected.
+
+cancellation_notes
+Type: text
+Free-text notes when a quotation is cancelled.
+
+target_rate
+Type: numeric
+Client target rate used in renegotiation.
 
 currency
 Type: text
@@ -1070,17 +1132,41 @@ quotation_id
 Type: uuid
 Foreign key referencing quotations.id.
 
+option_label
+Type: text
+Commercial option bucket used to compare multiple provider proposals inside the same quotation.
+
 provider_id
 Type: uuid
 Foreign key referencing providers.id.
 
+sales_accounting_concept_id
+Type: uuid
+Foreign key referencing sales_accounting_concepts.id.
+
 service_name
 Type: text
-Provider service label.
+Provider or accounting-concept label stored on the line.
 
 cost
 Type: numeric
 Provider cost amount.
+
+purchase_amount
+Type: numeric
+Commercial purchase amount for the line.
+
+sale_amount
+Type: numeric
+Commercial sale amount for the line.
+
+profit_amount
+Type: numeric
+Line profit calculated as sale - purchase.
+
+vat_rate
+Type: numeric
+IVA percentage applied from the accounting concept.
 
 currency
 Type: text
@@ -1096,12 +1182,141 @@ Creation timestamp.
 
 
 --------------------------------------------------
+TABLE: quotation_rejection_reasons
+--------------------------------------------------
+
+Purpose
+
+Stores reusable master-data rejection reasons for quotations.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+reason
+Type: text
+Unique rejection reason label.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: quotation_reference_counters
+--------------------------------------------------
+
+Purpose
+
+Stores per-service quotation counters used to generate references like QPRIFTL-000001.
+
+Columns
+
+service_type
+Type: text
+Primary key and service family.
+
+prefix
+Type: text
+Reference prefix for the service family.
+
+last_value
+Type: bigint
+Last issued sequence number.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: quotation_cargo_lines
+--------------------------------------------------
+
+Purpose
+
+Stores service-specific cargo/consolidation line details for quotations.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+quotation_id
+Type: uuid
+Foreign key referencing quotations.id.
+
+load_type
+Type: text
+Cargo unit type such as pallet, box, crate, or case.
+
+piece_count
+Type: integer
+Number of pieces for the line.
+
+width
+Type: numeric
+Width value for cargo calculations.
+
+length
+Type: numeric
+Length value for cargo calculations.
+
+height
+Type: numeric
+Height value for cargo calculations.
+
+weight
+Type: numeric
+Weight value for cargo calculations.
+
+freight_class
+Type: text
+NMFC or related freight class when applicable.
+
+cbm
+Type: numeric
+Computed or stored CBM value.
+
+volumetric_weight_kg
+Type: numeric
+Computed or stored volumetric weight.
+
+sort_order
+Type: integer
+Display order inside the quotation.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
 TABLE: shipments
 --------------------------------------------------
 
 Purpose
 
-Stores operational jobs created from approved quotations.
+Stores operational jobs linked to quotations after the commercial handoff into operations.
 
 Columns
 

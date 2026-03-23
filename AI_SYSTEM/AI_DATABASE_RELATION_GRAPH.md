@@ -151,17 +151,29 @@ references opportunities.id
 quotations.created_by
 references users.id
 
+quotations.pricing_owner_id
+references users.id
+
 opportunities.incoterm_id
 references incoterms.id
 
 quotations.incoterm_id
 references incoterms.id
 
+quotations.rejection_reason_id
+references quotation_rejection_reasons.id
+
 quotation_costs.quotation_id
 references quotations.id
 
 quotation_costs.provider_id
 references providers.id
+
+quotation_costs.sales_accounting_concept_id
+references sales_accounting_concepts.id
+
+quotation_cargo_lines.quotation_id
+references quotations.id
 
 shipments.quotation_id
 references quotations.id
@@ -209,14 +221,17 @@ DATABASE CREATION ORDER
 12. incoterms
 13. opportunities
 14. quotations
-15. quotation_costs
-16. shipments
-17. shipment_events
-18. client_invoices
-19. provider_invoices
-20. commissions
-21. audit_logs
-22. automation_logs
+15. quotation_rejection_reasons
+16. quotation_reference_counters
+17. quotation_costs
+18. quotation_cargo_lines
+19. shipments
+20. shipment_events
+21. client_invoices
+22. provider_invoices
+23. commissions
+24. audit_logs
+25. automation_logs
 
 
 --------------------------------------------------
@@ -229,6 +244,8 @@ external_data_sources
 unlocodes
 service_transport_types
 sales_accounting_concepts
+quotation_rejection_reasons
+quotation_reference_counters
 
 
 CRM MODULE
@@ -249,6 +266,7 @@ provider_service_offerings
 opportunities
 quotations
 quotation_costs
+quotation_cargo_lines
 incoterms
 
 

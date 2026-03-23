@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { getCurrentErpUser, signOutCurrentUser, type CurrentErpUser } from "@/lib/auth"
+import { Brand } from "./Brand"
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard"
@@ -34,7 +35,7 @@ export function Topbar() {
       }
     }
 
-    loadCurrentUser()
+    void loadCurrentUser()
 
     return () => {
       cancelled = true
@@ -59,43 +60,54 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-[#E5E7EB] bg-[#FFFFFF]/70 px-6 py-3 backdrop-blur">
-      <div className="flex flex-col">
-        <span className="text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-          Module
-        </span>
-        <span className="text-lg font-semibold text-[#111827]">{title}</span>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="hidden items-center rounded-md border border-[#E5E7EB] bg-white px-3 py-1 text-sm text-[#6B7280] shadow-sm sm:flex">
-          <span className="mr-2 text-xs text-[#9CA3AF]">Search</span>
-          <span className="text-xs text-[#D1D5DB]">⌘K</span>
-        </div>
-
-        <div className="hidden text-right md:block">
-          <div className="text-sm font-medium text-[#111827]">
-            {currentUser
-              ? [currentUser.first_name, currentUser.last_name].filter(Boolean).join(" ") || currentUser.username || currentUser.email
-              : "ERP User"}
+    <header className="relative border-b border-white/10 bg-[rgba(7,16,32,0.4)] px-4 py-4 backdrop-blur-xl sm:px-6">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 lg:hidden">
+            <Brand compact light />
           </div>
-          <div className="text-xs uppercase tracking-wide text-[#94A3B8]">
-            {currentUser?.role_name || "Sin rol"}
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[var(--brand-gray)]">
+              Module
+            </span>
+            <span className="text-lg font-semibold text-white">{title}</span>
           </div>
         </div>
 
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-xs font-semibold text-white">
-          {initials}
-        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden items-center rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-sm text-[var(--brand-soft-gray)] shadow-sm sm:flex">
+            <span className="mr-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--brand-gray)]">
+              Search
+            </span>
+            <span className="text-xs text-white/50">⌘K</span>
+          </div>
 
-        <button
-          type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#334155] transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {signingOut ? "Saliendo..." : "Salir"}
-        </button>
+          <div className="hidden text-right md:block">
+            <div className="text-sm font-medium text-white">
+              {currentUser
+                ? [currentUser.first_name, currentUser.last_name].filter(Boolean).join(" ") ||
+                  currentUser.username ||
+                  currentUser.email
+                : "ERP User"}
+            </div>
+            <div className="text-[11px] uppercase tracking-[0.26em] text-[var(--brand-gray)]">
+              {currentUser?.role_name || "Sin rol"}
+            </div>
+          </div>
+
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,_#B33A5B,_#800020)] text-xs font-semibold text-white shadow-[0_14px_28px_-16px_rgba(179,58,91,0.9)]">
+            {initials}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand-light-gray)] transition hover:border-[rgba(179,58,91,0.45)] hover:bg-[rgba(179,58,91,0.16)] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {signingOut ? "Saliendo..." : "Salir"}
+          </button>
+        </div>
       </div>
     </header>
   )

@@ -2,10 +2,13 @@ import { supabase } from "@/lib/supabaseClient"
 import { getMasterDataBackendMode, type MasterDataBackendMode } from "./backendMode"
 import type {
   Incoterm,
+  NewQuotationRejectionReason,
   NewSalesAccountingConcept,
   NewServiceTransportType,
+  QuotationRejectionReason,
   SalesAccountingConcept,
   ServiceTransportType,
+  UpdateQuotationRejectionReason,
   UpdateSalesAccountingConcept,
   UpdateServiceTransportType,
   UnlocodeCountrySummary,
@@ -64,6 +67,15 @@ function mapSalesAccountingConcept(row: Record<string, unknown>): SalesAccountin
     operation_type: String(row.operation_type ?? ""),
     vat_rate: Number(row.vat_rate ?? 0),
     sat_code: String(row.sat_code ?? ""),
+    created_at: String(row.created_at ?? new Date(0).toISOString()),
+    updated_at: (row.updated_at as string | null | undefined) ?? null,
+  }
+}
+
+function mapQuotationRejectionReason(row: Record<string, unknown>): QuotationRejectionReason {
+  return {
+    id: String(row.id ?? ""),
+    reason: String(row.reason ?? ""),
     created_at: String(row.created_at ?? new Date(0).toISOString()),
     updated_at: (row.updated_at as string | null | undefined) ?? null,
   }
@@ -313,6 +325,68 @@ export async function updateSalesAccountingConcept(
 
 export async function deleteSalesAccountingConcept(id: string): Promise<void> {
   const { error } = await supabase.rpc("delete_sales_accounting_concept", {
+    p_id: id,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function getQuotationRejectionReasons(params?: {
+  query?: string
+}): Promise<QuotationRejectionReason[]> {
+  let request = supabase
+    .from("quotation_rejection_reason_lookup_view")
+    .select("*")
+    .order("reason", { ascending: true })
+
+  const normalizedQuery = params?.query?.trim()
+  if (normalizedQuery) {
+    request = request.ilike("reason", `%${normalizedQuery}%`)
+  }
+
+  const { data, error } = await request
+
+  if (error) {
+    throw error
+  }
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) =>
+    mapQuotationRejectionReason(row)
+  )
+}
+
+export async function createQuotationRejectionReason(
+  payload: NewQuotationRejectionReason
+): Promise<string> {
+  const { data, error } = await supabase.rpc("create_quotation_rejection_reason", {
+    p_reason: payload.reason,
+  } as never)
+
+  if (error || !data) {
+    throw error ?? new Error("Failed to create quotation rejection reason")
+  }
+
+  return String(data)
+}
+
+export async function updateQuotationRejectionReason(
+  id: string,
+  payload: UpdateQuotationRejectionReason
+): Promise<void> {
+  const { error } = await supabase.rpc("update_quotation_rejection_reason", {
+    p_id: id,
+    p_reason: payload.reason,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function deleteQuotationRejectionReason(id: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_quotation_rejection_reason", {
     p_id: id,
   } as never)
 
