@@ -165,9 +165,11 @@ Uses:
 - unlocode_country_summary_view
 - /api/master-data/unlocodes snapshot fallback as temporary rollback safety when canonical master data is unavailable
 - service_transport_type_lookup_view
-- create_service_transport_type()
-- update_service_transport_type()
-- delete_service_transport_type()
+- service_transport_types is read-only from the application
+- sales_accounting_concept_lookup_view
+- create_sales_accounting_concept()
+- update_sales_accounting_concept()
+- delete_sales_accounting_concept()
 
 UN/LOCODE standard:
 
@@ -313,9 +315,11 @@ Canonical master data objects already available for future integration:
 - unlocode_lookup_view
 - search_unlocodes()
 - service_transport_type_lookup_view
-- create_service_transport_type()
-- update_service_transport_type()
-- delete_service_transport_type()
+- service_transport_types is read-only from the application
+- sales_accounting_concept_lookup_view
+- create_sales_accounting_concept()
+- update_sales_accounting_concept()
+- delete_sales_accounting_concept()
 
 Pricing integration rules:
 

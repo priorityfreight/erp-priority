@@ -39,8 +39,30 @@ insert into service_transport_types (
   transport_type
 )
 values
-  ('Maritimo', 'LCL'),
-  ('Terrestre', 'Caja de 53'),
-  ('Aereo', 'Paqueteria'),
-  ('Terrestre', 'Arrastre de contenedor')
+  ('AIR', 'Paqueteria'),
+  ('FCL', 'Contenedor de 40'),
+  ('LCL', 'Consolidado'),
+  ('FTL', 'Caja Seca de 53'),
+  ('FTL', 'Arrastre de contenedor'),
+  ('LTL', 'Consolidado'),
+  ('COURIER', 'Courier')
 on conflict (service_type, transport_type) do nothing;
+
+insert into incoterms (
+  code,
+  description
+)
+values
+  ('EXW', 'Ex Works'),
+  ('FCA', 'Free Carrier'),
+  ('CPT', 'Carriage Paid To'),
+  ('CIP', 'Carriage and Insurance Paid To'),
+  ('DAP', 'Delivered at Place'),
+  ('DPU', 'Delivered at Place Unloaded'),
+  ('DDP', 'Delivered Duty Paid'),
+  ('FAS', 'Free Alongside Ship'),
+  ('FOB', 'Free On Board'),
+  ('CFR', 'Cost and Freight'),
+  ('CIF', 'Cost, Insurance and Freight')
+on conflict (code) do update
+set description = excluded.description;

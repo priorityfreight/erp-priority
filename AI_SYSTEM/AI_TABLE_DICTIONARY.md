@@ -192,7 +192,7 @@ TABLE: service_transport_types
 
 Purpose
 
-Stores editable sales master data that maps a service type to a transport type.
+Stores the locked canonical sales master data that maps an allowed service type to a transport type.
 
 Columns
 
@@ -202,11 +202,54 @@ Primary key.
 
 service_type
 Type: text
-High-level commercial service family such as Maritimo, Terrestre, or Aereo.
+Allowed canonical service family. Valid values: AIR, FCL, LCL, FTL, LTL, COURIER.
 
 transport_type
 Type: text
 Operational transport option available inside the selected service type.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: sales_accounting_concepts
+--------------------------------------------------
+
+Purpose
+
+Stores SAT-aligned sales accounting concepts for reuse across commercial modules.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+concept
+Type: text
+Commercial/accounting concept label.
+
+service_type
+Type: text
+Allowed values: GENERAL, AIR, FCL, LCL, FTL, LTL, COURIER.
+
+operation_type
+Type: text
+Allowed values: IMPORT, EXPORT.
+
+vat_rate
+Type: numeric(5,2)
+Configured VAT rate percentage for the concept.
+
+sat_code
+Type: text
+SAT key for the concept.
 
 created_at
 Type: timestamptz
@@ -770,7 +813,7 @@ TABLE: incoterms
 
 Purpose
 
-Stores Incoterm master data used by quotations.
+Stores Incoterm master data used by opportunities and quotations.
 
 Columns
 
@@ -837,6 +880,14 @@ Service type requested.
 transport_type
 Type: text
 Transport type filtered from the selected service type.
+
+operation_type
+Type: text
+Commercial operation direction. Allowed values: Import, Export.
+
+incoterm_id
+Type: uuid
+Foreign key referencing incoterms.id.
 
 origin
 Type: text

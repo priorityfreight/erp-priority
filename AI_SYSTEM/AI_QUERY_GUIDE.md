@@ -74,9 +74,7 @@ add_contact_to_provider()
 get_provider_full()
 search_providers()
 search_unlocodes()
-create_service_transport_type()
-update_service_transport_type()
-delete_service_transport_type()
+service_transport_type_lookup_view
 
 
 --------------------------------------------------
@@ -126,6 +124,8 @@ Opportunity-specific write rules:
 - use update_opportunity_status() for lifecycle transitions
 - service_type comes from service_transport_type_lookup_view
 - transport_type must be filtered by selected service_type
+- operation_type must be either Import or Export
+- incoterm_id must come from the canonical incoterms catalog
 - origin and destination must use UN/LOCODE-backed values
 - estimated_value must be backend-calculated from expected_profit_usd * service_quantity
 - expiration_date must be backend-calculated from start_date
@@ -292,7 +292,17 @@ For CRM/Pricing list screens with meaningful growth:
 Sales service type catalog
 
 query service_transport_type_lookup_view for list and filter screens
-use create_service_transport_type(), update_service_transport_type(), and delete_service_transport_type() for writes
+do not write to service_transport_types from the application
+the catalog is locked to the canonical service type families: AIR, FCL, LCL, FTL, LTL, and COURIER
+change this catalog only through controlled migrations
+
+
+Sales accounting concepts catalog
+
+query sales_accounting_concept_lookup_view for list and filter screens
+use create_sales_accounting_concept(), update_sales_accounting_concept(), and delete_sales_accounting_concept() for writes
+service_type must be one of: GENERAL, AIR, FCL, LCL, FTL, LTL, COURIER
+operation_type must be one of: IMPORT, EXPORT
 
 
 --------------------------------------------------

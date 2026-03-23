@@ -10,15 +10,17 @@ import type {
 const OPPORTUNITY_SYNC_INTERVAL_MS = 60_000
 let lastOpportunitySyncAt = 0
 const OPPORTUNITY_COLUMNS =
-  "id,client_id,salesperson_id,title,description,service_type,transport_type,origin,origin_unlocode,origin_unlocode_id,destination,destination_unlocode,destination_unlocode_id,stage,status,expected_profit_usd,service_quantity,estimated_value,start_date,expiration_date,created_at,updated_at"
+  "id,client_id,salesperson_id,title,description,service_type,transport_type,operation_type,incoterm_id,origin,origin_unlocode,origin_unlocode_id,destination,destination_unlocode,destination_unlocode_id,stage,status,expected_profit_usd,service_quantity,estimated_value,start_date,expiration_date,created_at,updated_at"
 const OPPORTUNITY_SUMMARY_COLUMNS =
-  "id,client_id,client_name,salesperson_id,salesperson_name,title,stage,status,service_type,transport_type,origin,origin_unlocode,origin_unlocode_id,destination,destination_unlocode,destination_unlocode_id,expected_profit_usd,service_quantity,estimated_value,start_date,expiration_date,created_at"
+  "id,client_id,client_name,salesperson_id,salesperson_name,title,stage,status,service_type,transport_type,operation_type,incoterm_id,incoterm_code,origin,origin_unlocode,origin_unlocode_id,destination,destination_unlocode,destination_unlocode_id,expected_profit_usd,service_quantity,estimated_value,start_date,expiration_date,created_at"
 
 export type CreateOpportunityInput = {
   clientId: string
   salespersonId?: string | null
   serviceType: string
   transportType: string
+  operationType: string
+  incotermId: string
   originUnlocode: string
   destinationUnlocode: string
   expectedProfitUsd: number | null
@@ -35,6 +37,9 @@ function mapOpportunity(row: Record<string, unknown>): Opportunity {
     description: (row.description as string | null | undefined) ?? null,
     service_type: (row.service_type as string | null | undefined) ?? null,
     transport_type: (row.transport_type as string | null | undefined) ?? null,
+    operation_type: (row.operation_type as string | null | undefined) ?? null,
+    incoterm_id: (row.incoterm_id as string | null | undefined) ?? null,
+    incoterm_code: (row.incoterm_code as string | null | undefined) ?? null,
     origin: (row.origin as string | null | undefined) ?? null,
     origin_unlocode: (row.origin_unlocode as string | null | undefined) ?? null,
     origin_unlocode_id: (row.origin_unlocode_id as string | null | undefined) ?? null,
@@ -77,6 +82,8 @@ function applyOpportunityFilters(
         opportunity.client_name,
         opportunity.service_type,
         opportunity.transport_type,
+        opportunity.operation_type,
+        opportunity.incoterm_code,
         opportunity.origin,
         opportunity.destination,
         opportunity.salesperson_name,
@@ -128,7 +135,7 @@ export async function getOpportunities(params?: {
     const normalizedQuery = params?.query?.trim()
     if (normalizedQuery) {
       request = request.or(
-        `title.ilike.%${normalizedQuery}%,client_name.ilike.%${normalizedQuery}%,service_type.ilike.%${normalizedQuery}%,transport_type.ilike.%${normalizedQuery}%,origin.ilike.%${normalizedQuery}%,destination.ilike.%${normalizedQuery}%,salesperson_name.ilike.%${normalizedQuery}%`
+        `title.ilike.%${normalizedQuery}%,client_name.ilike.%${normalizedQuery}%,service_type.ilike.%${normalizedQuery}%,transport_type.ilike.%${normalizedQuery}%,operation_type.ilike.%${normalizedQuery}%,incoterm_code.ilike.%${normalizedQuery}%,origin.ilike.%${normalizedQuery}%,destination.ilike.%${normalizedQuery}%,salesperson_name.ilike.%${normalizedQuery}%`
       )
     }
 
@@ -225,7 +232,7 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
     }
 
     const record = data as unknown as Record<string, unknown>
-    const [clientResult, salespersonResult] = await Promise.all([
+    const [clientResult, salespersonResult, incotermResult] = await Promise.all([
       record.client_id
         ? supabase
             .from("clients")
@@ -240,6 +247,13 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
             .eq("id", String(record.salesperson_id))
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      record.incoterm_id
+        ? supabase
+            .from("incoterms")
+            .select("code")
+            .eq("id", String(record.incoterm_id))
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ])
 
     if (clientResult.error) {
@@ -248,6 +262,10 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
 
     if (salespersonResult.error) {
       throw salespersonResult.error
+    }
+
+    if (incotermResult.error) {
+      throw incotermResult.error
     }
 
     const clientRelation = clientResult.data
@@ -270,6 +288,9 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
 
     return {
       ...mapOpportunity(record),
+      incoterm_code: incotermResult.data
+        ? String((incotermResult.data as { code?: string | null }).code ?? "")
+        : null,
       clients: clientRelation,
       salesperson_name: salespersonName,
     }
@@ -287,25 +308,41 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
 
   const opportunityRow = data as Record<string, unknown>
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("id,company_name")
-    .eq("id", String(opportunityRow.client_id))
-    .maybeSingle()
+  const [clientResult, incotermResult] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id,company_name")
+      .eq("id", String(opportunityRow.client_id))
+      .maybeSingle(),
+    opportunityRow.incoterm_id
+      ? supabase
+          .from("incoterms")
+          .select("code")
+          .eq("id", String(opportunityRow.incoterm_id))
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ])
 
-  if (clientError) {
-    throw clientError
+  if (clientResult.error) {
+    throw clientResult.error
+  }
+
+  if (incotermResult.error) {
+    throw incotermResult.error
   }
 
   return {
     ...mapOpportunity(opportunityRow),
-    clients: client
+    clients: clientResult.data
       ? {
-          id: String((client as { id: string }).id),
+          id: String((clientResult.data as { id: string }).id),
           company_name: String(
-            (client as { company_name?: string | null }).company_name ?? ""
+            (clientResult.data as { company_name?: string | null }).company_name ?? ""
           ),
         }
+      : null,
+    incoterm_code: incotermResult.data
+      ? String((incotermResult.data as { code?: string | null }).code ?? "")
       : null,
     salesperson_name: null,
   }
@@ -319,6 +356,8 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       p_client_id: input.clientId,
       p_service_type: input.serviceType,
       p_transport_type: input.transportType,
+      p_operation_type: input.operationType,
+      p_incoterm_id: input.incotermId || null,
       p_origin_unlocode: input.originUnlocode,
       p_destination_unlocode: input.destinationUnlocode,
       p_expected_profit_usd: input.expectedProfitUsd,
@@ -343,6 +382,8 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       title: "Opportunity",
       service_type: input.serviceType,
       transport_type: input.transportType,
+      operation_type: input.operationType,
+      incoterm_id: input.incotermId || null,
       origin_unlocode: input.originUnlocode,
       destination_unlocode: input.destinationUnlocode,
       status: "investigando",

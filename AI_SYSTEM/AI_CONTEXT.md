@@ -236,6 +236,8 @@ Opportunities
   salesperson_id
   service_type
   transport_type
+  operation_type
+  incoterm_id
   origin_unlocode
   destination_unlocode
 - opportunity breakdown fields are:

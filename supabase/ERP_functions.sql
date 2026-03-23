@@ -631,6 +631,8 @@ create or replace function create_opportunity(
   p_stage text default 'qualification',
   p_service_type text default null,
   p_transport_type text default null,
+  p_operation_type text default null,
+  p_incoterm_id uuid default null,
   p_origin_unlocode text default null,
   p_destination_unlocode text default null,
   p_expected_profit_usd numeric default null,
@@ -664,6 +666,8 @@ begin
     description,
     service_type,
     transport_type,
+    operation_type,
+    incoterm_id,
     estimated_value,
     origin,
     origin_unlocode,
@@ -681,6 +685,13 @@ begin
     nullif(btrim(p_description), ''),
     nullif(btrim(p_service_type), ''),
     nullif(btrim(p_transport_type), ''),
+    case
+      when nullif(btrim(coalesce(p_operation_type, '')), '') is null then null
+      when lower(btrim(p_operation_type)) = 'import' then 'Import'
+      when lower(btrim(p_operation_type)) = 'export' then 'Export'
+      else btrim(p_operation_type)
+    end,
+    p_incoterm_id,
     p_estimated_value,
     nullif(btrim(p_origin), ''),
     nullif(btrim(p_origin_unlocode), ''),
@@ -1136,33 +1147,8 @@ returns uuid
 language plpgsql
 security definer
 as $$
-declare
-  normalized_service_type text;
-  normalized_transport_type text;
-  new_record_id uuid;
 begin
-  normalized_service_type := nullif(btrim(p_service_type), '');
-  normalized_transport_type := nullif(btrim(p_transport_type), '');
-
-  if normalized_service_type is null then
-    raise exception 'service_type is required';
-  end if;
-
-  if normalized_transport_type is null then
-    raise exception 'transport_type is required';
-  end if;
-
-  insert into service_transport_types (
-    service_type,
-    transport_type
-  )
-  values (
-    normalized_service_type,
-    normalized_transport_type
-  )
-  returning id into new_record_id;
-
-  return new_record_id;
+  raise exception 'service_transport_types catalog is locked; manage canonical values through migrations only';
 end;
 $$;
 
@@ -1180,26 +1166,8 @@ returns void
 language plpgsql
 security definer
 as $$
-declare
-  normalized_service_type text;
-  normalized_transport_type text;
 begin
-  normalized_service_type := nullif(btrim(p_service_type), '');
-  normalized_transport_type := nullif(btrim(p_transport_type), '');
-
-  if normalized_service_type is null then
-    raise exception 'service_type is required';
-  end if;
-
-  if normalized_transport_type is null then
-    raise exception 'transport_type is required';
-  end if;
-
-  update service_transport_types
-  set
-    service_type = normalized_service_type,
-    transport_type = normalized_transport_type
-  where id = p_id;
+  raise exception 'service_transport_types catalog is locked; manage canonical values through migrations only';
 end;
 $$;
 
@@ -1216,14 +1184,99 @@ language plpgsql
 security definer
 as $$
 begin
-  delete from service_transport_types
+  raise exception 'service_transport_types catalog is locked; manage canonical values through migrations only';
+end;
+$$;
+
+
+-- =========================================
+-- 17. CREATE SALES ACCOUNTING CONCEPT
+-- =========================================
+
+create or replace function create_sales_accounting_concept(
+  p_concept text,
+  p_service_type text,
+  p_operation_type text,
+  p_vat_rate numeric,
+  p_sat_code text
+)
+returns uuid
+language plpgsql
+security definer
+as $$
+declare
+  new_record_id uuid;
+begin
+  insert into sales_accounting_concepts (
+    concept,
+    service_type,
+    operation_type,
+    vat_rate,
+    sat_code
+  )
+  values (
+    nullif(btrim(p_concept), ''),
+    upper(nullif(btrim(p_service_type), '')),
+    upper(nullif(btrim(p_operation_type), '')),
+    coalesce(p_vat_rate, 0),
+    upper(nullif(btrim(p_sat_code), ''))
+  )
+  returning id into new_record_id;
+
+  return new_record_id;
+end;
+$$;
+
+
+-- =========================================
+-- 18. UPDATE SALES ACCOUNTING CONCEPT
+-- =========================================
+
+create or replace function update_sales_accounting_concept(
+  p_id uuid,
+  p_concept text,
+  p_service_type text,
+  p_operation_type text,
+  p_vat_rate numeric,
+  p_sat_code text
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update sales_accounting_concepts
+  set
+    concept = nullif(btrim(p_concept), ''),
+    service_type = upper(nullif(btrim(p_service_type), '')),
+    operation_type = upper(nullif(btrim(p_operation_type), '')),
+    vat_rate = coalesce(p_vat_rate, 0),
+    sat_code = upper(nullif(btrim(p_sat_code), ''))
   where id = p_id;
 end;
 $$;
 
 
 -- =========================================
--- 17. CREATE PROVIDER
+-- 19. DELETE SALES ACCOUNTING CONCEPT
+-- =========================================
+
+create or replace function delete_sales_accounting_concept(
+  p_id uuid
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  delete from sales_accounting_concepts
+  where id = p_id;
+end;
+$$;
+
+
+-- =========================================
+-- 20. CREATE PROVIDER
 -- =========================================
 
 create or replace function create_provider(

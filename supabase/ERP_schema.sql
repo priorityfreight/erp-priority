@@ -105,11 +105,38 @@ create table service_transport_types (
   transport_type text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz,
+  constraint service_transport_types_allowed_service_type
+    check (service_type in ('AIR', 'FCL', 'LCL', 'FTL', 'LTL', 'COURIER')),
   constraint service_transport_types_unique unique (service_type, transport_type)
 );
 
 create index idx_service_transport_types_service_type on service_transport_types(service_type);
 create index idx_service_transport_types_transport_type on service_transport_types(transport_type);
+
+create table sales_accounting_concepts (
+  id uuid primary key default gen_random_uuid(),
+  concept text not null,
+  service_type text not null,
+  operation_type text not null,
+  vat_rate numeric(5,2) not null default 16.00,
+  sat_code text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint sales_accounting_concepts_allowed_service_type
+    check (service_type in ('GENERAL', 'AIR', 'FCL', 'LCL', 'FTL', 'LTL', 'COURIER')),
+  constraint sales_accounting_concepts_allowed_operation_type
+    check (operation_type in ('IMPORT', 'EXPORT')),
+  constraint sales_accounting_concepts_vat_rate_range
+    check (vat_rate >= 0 and vat_rate <= 100),
+  constraint sales_accounting_concepts_unique unique (concept, service_type, operation_type, sat_code)
+);
+
+create index idx_sales_accounting_concepts_service_type
+  on sales_accounting_concepts(service_type);
+create index idx_sales_accounting_concepts_operation_type
+  on sales_accounting_concepts(operation_type);
+create index idx_sales_accounting_concepts_sat_code
+  on sales_accounting_concepts(sat_code);
 
 
 -- =========================================================
@@ -295,6 +322,8 @@ create table opportunities (
   trade_lane text,
   service_type text,
   transport_type text,
+  operation_type text,
+  incoterm_id uuid references incoterms(id),
   origin text,
   origin_unlocode text,
   origin_unlocode_id uuid references unlocodes(id),
@@ -311,7 +340,9 @@ create table opportunities (
   start_date date,
   expiration_date date,
   created_at timestamptz not null default now(),
-  updated_at timestamptz
+  updated_at timestamptz,
+  constraint opportunities_allowed_operation_type
+    check (operation_type is null or operation_type in ('Import', 'Export'))
 );
 
 create index idx_opportunities_client_id on opportunities(client_id);
@@ -320,6 +351,8 @@ create index idx_opportunities_status on opportunities(status);
 create index idx_opportunities_stage on opportunities(stage);
 create index idx_opportunities_service_type on opportunities(service_type);
 create index idx_opportunities_transport_type on opportunities(transport_type);
+create index idx_opportunities_operation_type on opportunities(operation_type);
+create index idx_opportunities_incoterm_id on opportunities(incoterm_id);
 create index idx_opportunities_expiration_date on opportunities(expiration_date);
 create index idx_opportunities_origin_unlocode_id on opportunities(origin_unlocode_id);
 create index idx_opportunities_destination_unlocode_id on opportunities(destination_unlocode_id);

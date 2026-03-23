@@ -13,12 +13,14 @@ import {
   deleteOpportunity,
   getBackendMode,
   getClientFull,
+  getIncoterms,
   getServiceTransportTypes,
   getUsers,
   type BackendMode,
   type Client,
   type Contact,
   type ClientLogisticsParty,
+  type Incoterm,
   type Opportunity,
   type ServiceTransportType,
   type User,
@@ -42,6 +44,7 @@ type ClientDetailsState = {
   opportunities: Opportunity[]
   users: User[]
   serviceTransportTypes: ServiceTransportType[]
+  incoterms: Incoterm[]
 }
 
 function InfoCard({
@@ -145,6 +148,8 @@ export default function ClientDetailPage() {
     salespersonId: "",
     serviceType: "",
     transportType: "",
+    operationType: "",
+    incotermId: "",
     origin: "",
     originUnlocode: "",
     destination: "",
@@ -199,6 +204,8 @@ export default function ClientDetailPage() {
       salespersonId: clientDetails?.client.account_owner_id || "",
       serviceType: "",
       transportType: "",
+      operationType: "",
+      incotermId: "",
       origin: "",
       originUnlocode: "",
       destination: "",
@@ -219,11 +226,12 @@ export default function ClientDetailPage() {
     async function load(id: string) {
       try {
         setLoading(true)
-        const [data, mode, users, serviceTransportTypes] = await Promise.all([
+        const [data, mode, users, serviceTransportTypes, incoterms] = await Promise.all([
           getClientFull(id),
           getBackendMode(),
           getUsers(),
           getServiceTransportTypes(),
+          getIncoterms(),
         ])
 
         if (cancelled || !data?.client) {
@@ -238,6 +246,7 @@ export default function ClientDetailPage() {
           opportunities: data.opportunities ?? [],
           users,
           serviceTransportTypes,
+          incoterms,
         })
         syncClientForm(data.client)
         setOpportunityForm((current) => ({
@@ -275,6 +284,7 @@ export default function ClientDetailPage() {
       opportunities: data.opportunities ?? [],
       users: clientDetails.users,
       serviceTransportTypes: clientDetails.serviceTransportTypes,
+      incoterms: clientDetails.incoterms,
     })
     syncClientForm(data.client)
     setOpportunityForm((current) => ({
@@ -394,6 +404,16 @@ export default function ClientDetailPage() {
       return
     }
 
+    if (!opportunityForm.operationType) {
+      alert("Selecciona el tipo de operacion")
+      return
+    }
+
+    if (!opportunityForm.incotermId) {
+      alert("Selecciona el incoterm")
+      return
+    }
+
     if (!opportunityForm.originUnlocode || !opportunityForm.destinationUnlocode) {
       alert("Selecciona origen y destino desde UN/LOCODE")
       return
@@ -406,6 +426,8 @@ export default function ClientDetailPage() {
         salespersonId: opportunityForm.salespersonId || null,
         serviceType: opportunityForm.serviceType,
         transportType: opportunityForm.transportType,
+        operationType: opportunityForm.operationType,
+        incotermId: opportunityForm.incotermId,
         originUnlocode: opportunityForm.originUnlocode,
         destinationUnlocode: opportunityForm.destinationUnlocode,
         expectedProfitUsd: opportunityForm.expectedProfitUsd.trim()
@@ -568,8 +590,15 @@ export default function ClientDetailPage() {
     )
   }
 
-  const { client, contacts, logistics_parties, opportunities, users, serviceTransportTypes } =
-    clientDetails
+  const {
+    client,
+    contacts,
+    logistics_parties,
+    opportunities,
+    users,
+    serviceTransportTypes,
+    incoterms,
+  } = clientDetails
   const pipelineValue = opportunities.reduce(
     (sum, opportunity) => sum + (opportunity.estimated_value ?? 0),
     0
@@ -1111,6 +1140,7 @@ export default function ClientDetailPage() {
             clients={[client]}
             users={users}
             serviceTransportTypes={serviceTransportTypes}
+            incoterms={incoterms}
             onChange={(field, value) => {
               setOpportunityForm((current) => {
                 if (field === "clientId") {

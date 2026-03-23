@@ -116,6 +116,9 @@ select
   end as status,
   o.service_type,
   o.transport_type,
+  o.operation_type,
+  o.incoterm_id,
+  i.code as incoterm_code,
   o.salesperson_id,
   concat_ws(' ', u.first_name, u.last_name) as salesperson_name,
   o.origin,
@@ -135,6 +138,7 @@ select
 from opportunities o
 join clients c on c.id = o.client_id
 left join users u on u.id = o.salesperson_id
+left join incoterms i on i.id = o.incoterm_id
 where c.is_deleted = false;
 
 
@@ -438,3 +442,21 @@ select
   stt.updated_at
 from service_transport_types stt
 order by stt.service_type asc, stt.transport_type asc;
+
+
+-- =========================================
+-- SALES ACCOUNTING CONCEPT LOOKUP
+-- =========================================
+
+create or replace view sales_accounting_concept_lookup_view as
+select
+  sac.id,
+  sac.concept,
+  sac.service_type,
+  sac.operation_type,
+  sac.vat_rate,
+  sac.sat_code,
+  sac.created_at,
+  sac.updated_at
+from sales_accounting_concepts sac
+order by sac.service_type asc, sac.operation_type asc, sac.concept asc;

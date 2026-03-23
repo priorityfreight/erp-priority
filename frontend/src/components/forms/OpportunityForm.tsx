@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import type {
   Client,
+  Incoterm,
   ServiceTransportType,
   User,
 } from "@/lib/db"
@@ -13,6 +14,8 @@ export type OpportunityFormValues = {
   salespersonId: string
   serviceType: string
   transportType: string
+  operationType: string
+  incotermId: string
   origin: string
   originUnlocode: string
   destination: string
@@ -29,6 +32,7 @@ type OpportunityFormProps = {
   clients: Client[]
   users: User[]
   serviceTransportTypes: ServiceTransportType[]
+  incoterms: Incoterm[]
   createdAt?: string | null
   startDate?: string | null
   expirationDate?: string | null
@@ -83,6 +87,7 @@ export function OpportunityForm({
   clients,
   users,
   serviceTransportTypes,
+  incoterms,
   createdAt,
   startDate,
   expirationDate,
@@ -184,6 +189,31 @@ export function OpportunityForm({
             {availableTransportTypes.map((transportType) => (
               <option key={transportType} value={transportType}>
                 {transportType}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+            value={values.operationType}
+            onChange={(event) => onChange("operationType", event.target.value)}
+            disabled={disabled}
+          >
+            <option value="">Tipo de operacion</option>
+            <option value="Import">Import</option>
+            <option value="Export">Export</option>
+          </select>
+
+          <select
+            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+            value={values.incotermId}
+            onChange={(event) => onChange("incotermId", event.target.value)}
+            disabled={disabled}
+          >
+            <option value="">Incoterm</option>
+            {incoterms.map((incoterm) => (
+              <option key={incoterm.id} value={incoterm.id}>
+                {incoterm.code}
               </option>
             ))}
           </select>

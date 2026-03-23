@@ -47,6 +47,11 @@ before update on service_transport_types
 for each row
 execute function set_updated_at();
 
+create trigger set_sales_accounting_concepts_updated_at
+before update on sales_accounting_concepts
+for each row
+execute function set_updated_at();
+
 create trigger set_prospects_updated_at
 before update on prospects
 for each row
@@ -676,6 +681,11 @@ execute function audit_trigger();
 
 create trigger audit_provider_service_offerings
 after insert or update or delete on provider_service_offerings
+for each row
+execute function audit_trigger();
+
+create trigger audit_sales_accounting_concepts
+after insert or update or delete on sales_accounting_concepts
 for each row
 execute function audit_trigger();
 

@@ -151,6 +151,9 @@ references opportunities.id
 quotations.created_by
 references users.id
 
+opportunities.incoterm_id
+references incoterms.id
+
 quotations.incoterm_id
 references incoterms.id
 
@@ -225,6 +228,7 @@ MASTER DATA MODULE
 external_data_sources
 unlocodes
 service_transport_types
+sales_accounting_concepts
 
 
 CRM MODULE

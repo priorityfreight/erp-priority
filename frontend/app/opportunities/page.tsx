@@ -6,10 +6,12 @@ import {
   createOpportunity,
   deleteOpportunity,
   getClients,
+  getIncoterms,
   getOpportunities,
   getServiceTransportTypes,
   getUsers,
   type Client,
+  type Incoterm,
   type OpportunitySummary,
   type ServiceTransportType,
   type User,
@@ -33,6 +35,8 @@ const emptyForm: OpportunityFormValues = {
   salespersonId: "",
   serviceType: "",
   transportType: "",
+  operationType: "",
+  incotermId: "",
   origin: "",
   originUnlocode: "",
   destination: "",
@@ -47,6 +51,7 @@ export default function OpportunitiesPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [serviceTransportTypes, setServiceTransportTypes] = useState<ServiceTransportType[]>([])
+  const [incoterms, setIncoterms] = useState<Incoterm[]>([])
   const [formValues, setFormValues] = useState<OpportunityFormValues>(emptyForm)
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
@@ -58,14 +63,16 @@ export default function OpportunitiesPage() {
 
   async function loadReferenceData() {
     try {
-      const [clientsData, usersData, serviceTransportData] = await Promise.all([
+      const [clientsData, usersData, serviceTransportData, incotermData] = await Promise.all([
         getClients(),
         getUsers(),
         getServiceTransportTypes(),
+        getIncoterms(),
       ])
       setClients(clientsData)
       setUsers(usersData)
       setServiceTransportTypes(serviceTransportData)
+      setIncoterms(incotermData)
     } catch (error) {
       console.error(error)
     }
@@ -122,6 +129,16 @@ export default function OpportunitiesPage() {
       return
     }
 
+    if (!formValues.operationType) {
+      alert("Selecciona el tipo de operacion")
+      return
+    }
+
+    if (!formValues.incotermId) {
+      alert("Selecciona el incoterm")
+      return
+    }
+
     if (!formValues.originUnlocode || !formValues.destinationUnlocode) {
       alert("Selecciona origen y destino desde UN/LOCODE")
       return
@@ -134,6 +151,8 @@ export default function OpportunitiesPage() {
         salespersonId: formValues.salespersonId || null,
         serviceType: formValues.serviceType,
         transportType: formValues.transportType,
+        operationType: formValues.operationType,
+        incotermId: formValues.incotermId,
         originUnlocode: formValues.originUnlocode,
         destinationUnlocode: formValues.destinationUnlocode,
         expectedProfitUsd: formValues.expectedProfitUsd
@@ -365,6 +384,7 @@ export default function OpportunitiesPage() {
             clients={clients}
             users={users}
             serviceTransportTypes={serviceTransportTypes}
+            incoterms={incoterms}
             onChange={(field, value) => {
               setFormValues((current) => {
                 if (field === "clientId") {

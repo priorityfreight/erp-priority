@@ -730,6 +730,8 @@ export type Database = {
           expected_profit_usd: number | null
           expiration_date: string | null
           id: string
+          incoterm_id: string | null
+          operation_type: string | null
           origin: string | null
           origin_unlocode: string | null
           origin_unlocode_id: string | null
@@ -757,6 +759,8 @@ export type Database = {
           expected_profit_usd?: number | null
           expiration_date?: string | null
           id?: string
+          incoterm_id?: string | null
+          operation_type?: string | null
           origin?: string | null
           origin_unlocode?: string | null
           origin_unlocode_id?: string | null
@@ -784,6 +788,8 @@ export type Database = {
           expected_profit_usd?: number | null
           expiration_date?: string | null
           id?: string
+          incoterm_id?: string | null
+          operation_type?: string | null
           origin?: string | null
           origin_unlocode?: string | null
           origin_unlocode_id?: string | null
@@ -910,6 +916,13 @@ export type Database = {
             columns: ["destination_unlocode_id"]
             isOneToOne: false
             referencedRelation: "unlocodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_incoterm_id_fkey"
+            columns: ["incoterm_id"]
+            isOneToOne: false
+            referencedRelation: "incoterms"
             referencedColumns: ["id"]
           },
           {
@@ -1491,6 +1504,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_accounting_concepts: {
+        Row: {
+          concept: string
+          created_at: string
+          id: string
+          operation_type: string
+          sat_code: string
+          service_type: string
+          updated_at: string | null
+          vat_rate: number
+        }
+        Insert: {
+          concept: string
+          created_at?: string
+          id?: string
+          operation_type: string
+          sat_code: string
+          service_type: string
+          updated_at?: string | null
+          vat_rate?: number
+        }
+        Update: {
+          concept?: string
+          created_at?: string
+          id?: string
+          operation_type?: string
+          sat_code?: string
+          service_type?: string
+          updated_at?: string | null
+          vat_rate?: number
+        }
+        Relationships: []
+      }
       service_transport_types: {
         Row: {
           created_at: string
@@ -2029,6 +2075,9 @@ export type Database = {
           expected_profit_usd: number | null
           expiration_date: string | null
           id: string | null
+          incoterm_code: string | null
+          incoterm_id: string | null
+          operation_type: string | null
           origin: string | null
           origin_unlocode: string | null
           origin_unlocode_id: string | null
@@ -2055,6 +2104,13 @@ export type Database = {
             columns: ["destination_unlocode_id"]
             isOneToOne: false
             referencedRelation: "unlocodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_incoterm_id_fkey"
+            columns: ["incoterm_id"]
+            isOneToOne: false
+            referencedRelation: "incoterms"
             referencedColumns: ["id"]
           },
           {
@@ -2187,6 +2243,39 @@ export type Database = {
           reference_number: string | null
           service_type: string | null
           status: string | null
+        }
+        Relationships: []
+      }
+      sales_accounting_concept_lookup_view: {
+        Row: {
+          concept: string | null
+          created_at: string | null
+          id: string | null
+          operation_type: string | null
+          sat_code: string | null
+          service_type: string | null
+          updated_at: string | null
+          vat_rate: number | null
+        }
+        Insert: {
+          concept?: string | null
+          created_at?: string | null
+          id?: string | null
+          operation_type?: string | null
+          sat_code?: string | null
+          service_type?: string | null
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Update: {
+          concept?: string | null
+          created_at?: string | null
+          id?: string | null
+          operation_type?: string | null
+          sat_code?: string | null
+          service_type?: string | null
+          updated_at?: string | null
+          vat_rate?: number | null
         }
         Relationships: []
       }
@@ -2411,26 +2500,49 @@ export type Database = {
         }
         Returns: string
       }
-      create_opportunity: {
-        Args: {
-          p_client_id: string
-          p_description?: string
-          p_destination?: string
-          p_destination_unlocode?: string
-          p_estimated_value?: number
-          p_expected_profit_usd?: number
-          p_origin?: string
-          p_origin_unlocode?: string
-          p_salesperson_id?: string
-          p_service_quantity?: number
-          p_service_type?: string
-          p_stage?: string
-          p_status?: string
-          p_title?: string
-          p_transport_type?: string
-        }
-        Returns: string
-      }
+      create_opportunity:
+        | {
+            Args: {
+              p_client_id: string
+              p_description?: string
+              p_destination?: string
+              p_destination_unlocode?: string
+              p_estimated_value?: number
+              p_expected_profit_usd?: number
+              p_incoterm_id?: string
+              p_operation_type?: string
+              p_origin?: string
+              p_origin_unlocode?: string
+              p_salesperson_id?: string
+              p_service_quantity?: number
+              p_service_type?: string
+              p_stage?: string
+              p_status?: string
+              p_title?: string
+              p_transport_type?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_client_id: string
+              p_description?: string
+              p_destination?: string
+              p_destination_unlocode?: string
+              p_estimated_value?: number
+              p_expected_profit_usd?: number
+              p_origin?: string
+              p_origin_unlocode?: string
+              p_salesperson_id?: string
+              p_service_quantity?: number
+              p_service_type?: string
+              p_stage?: string
+              p_status?: string
+              p_title?: string
+              p_transport_type?: string
+            }
+            Returns: string
+          }
       create_provider: {
         Args: {
           p_city_unlocode?: string
@@ -2450,6 +2562,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_sales_accounting_concept: {
+        Args: {
+          p_concept: string
+          p_operation_type: string
+          p_sat_code: string
+          p_service_type: string
+          p_vat_rate: number
+        }
+        Returns: string
+      }
       create_service_transport_type: {
         Args: { p_service_type: string; p_transport_type: string }
         Returns: string
@@ -2459,11 +2581,16 @@ export type Database = {
         Args: { p_party_id: string }
         Returns: undefined
       }
+      delete_sales_accounting_concept: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       delete_service_transport_type: {
         Args: { p_id: string }
         Returns: undefined
       }
       erp_current_role_name: { Args: never; Returns: string }
+      erp_current_user_id: { Args: never; Returns: string }
       erp_is_admin: { Args: never; Returns: boolean }
       erp_is_authenticated_active_user: { Args: never; Returns: boolean }
       generate_reference: { Args: { prefix: string }; Returns: string }
@@ -2613,6 +2740,17 @@ export type Database = {
       }
       update_opportunity_status: {
         Args: { p_opportunity_id: string; p_status: string }
+        Returns: undefined
+      }
+      update_sales_accounting_concept: {
+        Args: {
+          p_concept: string
+          p_id: string
+          p_operation_type: string
+          p_sat_code: string
+          p_service_type: string
+          p_vat_rate: number
+        }
         Returns: undefined
       }
       update_service_transport_type: {

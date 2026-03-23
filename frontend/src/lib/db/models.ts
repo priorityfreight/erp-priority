@@ -99,6 +99,9 @@ export type Opportunity = {
   description: string | null
   service_type: string | null
   transport_type: string | null
+  operation_type: string | null
+  incoterm_id: string | null
+  incoterm_code?: string | null
   origin: string | null
   origin_unlocode: string | null
   origin_unlocode_id?: string | null
@@ -243,6 +246,25 @@ export type ServiceTransportType = {
   updated_at: string | null
 }
 
+export type Incoterm = {
+  id: string
+  code: string
+  description: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export type SalesAccountingConcept = {
+  id: string
+  concept: string
+  service_type: string
+  operation_type: string
+  vat_rate: number
+  sat_code: string
+  created_at: string
+  updated_at: string | null
+}
+
 export type ClientFullPayload = {
   client: Client
   contacts: Contact[]
@@ -330,3 +352,8 @@ export type UpdateServiceTransportType = Pick<
   ServiceTransportType,
   "service_type" | "transport_type"
 >
+export type NewSalesAccountingConcept = Pick<
+  SalesAccountingConcept,
+  "concept" | "service_type" | "operation_type" | "vat_rate" | "sat_code"
+>
+export type UpdateSalesAccountingConcept = NewSalesAccountingConcept

@@ -1,8 +1,12 @@
 import { supabase } from "@/lib/supabaseClient"
 import { getMasterDataBackendMode, type MasterDataBackendMode } from "./backendMode"
 import type {
+  Incoterm,
+  NewSalesAccountingConcept,
   NewServiceTransportType,
+  SalesAccountingConcept,
   ServiceTransportType,
+  UpdateSalesAccountingConcept,
   UpdateServiceTransportType,
   UnlocodeCountrySummary,
   UnlocodeRecord,
@@ -37,6 +41,29 @@ function mapServiceTransportType(row: Record<string, unknown>): ServiceTransport
     id: String(row.id),
     service_type: String(row.service_type ?? ""),
     transport_type: String(row.transport_type ?? ""),
+    created_at: String(row.created_at ?? new Date(0).toISOString()),
+    updated_at: (row.updated_at as string | null | undefined) ?? null,
+  }
+}
+
+function mapIncoterm(row: Record<string, unknown>): Incoterm {
+  return {
+    id: String(row.id),
+    code: String(row.code ?? ""),
+    description: (row.description as string | null | undefined) ?? null,
+    created_at: String(row.created_at ?? new Date(0).toISOString()),
+    updated_at: (row.updated_at as string | null | undefined) ?? null,
+  }
+}
+
+function mapSalesAccountingConcept(row: Record<string, unknown>): SalesAccountingConcept {
+  return {
+    id: String(row.id),
+    concept: String(row.concept ?? ""),
+    service_type: String(row.service_type ?? ""),
+    operation_type: String(row.operation_type ?? ""),
+    vat_rate: Number(row.vat_rate ?? 0),
+    sat_code: String(row.sat_code ?? ""),
     created_at: String(row.created_at ?? new Date(0).toISOString()),
     updated_at: (row.updated_at as string | null | undefined) ?? null,
   }
@@ -193,6 +220,105 @@ export async function getServiceTransportTypes(params?: {
   return ((data ?? []) as Record<string, unknown>[]).map((row) =>
     mapServiceTransportType(row)
   )
+}
+
+export async function getIncoterms(): Promise<Incoterm[]> {
+  const { data, error } = await supabase
+    .from("incoterms")
+    .select("*")
+    .order("code", { ascending: true })
+
+  if (error) {
+    throw error
+  }
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => mapIncoterm(row))
+}
+
+export async function getSalesAccountingConcepts(params?: {
+  query?: string
+  serviceType?: string
+  operationType?: string
+}): Promise<SalesAccountingConcept[]> {
+  let request = supabase
+    .from("sales_accounting_concept_lookup_view")
+    .select("*")
+    .order("service_type", { ascending: true })
+    .order("operation_type", { ascending: true })
+    .order("concept", { ascending: true })
+
+  const normalizedQuery = params?.query?.trim()
+  if (normalizedQuery) {
+    request = request.or(
+      `concept.ilike.%${normalizedQuery}%,service_type.ilike.%${normalizedQuery}%,operation_type.ilike.%${normalizedQuery}%,sat_code.ilike.%${normalizedQuery}%`
+    )
+  }
+
+  const normalizedServiceType = params?.serviceType?.trim()
+  if (normalizedServiceType && normalizedServiceType !== "all") {
+    request = request.eq("service_type", normalizedServiceType)
+  }
+
+  const normalizedOperationType = params?.operationType?.trim()
+  if (normalizedOperationType && normalizedOperationType !== "all") {
+    request = request.eq("operation_type", normalizedOperationType)
+  }
+
+  const { data, error } = await request
+
+  if (error) {
+    throw error
+  }
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) =>
+    mapSalesAccountingConcept(row)
+  )
+}
+
+export async function createSalesAccountingConcept(
+  payload: NewSalesAccountingConcept
+): Promise<string> {
+  const { data, error } = await supabase.rpc("create_sales_accounting_concept", {
+    p_concept: payload.concept,
+    p_service_type: payload.service_type,
+    p_operation_type: payload.operation_type,
+    p_vat_rate: payload.vat_rate,
+    p_sat_code: payload.sat_code,
+  } as never)
+
+  if (error || !data) {
+    throw error ?? new Error("Failed to create sales accounting concept")
+  }
+
+  return String(data)
+}
+
+export async function updateSalesAccountingConcept(
+  id: string,
+  payload: UpdateSalesAccountingConcept
+): Promise<void> {
+  const { error } = await supabase.rpc("update_sales_accounting_concept", {
+    p_id: id,
+    p_concept: payload.concept,
+    p_service_type: payload.service_type,
+    p_operation_type: payload.operation_type,
+    p_vat_rate: payload.vat_rate,
+    p_sat_code: payload.sat_code,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function deleteSalesAccountingConcept(id: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_sales_accounting_concept", {
+    p_id: id,
+  } as never)
+
+  if (error) {
+    throw error
+  }
 }
 
 export async function createServiceTransportType(

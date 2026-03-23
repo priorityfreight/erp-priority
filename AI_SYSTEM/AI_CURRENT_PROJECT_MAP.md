@@ -112,7 +112,8 @@ Current master data coverage:
 - unlocodes
 - initial UN/LOCODE snapshot assets under master_data/unlocode/
 - live UN/LOCODE rows imported into the linked Supabase cloud project
-- service_transport_types editable sales catalog with seeded defaults
+- service_transport_types locked sales catalog with canonical service type families
+- sales_accounting_concepts editable SAT-aligned sales accounting catalog
 
 
 --------------------------------------------------
@@ -139,6 +140,7 @@ Current route files:
 - frontend/app/pricing/providers/[id]/page.tsx
 - frontend/app/master-data/page.tsx
 - frontend/app/master-data/sales/service-types/page.tsx
+- frontend/app/master-data/sales/accounting-concepts/page.tsx
 - frontend/app/master-data/unlocode/page.tsx
 
 Current shared layout files:
@@ -311,9 +313,11 @@ masterData.ts
 - the canonical UN/LOCODE contract for all modules is:
   unlocodes + unlocode_lookup_view + search_unlocodes()
 - service_transport_type_lookup_view
-- create_service_transport_type()
-- update_service_transport_type()
-- delete_service_transport_type()
+- service_transport_types is read-only from the application
+- sales_accounting_concept_lookup_view
+- create_sales_accounting_concept()
+- update_sales_accounting_concept()
+- delete_sales_accounting_concept()
 
 
 --------------------------------------------------

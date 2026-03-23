@@ -6,10 +6,12 @@ import { useParams, useRouter } from "next/navigation"
 import {
   deleteOpportunity,
   getClients,
+  getIncoterms,
   getOpportunityById,
   getServiceTransportTypes,
   getUsers,
   type Client,
+  type Incoterm,
   type OpportunityWithClient,
   type ServiceTransportType,
   type User,
@@ -35,6 +37,7 @@ type OpportunityDetailsState = {
   clients: Client[]
   users: User[]
   serviceTransportTypes: ServiceTransportType[]
+  incoterms: Incoterm[]
 }
 
 function InfoCard({
@@ -98,6 +101,8 @@ export default function OpportunityDetailPage() {
     salespersonId: "",
     serviceType: "",
     transportType: "",
+    operationType: "",
+    incotermId: "",
     origin: "",
     originUnlocode: "",
     destination: "",
@@ -114,6 +119,8 @@ export default function OpportunityDetailPage() {
       salespersonId: opportunity.salesperson_id || "",
       serviceType: opportunity.service_type || "",
       transportType: opportunity.transport_type || "",
+      operationType: opportunity.operation_type || "",
+      incotermId: opportunity.incoterm_id || "",
       origin: opportunity.origin || "",
       originUnlocode: opportunity.origin_unlocode || "",
       destination: opportunity.destination || "",
@@ -137,11 +144,12 @@ export default function OpportunityDetailPage() {
     async function load(id: string) {
       try {
         setLoading(true)
-        const [opportunity, clients, users, serviceTransportTypes] = await Promise.all([
+        const [opportunity, clients, users, serviceTransportTypes, incoterms] = await Promise.all([
           getOpportunityById(id),
           getClients(),
           getUsers(),
           getServiceTransportTypes(),
+          getIncoterms(),
         ])
 
         if (cancelled || !opportunity) {
@@ -153,6 +161,7 @@ export default function OpportunityDetailPage() {
           clients,
           users,
           serviceTransportTypes,
+          incoterms,
         })
         syncForm(opportunity)
       } finally {
@@ -201,6 +210,16 @@ export default function OpportunityDetailPage() {
       return
     }
 
+    if (!formValues.operationType) {
+      alert("Selecciona el tipo de operacion")
+      return
+    }
+
+    if (!formValues.incotermId) {
+      alert("Selecciona el incoterm")
+      return
+    }
+
     if (!formValues.originUnlocode || !formValues.destinationUnlocode) {
       alert("Selecciona origen y destino desde UN/LOCODE")
       return
@@ -213,6 +232,8 @@ export default function OpportunityDetailPage() {
         salesperson_id: formValues.salespersonId || null,
         service_type: formValues.serviceType || null,
         transport_type: formValues.transportType || null,
+        operation_type: formValues.operationType || null,
+        incoterm_id: formValues.incotermId || null,
         origin_unlocode: formValues.originUnlocode || null,
         destination_unlocode: formValues.destinationUnlocode || null,
         expected_profit_usd: formValues.expectedProfitUsd
@@ -299,7 +320,7 @@ export default function OpportunityDetailPage() {
     )
   }
 
-  const { opportunity, clients, users, serviceTransportTypes } = details
+  const { opportunity, clients, users, serviceTransportTypes, incoterms } = details
   const estimatedValue =
     opportunity.expected_profit_usd != null && opportunity.service_quantity != null
       ? opportunity.expected_profit_usd * opportunity.service_quantity
@@ -401,6 +422,8 @@ export default function OpportunityDetailPage() {
           <InfoField label="Usuario" value={opportunity.salesperson_name} />
           <InfoField label="Tipo de servicio" value={opportunity.service_type} />
           <InfoField label="Tipo de transporte" value={opportunity.transport_type} />
+          <InfoField label="Tipo de operacion" value={opportunity.operation_type} />
+          <InfoField label="Incoterm" value={opportunity.incoterm_code} />
           <InfoField label="Origen" value={opportunity.origin} />
           <InfoField label="UN/LOCODE origen" value={opportunity.origin_unlocode} />
           <InfoField label="Destino" value={opportunity.destination} />
@@ -445,6 +468,7 @@ export default function OpportunityDetailPage() {
             clients={clients}
             users={users}
             serviceTransportTypes={serviceTransportTypes}
+            incoterms={incoterms}
             createdAt={opportunity.created_at}
             startDate={opportunity.start_date}
             expirationDate={opportunity.expiration_date}

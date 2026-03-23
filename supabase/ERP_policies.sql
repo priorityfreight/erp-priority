@@ -94,10 +94,12 @@ using (public.erp_is_admin());
 alter table external_data_sources enable row level security;
 alter table unlocodes enable row level security;
 alter table service_transport_types enable row level security;
+alter table sales_accounting_concepts enable row level security;
 alter table incoterms enable row level security;
 alter table external_data_sources force row level security;
 alter table unlocodes force row level security;
 alter table service_transport_types force row level security;
+alter table sales_accounting_concepts force row level security;
 alter table incoterms force row level security;
 
 create policy "active_select_external_data_sources"
@@ -160,6 +162,27 @@ with check (public.erp_is_admin());
 
 create policy "admin_delete_service_transport_types"
 on service_transport_types
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_sales_accounting_concepts"
+on sales_accounting_concepts
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_sales_accounting_concepts"
+on sales_accounting_concepts
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_sales_accounting_concepts"
+on sales_accounting_concepts
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_sales_accounting_concepts"
+on sales_accounting_concepts
 for delete
 using (public.erp_is_admin());
 

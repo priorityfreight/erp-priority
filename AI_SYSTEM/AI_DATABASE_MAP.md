@@ -23,6 +23,7 @@ Master Data
 external_data_sources
 unlocodes
 service_transport_types
+sales_accounting_concepts
 
 
 CRM
@@ -134,6 +135,7 @@ provider_service_offerings.service_transport_type_id → service_transport_types
 
 opportunities.client_id → clients.id
 opportunities.salesperson_id → users.id
+opportunities.incoterm_id → incoterms.id
 
 quotations.client_id → clients.id
 quotations.opportunity_id → opportunities.id
@@ -310,14 +312,17 @@ Returns a provider profile with related contacts and offered services.
 search_providers()
 Searches provider rows by name, type, city, country, or company email.
 
-create_service_transport_type()
-Creates a sales master data row for service type and transport type.
+service_transport_types application writes are intentionally blocked.
+Canonical changes to the sales service catalog must be applied only through migrations.
 
-update_service_transport_type()
-Updates a sales master data row for service type and transport type.
+create_sales_accounting_concept()
+Creates a SAT-aligned sales accounting concept row.
 
-delete_service_transport_type()
-Deletes a sales master data row for service type and transport type.
+update_sales_accounting_concept()
+Updates a SAT-aligned sales accounting concept row.
+
+delete_sales_accounting_concept()
+Deletes a SAT-aligned sales accounting concept row.
 
 
 --------------------------------------------------

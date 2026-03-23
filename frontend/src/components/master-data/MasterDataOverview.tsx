@@ -13,8 +13,15 @@ const submodules = [
     title: "Ventas / Tipos de servicio",
     href: "/master-data/sales/service-types",
     status: "Live",
-    coverage: "Catalogo editable en backend canonico",
+    coverage: "Catalogo bloqueado en backend canonico",
     notes: "Relaciona el tipo de servicio con el tipo de transporte disponible para ventas.",
+  },
+  {
+    title: "Ventas / Conceptos contables",
+    href: "/master-data/sales/accounting-concepts",
+    status: "Live",
+    coverage: "Catalogo SAT editable en backend canonico",
+    notes: "Administra concepto, servicio, operacion, IVA y clave SAT para ventas.",
   },
   {
     title: "UN/LOCODE",
@@ -49,7 +56,7 @@ export function MasterDataOverview() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
               Active Submodules
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">3</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">4</div>
           </div>
           <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
@@ -64,7 +71,7 @@ export function MasterDataOverview() {
               Initial Scope
             </div>
             <div className="mt-2 text-sm font-medium text-[#111827]">
-              UN/LOCODE, usuarios y catalogos editables
+              UN/LOCODE, usuarios y catalogos comerciales
             </div>
           </div>
         </section>

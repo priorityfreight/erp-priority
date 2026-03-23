@@ -62,16 +62,25 @@ Current cloud import status:
 
 2. Ventas
 
-Current live editable catalog:
+Current live catalog:
 
 - Tipos de servicio
+- Conceptos contables
 
-Current seed scope:
+Current locked service type families:
 
-- Maritimo / LCL
-- Terrestre / Caja de 53
-- Aereo / Paqueteria
-- Terrestre / Arrastre de contenedor
+- AIR
+- FCL
+- LCL
+- FTL
+- LTL
+- COURIER
+
+Current catalog behavior:
+
+- read-only from the application
+- canonical changes only via migrations
+- transport types remain associated to one of the locked service type families
 
 
 --------------------------------------------------
@@ -108,19 +117,32 @@ UN/LOCODE backend search implementation:
 service_transport_types
 
 Purpose:
-Stores editable sales catalog rows that relate a service type with a transport type.
+Stores the locked canonical sales catalog that relates an allowed service type family with a transport type.
 
 service_transport_type_lookup_view
 
 Purpose:
 Provides a read-friendly ordered projection for the sales catalog screen.
 
-create_service_transport_type()
-update_service_transport_type()
-delete_service_transport_type()
+Application writes are blocked for this catalog.
+Canonical changes must be made only through controlled migrations.
+
+sales_accounting_concepts
 
 Purpose:
-Provide the canonical write path for the editable sales catalog.
+Stores editable SAT-aligned sales accounting concepts with service type, operation type, VAT, and SAT key.
+
+sales_accounting_concept_lookup_view
+
+Purpose:
+Provides a read-friendly ordered projection for the sales accounting concept screen.
+
+create_sales_accounting_concept()
+update_sales_accounting_concept()
+delete_sales_accounting_concept()
+
+Purpose:
+Provide the canonical application write path for accounting concepts.
 
 
 --------------------------------------------------
@@ -242,14 +264,14 @@ Do not replace this pattern with free-text location capture.
 SALES CATALOG RULES
 --------------------------------------------------
 
-Editable sales master data must:
+Sales master data must:
 
 - live in canonical tables under MASTER DATA, not inside transactional sales tables
 - be managed through the canonical query layer
 - be seeded with the current business defaults when the catalog is introduced
 - stay small, human-readable, and intentionally curated
 
-The first editable sales catalog is:
+The current locked sales catalog is:
 
 - Tipos de servicio = service_type + transport_type
 

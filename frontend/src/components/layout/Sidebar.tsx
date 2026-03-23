@@ -22,6 +22,11 @@ const navItems: NavItem[] = [
     label: "Ventas / Tipos de servicio",
     section: "Master Data",
   },
+  {
+    href: "/master-data/sales/accounting-concepts",
+    label: "Ventas / Conceptos contables",
+    section: "Master Data",
+  },
   { href: "/master-data/unlocode", label: "UN/LOCODE", section: "Master Data" },
 ]
 
