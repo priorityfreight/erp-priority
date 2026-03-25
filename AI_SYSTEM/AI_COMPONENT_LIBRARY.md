@@ -103,6 +103,7 @@ Contains main modules.
 Must support:
 
 - shared brand lockup
+- real company logo asset instead of recreated typography
 - grouped module sections
 - accordion module cards
 - permission-aware route visibility

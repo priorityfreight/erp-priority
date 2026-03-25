@@ -97,6 +97,7 @@ Sidebar visual direction:
 - burgundy active state
 - soft gray section labels
 - embedded brand lockup near the top
+- use the real company wordmark or mark asset, not generated text lockups
 - retractable grouped module cards instead of a flat crowded menu
 - remember the desktop collapsed state between sessions
 - behave as a slide-in drawer on mobile with a strong close affordance

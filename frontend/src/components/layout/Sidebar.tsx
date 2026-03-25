@@ -22,12 +22,18 @@ type ModuleGroup = {
 }
 
 const moduleIconMap: Record<string, string> = {
-  dashboard: "DB",
-  crm: "CRM",
+  dashboard: "DA",
+  home: "DA",
+  crm: "CR",
+  briefcase: "CR",
   pricing: "PR",
+  calculator: "PR",
   master_data: "MD",
-  operations: "OPS",
-  finance: "FIN",
+  database: "MD",
+  operations: "OP",
+  logistics: "OP",
+  finance: "FI",
+  banknote: "FI",
 }
 
 function normalizeRoute(routePath: string | null) {
@@ -158,56 +164,31 @@ export function Sidebar({
         ].join(" ")}
       >
         <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top_left,_rgba(179,58,91,0.38),_transparent_44%)]" />
-        <div className="relative flex items-center justify-between px-4 pb-5 pt-6">
-          <div className={collapsed ? "mx-auto" : ""}>
+        <div className="relative flex items-center justify-between gap-3 px-4 pb-4 pt-6">
+          <div className={collapsed ? "mx-auto" : "min-w-0 flex-1"}>
             <Brand compact={collapsed} light />
           </div>
-          <button
-            type="button"
-            onClick={collapsed ? onToggleCollapsed : onCloseMobile}
-            className={[
-              "rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--brand-soft-gray)] hover:bg-white/12 lg:hidden",
-            ].join(" ")}
-          >
-            Cerrar
-          </button>
-        </div>
-
-        {!collapsed ? (
-          <div className="relative mx-4 rounded-[24px] border border-white/10 bg-white/6 px-4 py-4 shadow-[0_20px_60px_-40px_rgba(3,10,24,0.95)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[var(--brand-soft-gray)]">
-                  Operating Workspace
-                </div>
-                <div className="mt-2 text-sm leading-6 text-[var(--brand-light-gray)]">
-                  Navegacion inteligente por modulo, con acceso filtrado por permisos reales.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={onToggleCollapsed}
-                className="hidden rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--brand-soft-gray)] hover:bg-white/12 lg:block"
-              >
-                Contraer
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="relative flex justify-center px-2 pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={collapsed ? onToggleCollapsed : onCloseMobile}
+              className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--brand-soft-gray)] hover:bg-white/12 lg:hidden"
+            >
+              Cerrar
+            </button>
             <button
               type="button"
               onClick={onToggleCollapsed}
-              className="hidden h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-soft-gray)] hover:bg-white/12 lg:flex"
-              title="Expandir menu"
+              className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-sm font-semibold text-[var(--brand-soft-gray)] hover:bg-white/12 lg:flex"
+              title={collapsed ? "Expandir menu" : "Contraer menu"}
             >
-              +
+              {collapsed ? "+" : "−"}
             </button>
           </div>
-        )}
+        </div>
 
-        <nav className="relative flex-1 overflow-y-auto px-3 pb-5 pt-5">
-          <div className="space-y-3">
+        <nav className="relative flex-1 overflow-y-auto px-3 pb-5 pt-2">
+          <div className="space-y-2.5">
             {moduleGroups.map((moduleGroup) => {
               const moduleHasActiveRoute = moduleGroup.items.some((item) =>
                 isRouteActive(pathname, normalizeRoute(item.route_path))
@@ -215,7 +196,7 @@ export function Sidebar({
               const isExpanded =
                 expandedModules[moduleGroup.moduleCode] ?? getDefaultExpandedState(moduleGroup)
               const iconLabel =
-                moduleGroup.moduleIconKey ||
+                moduleIconMap[moduleGroup.moduleIconKey ?? ""] ||
                 moduleIconMap[moduleGroup.moduleCode] ||
                 moduleGroup.moduleName.slice(0, 2).toUpperCase()
 
@@ -223,17 +204,17 @@ export function Sidebar({
                 <section
                   key={moduleGroup.moduleCode}
                   className={[
-                    "rounded-[24px] border transition-all",
+                    "rounded-[22px] border transition-all",
                     moduleHasActiveRoute
-                      ? "border-[rgba(179,58,91,0.34)] bg-[linear-gradient(180deg,_rgba(128,0,32,0.18),_rgba(11,31,59,0.26))]"
-                      : "border-white/8 bg-white/[0.03]",
+                      ? "border-[rgba(179,58,91,0.34)] bg-[linear-gradient(180deg,_rgba(128,0,32,0.22),_rgba(11,31,59,0.18))] shadow-[0_24px_48px_-32px_rgba(128,0,32,0.85)]"
+                      : "border-white/8 bg-white/[0.025]",
                   ].join(" ")}
                 >
                   <button
                     type="button"
                     onClick={() => toggleModule(moduleGroup.moduleCode, isExpanded)}
                     className={[
-                      "flex w-full items-center gap-3 px-3 py-3 text-left",
+                      "flex w-full items-center gap-3 px-3 py-3.5 text-left",
                       collapsed ? "justify-center" : "justify-between",
                     ].join(" ")}
                     title={collapsed ? moduleGroup.moduleName : undefined}
@@ -252,9 +233,6 @@ export function Sidebar({
                       {!collapsed ? (
                         <div>
                           <div className="text-sm font-semibold text-white">{moduleGroup.moduleName}</div>
-                          <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--brand-gray)]">
-                            {moduleGroup.items.length} vistas
-                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -277,7 +255,7 @@ export function Sidebar({
                             href={href}
                             onClick={onCloseMobile}
                             className={[
-                              "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
+                              "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
                               active
                                 ? "bg-[linear-gradient(135deg,_rgba(179,58,91,0.92),_rgba(128,0,32,0.88))] text-white shadow-[0_20px_34px_-24px_rgba(179,58,91,0.95)]"
                                 : "text-[var(--brand-light-gray)] hover:bg-white/8 hover:text-white",
@@ -302,23 +280,6 @@ export function Sidebar({
             })}
           </div>
         </nav>
-
-        <div className="relative border-t border-white/10 px-4 py-4">
-          {collapsed ? (
-            <div className="text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-gray)]">
-              PFI
-            </div>
-          ) : (
-            <>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--brand-gray)]">
-                Priority Freight Intelligence
-              </div>
-              <div className="mt-2 text-sm text-[var(--brand-soft-gray)]">
-                Navegacion retractil, limpia y segura por permisos.
-              </div>
-            </>
-          )}
-        </div>
       </aside>
     </>
   )
