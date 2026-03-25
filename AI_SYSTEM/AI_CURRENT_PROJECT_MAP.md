@@ -159,6 +159,7 @@ Current shared layout files:
 - frontend/src/components/layout/Topbar.tsx
 - frontend/src/components/layout/PageContainer.tsx
 - frontend/proxy.ts
+- the shared shell now uses a retractable, permission-aware sidebar with grouped module accordions and a mobile drawer
 
 Current shared CRM/UI components:
 
@@ -169,6 +170,7 @@ Current shared CRM/UI components:
 - frontend/src/components/master-data/ServiceTransportTypeManager.tsx
 - frontend/src/components/master-data/UsersManager.tsx
 - frontend/src/components/master-data/RolesPermissionsManager.tsx
+- UsersManager now includes admin-only table actions for edit, activate/inactivate, and delete
 
 Current query layer:
 

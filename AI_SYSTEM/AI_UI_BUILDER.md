@@ -97,6 +97,9 @@ Sidebar visual direction:
 - burgundy active state
 - soft gray section labels
 - embedded brand lockup near the top
+- retractable grouped module cards instead of a flat crowded menu
+- remember the desktop collapsed state between sessions
+- behave as a slide-in drawer on mobile with a strong close affordance
 
 Example modules
 
@@ -108,6 +111,7 @@ Example modules
 ⚙️ Settings
 
 Users should understand modules just by icons.
+Users should also understand the module hierarchy at a glance through accordion groupings, not long flat lists.
 
 
 

@@ -50,7 +50,7 @@ async function getAdminClients() {
     }
   )
 
-  return { sessionClient, adminClient }
+  return { sessionClient, adminClient, currentUser }
 }
 
 export async function POST(request: Request) {
@@ -122,7 +122,7 @@ export async function PATCH(request: Request) {
     return clients.error
   }
 
-  const { sessionClient, adminClient } = clients
+  const { sessionClient, adminClient, currentUser } = clients
   const payload = (await request.json()) as UserPayload
 
   if (!payload.userId) {
@@ -130,6 +130,13 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    if (payload.userId === currentUser.id && payload.active === false) {
+      return NextResponse.json(
+        { error: "No puedes inactivar tu propio usuario administrador." },
+        { status: 400 }
+      )
+    }
+
     let resolvedAuthUserId = payload.authUserId ?? null
     const trimmedEmail = payload.email.trim().toLowerCase()
     const trimmedPassword = payload.password?.trim() || null
@@ -183,6 +190,86 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ id: profileResult.data, authUserId: resolvedAuthUserId })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unexpected error." },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  const clients = await getAdminClients()
+
+  if ("error" in clients) {
+    return clients.error
+  }
+
+  const { adminClient, currentUser } = clients
+  const payload = (await request.json()) as Pick<UserPayload, "userId" | "authUserId">
+
+  if (!payload.userId) {
+    return NextResponse.json({ error: "userId is required." }, { status: 400 })
+  }
+
+  if (payload.userId === currentUser.id) {
+    return NextResponse.json(
+      { error: "No puedes eliminar tu propio usuario administrador." },
+      { status: 400 }
+    )
+  }
+
+  try {
+    const [
+      clientsOwned,
+      opportunitiesOwned,
+      quotationsCreated,
+      quotationsOwned,
+      commissionsOwned,
+    ] = await Promise.all([
+      adminClient.from("clients").select("id", { count: "exact", head: true }).eq("account_owner_id", payload.userId),
+      adminClient.from("opportunities").select("id", { count: "exact", head: true }).eq("salesperson_id", payload.userId),
+      adminClient.from("quotations").select("id", { count: "exact", head: true }).eq("created_by", payload.userId),
+      adminClient.from("quotations").select("id", { count: "exact", head: true }).eq("pricing_owner_id", payload.userId),
+      adminClient.from("commissions").select("id", { count: "exact", head: true }).eq("user_id", payload.userId),
+    ])
+
+    const blockingReferences = [
+      { label: "clientes asignados", count: clientsOwned.count ?? 0 },
+      { label: "oportunidades asignadas", count: opportunitiesOwned.count ?? 0 },
+      { label: "cotizaciones creadas", count: quotationsCreated.count ?? 0 },
+      { label: "cotizaciones de pricing", count: quotationsOwned.count ?? 0 },
+      { label: "comisiones", count: commissionsOwned.count ?? 0 },
+    ].filter((item) => item.count > 0)
+
+    if (blockingReferences.length > 0) {
+      return NextResponse.json(
+        {
+          error: `No se puede eliminar el usuario porque tiene historial relacionado: ${blockingReferences
+            .map((item) => `${item.label} (${item.count})`)
+            .join(", ")}. Usa estatus inactivo en su lugar.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    await adminClient.from("audit_logs").update({ user_id: null }).eq("user_id", payload.userId)
+
+    if (payload.authUserId) {
+      const deleteAuthResult = await adminClient.auth.admin.deleteUser(payload.authUserId)
+
+      if (deleteAuthResult.error) {
+        return NextResponse.json({ error: deleteAuthResult.error.message }, { status: 400 })
+      }
+    }
+
+    const deleteProfileResult = await adminClient.from("users").delete().eq("id", payload.userId)
+
+    if (deleteProfileResult.error) {
+      return NextResponse.json({ error: deleteProfileResult.error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unexpected error." },

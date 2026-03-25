@@ -5,5 +5,10 @@ export default async function UsersPage() {
   await ensureRouteAccessOrRedirect("/master-data/users")
   const currentUser = await getCurrentErpUserServer()
 
-  return <UsersManager currentUserEmail={currentUser?.email ?? ""} />
+  return (
+    <UsersManager
+      currentUserEmail={currentUser?.email ?? ""}
+      currentUserId={currentUser?.id ?? ""}
+    />
+  )
 }

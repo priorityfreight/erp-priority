@@ -100,17 +100,14 @@ Sidebar
 
 Contains main modules.
 
-Dashboard
-Clients
-Opportunities
-Shipments
-Analytics
-Settings
-
 Must support:
 
 - shared brand lockup
 - grouped module sections
+- accordion module cards
+- permission-aware route visibility
+- persistent desktop collapsed state
+- mobile drawer open / close state
 - burgundy active item treatment
 - dark navy base
 
@@ -121,7 +118,6 @@ Topbar
 Contains
 
 Search
-Notifications
 User profile
 Quick actions
 

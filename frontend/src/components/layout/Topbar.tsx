@@ -12,7 +12,17 @@ function getPageTitle(pathname: string): string {
   return last.charAt(0).toUpperCase() + last.slice(1)
 }
 
-export function Topbar() {
+type TopbarProps = {
+  sidebarCollapsed: boolean
+  onToggleSidebar: () => void
+  onToggleMobileSidebar: () => void
+}
+
+export function Topbar({
+  sidebarCollapsed,
+  onToggleSidebar,
+  onToggleMobileSidebar,
+}: TopbarProps) {
   const pathname = usePathname()
   const title = getPageTitle(pathname)
   const [currentUser, setCurrentUser] = useState<CurrentErpUser | null>(null)
@@ -63,6 +73,21 @@ export function Topbar() {
     <header className="relative border-b border-white/10 bg-[rgba(7,16,32,0.4)] px-4 py-4 backdrop-blur-xl sm:px-6">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onToggleMobileSidebar}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-sm font-semibold text-white lg:hidden"
+            aria-label="Abrir menu"
+          >
+            ≡
+          </button>
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="hidden h-11 items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand-light-gray)] hover:bg-white/10 lg:flex"
+          >
+            <span>{sidebarCollapsed ? "Expandir" : "Contraer"}</span>
+          </button>
           <div className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 lg:hidden">
             <Brand compact light />
           </div>

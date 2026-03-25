@@ -170,6 +170,7 @@ Authorization:
 
 - route access is enforced through frontend/proxy.ts and erp_can_access_route()
 - sidebar visibility is driven by get_current_navigation_items()
+- the main sidebar is now a permission-aware retractable shell with grouped accordion modules, desktop collapse memory, and mobile drawer behavior
 - permission_modules and permission_submodules define the visible ERP navigation surface
 - permission_resources and role_resource_permissions define the live coarse-grained security layer
 - permission_fields and role_field_permissions define the current field-permission registry
@@ -397,6 +398,9 @@ Master Data
 - Users directory is an admin-only submodule under Master Data
 - the users module manages:
   name, role, email, phone, username, password provisioning, active/inactive status
+- the users workspace now supports create, edit, activate, inactivate, and delete actions from the directory table
+- the current admin cannot inactivate or delete their own active session identity
+- deleting a user is blocked when the ERP profile still owns live CRM, quotation, or commission history; those users must be left inactive instead
 - password creation and updates must be executed through a protected server path using the service role key
 - UN/LOCODE lookup uses unlocode_lookup_view and search_unlocodes()
 - the canonical UN/LOCODE contract for all modules is:

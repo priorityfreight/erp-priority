@@ -51,9 +51,10 @@ function mapUserToForm(user: User): UserFormValues {
 
 type UsersManagerProps = {
   currentUserEmail: string
+  currentUserId: string
 }
 
-export function UsersManager({ currentUserEmail }: UsersManagerProps) {
+export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerProps) {
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<UserRole[]>([])
   const [search, setSearch] = useState("")
@@ -65,6 +66,8 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
   const [formValues, setFormValues] = useState<UserFormValues>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [tableError, setTableError] = useState<string | null>(null)
+  const [tableFeedback, setTableFeedback] = useState<string | null>(null)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -74,8 +77,10 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
       ])
       setUsers(userRows)
       setRoles(roleRows)
+      setTableError(null)
     } catch (error) {
       console.error(error)
+      setTableError(error instanceof Error ? error.message : "No se pudieron cargar los usuarios.")
     }
   }, [])
 
@@ -135,6 +140,28 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
     setShowCreateModal(true)
   }
 
+  function buildUpdatePayload(user: User, overrides?: Partial<{
+    active: boolean
+    roleName: string
+    phone: string | null
+    username: string | null
+    firstName: string
+    lastName: string
+  }>) {
+    return {
+      userId: user.id,
+      authUserId: user.auth_user_id ?? null,
+      firstName: overrides?.firstName ?? user.first_name,
+      lastName: overrides?.lastName ?? user.last_name,
+      email: user.email.trim().toLowerCase(),
+      phone: overrides?.phone ?? user.phone ?? null,
+      username: overrides?.username ?? user.username ?? null,
+      roleName: overrides?.roleName ?? user.role_name ?? "",
+      active: overrides?.active ?? user.active,
+      password: null,
+    }
+  }
+
   async function handleSubmit() {
     const { firstName, lastName } = splitFullName(formValues.fullName)
 
@@ -181,9 +208,91 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
 
       setShowCreateModal(false)
       resetForm()
+      setTableFeedback(editingUser ? "Usuario actualizado correctamente." : "Usuario creado correctamente.")
       await loadUsers()
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "No se pudo guardar el usuario.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleToggleActive(user: User) {
+    const nextStatus = !user.active
+
+    if (user.id === currentUserId && !nextStatus) {
+      setTableError("No puedes inactivar tu propio usuario administrador.")
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      setTableError(null)
+
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildUpdatePayload(user, { active: nextStatus })),
+      })
+
+      const result = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(result.error || "No se pudo actualizar el estatus del usuario.")
+      }
+
+      setTableFeedback(`Usuario marcado como ${nextStatus ? "activo" : "inactivo"}.`)
+      await loadUsers()
+    } catch (error) {
+      setTableError(
+        error instanceof Error ? error.message : "No se pudo actualizar el estatus del usuario."
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDeleteUser(user: User) {
+    if (user.id === currentUserId) {
+      setTableError("No puedes eliminar tu propio usuario administrador.")
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Vas a eliminar al usuario ${getDisplayName(user)}. Esta accion no se puede deshacer.`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      setTableError(null)
+
+      const response = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          authUserId: user.auth_user_id ?? null,
+        }),
+      })
+
+      const result = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(result.error || "No se pudo eliminar el usuario.")
+      }
+
+      setTableFeedback("Usuario eliminado correctamente.")
+      await loadUsers()
+    } catch (error) {
+      setTableError(error instanceof Error ? error.message : "No se pudo eliminar el usuario.")
     } finally {
       setSubmitting(false)
     }
@@ -279,6 +388,18 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
             Usuario actual: <span className="font-semibold text-[#0F172A]">{currentUserEmail}</span>
           </div>
 
+          {tableFeedback ? (
+            <div className="mb-4 rounded-xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-sm text-[#166534]">
+              {tableFeedback}
+            </div>
+          ) : null}
+
+          {tableError ? (
+            <div className="mb-4 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+              {tableError}
+            </div>
+          ) : null}
+
           {filteredUsers.length === 0 ? (
             <p className="text-sm text-[#6B7280]">
               No hay usuarios que coincidan con los filtros actuales.
@@ -313,13 +434,35 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
                         {user.auth_user_id ? "Vinculado" : "Pendiente"}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-end">
+                        <div className="flex flex-wrap justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => openEditModal(user)}
                             className="rounded-md border border-[#D1D5DB] px-3 py-2 text-xs font-medium text-[#374151] hover:bg-[#F8FAFC]"
                           >
                             Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleToggleActive(user)}
+                            disabled={submitting}
+                            className={[
+                              "rounded-md px-3 py-2 text-xs font-medium text-white",
+                              user.active
+                                ? "bg-[#B45309] hover:bg-[#92400E]"
+                                : "bg-[#047857] hover:bg-[#065F46]",
+                              submitting ? "cursor-not-allowed opacity-70" : "",
+                            ].join(" ")}
+                          >
+                            {user.active ? "Inactivar" : "Activar"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteUser(user)}
+                            disabled={submitting}
+                            className="rounded-md border border-[#FCA5A5] px-3 py-2 text-xs font-medium text-[#B91C1C] hover:bg-[#FEF2F2] disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            Eliminar
                           </button>
                         </div>
                       </td>
