@@ -91,6 +91,144 @@ export type UserRole = {
   description: string | null
 }
 
+export type PermissionModule = {
+  id: string
+  code: string
+  name: string
+  icon_key: string | null
+  sort_order: number
+  active: boolean
+}
+
+export type PermissionSubmodule = {
+  id: string
+  module_id: string
+  code: string
+  name: string
+  route_path: string | null
+  route_matchers: string[]
+  sort_order: number
+  active: boolean
+}
+
+export type PermissionAction = {
+  id: string
+  code: string
+  name: string
+  scope_type: string
+  active: boolean
+}
+
+export type PermissionCondition = {
+  id: string
+  code: string
+  name: string
+  description: string | null
+}
+
+export type PermissionResourceCatalogItem = {
+  module_id: string
+  module_code: string
+  module_name: string
+  module_icon_key: string | null
+  module_sort_order: number
+  module_active: boolean
+  submodule_id: string | null
+  submodule_code: string | null
+  submodule_name: string | null
+  route_path: string | null
+  route_matchers: string[]
+  submodule_sort_order: number | null
+  submodule_active: boolean | null
+  resource_id: string
+  resource_key: string
+  resource_name: string
+  resource_type: string
+  resource_group: string | null
+  table_name: string | null
+  view_name: string | null
+  rpc_name: string | null
+  entity_owner_field: string | null
+  entity_branch_field: string | null
+  resource_sort_order: number
+  resource_active: boolean
+}
+
+export type PermissionFieldCatalogItem = {
+  resource_key: string
+  resource_name: string
+  field_id: string
+  resource_id: string
+  field_key: string
+  label: string
+  data_type: string | null
+  field_group: string | null
+  field_sort_order: number
+  active: boolean
+}
+
+export type RoleResourcePermissionMatrixRow = {
+  role_id: string
+  role_name: string
+  module_id: string
+  module_code: string
+  module_name: string
+  module_icon_key: string | null
+  module_sort_order: number
+  submodule_id: string | null
+  submodule_code: string | null
+  submodule_name: string | null
+  route_path: string | null
+  route_matchers: string[]
+  submodule_sort_order: number | null
+  resource_id: string
+  resource_key: string
+  resource_name: string
+  resource_type: string
+  resource_group: string | null
+  action_id: string
+  action_code: string
+  action_name: string
+  allowed: boolean
+  condition_id: string | null
+  condition_code: string
+  condition_name: string
+  role_permission_id: string | null
+}
+
+export type RoleFieldPermissionMatrixRow = {
+  role_id: string
+  role_name: string
+  resource_key: string
+  resource_name: string
+  field_id: string
+  field_key: string
+  field_label: string
+  data_type: string | null
+  field_group: string | null
+  field_sort_order: number
+  action_id: string
+  action_code: string
+  action_name: string
+  allowed: boolean
+  condition_id: string | null
+  condition_code: string
+  condition_name: string
+  role_field_permission_id: string | null
+}
+
+export type NavigationPermissionItem = {
+  module_code: string
+  module_name: string
+  module_icon_key: string | null
+  module_sort_order: number
+  submodule_code: string
+  submodule_name: string
+  route_path: string | null
+  route_matchers: string[]
+  submodule_sort_order: number
+}
+
 export type Opportunity = {
   id: string
   client_id: string
@@ -180,6 +318,11 @@ export type Quotation = {
   estimated_cost: number | null
   estimated_price: number | null
   expected_profit: number | null
+  can_view_cost?: boolean
+  can_edit_purchase_amount?: boolean
+  can_view_sale_price?: boolean
+  can_edit_sale_price?: boolean
+  can_view_expected_profit?: boolean
   total_charge_lines?: number
   created_at: string
   updated_at: string | null
@@ -203,10 +346,15 @@ export type QuotationChargeLine = {
   sales_accounting_concept_id: string | null
   accounting_concept?: string | null
   service_name: string
-  cost: number
+  cost: number | null
   purchase_amount: number | null
   sale_amount: number | null
   profit_amount: number | null
+  can_view_cost?: boolean
+  can_edit_purchase_amount?: boolean
+  can_view_sale_price?: boolean
+  can_edit_sale_price?: boolean
+  can_view_expected_profit?: boolean
   vat_rate: number
   currency: string
   notes: string | null

@@ -26,6 +26,8 @@ type QuotationChargeLineFormProps = {
   submitLabel?: string
   loading?: boolean
   allowSaleAmount?: boolean
+  disabled?: boolean
+  disabledReason?: string | null
 }
 
 export function QuotationChargeLineForm({
@@ -41,6 +43,8 @@ export function QuotationChargeLineForm({
   submitLabel = "Guardar cargo",
   loading = false,
   allowSaleAmount = false,
+  disabled = false,
+  disabledReason = null,
 }: QuotationChargeLineFormProps) {
   const filteredConcepts = useMemo(
     () =>
@@ -76,12 +80,14 @@ export function QuotationChargeLineForm({
           className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
           placeholder="Opcion (ej. Opcion 1)"
           value={values.optionLabel}
+          disabled={disabled}
           onChange={(event) => onChange("optionLabel", event.target.value)}
         />
 
         <select
           className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
           value={values.providerId}
+          disabled={disabled}
           onChange={(event) => onChange("providerId", event.target.value)}
         >
           <option value="">Proveedor</option>
@@ -95,6 +101,7 @@ export function QuotationChargeLineForm({
         <select
           className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
           value={values.salesAccountingConceptId}
+          disabled={disabled}
           onChange={(event) => {
             const nextId = event.target.value
             const nextConcept = filteredConcepts.find((item) => item.id === nextId)
@@ -117,6 +124,7 @@ export function QuotationChargeLineForm({
           placeholder="Compra"
           inputMode="decimal"
           value={values.purchaseAmount}
+          disabled={disabled}
           onChange={(event) => onChange("purchaseAmount", event.target.value)}
         />
 
@@ -126,6 +134,7 @@ export function QuotationChargeLineForm({
             placeholder="Venta"
             inputMode="decimal"
             value={values.saleAmount}
+            disabled={disabled}
             onChange={(event) => onChange("saleAmount", event.target.value)}
           />
         ) : null}
@@ -135,6 +144,7 @@ export function QuotationChargeLineForm({
           placeholder="IVA"
           inputMode="decimal"
           value={values.vatRate}
+          disabled={disabled}
           onChange={(event) => onChange("vatRate", event.target.value)}
         />
 
@@ -153,6 +163,7 @@ export function QuotationChargeLineForm({
           className="md:col-span-2 min-h-[100px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
           placeholder="Notas del cargo"
           value={values.notes}
+          disabled={disabled}
           onChange={(event) => onChange("notes", event.target.value)}
         />
       </div>
@@ -169,12 +180,18 @@ export function QuotationChargeLineForm({
         )}
       </div>
 
+      {disabledReason ? (
+        <div className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-3 py-3 text-sm text-[#92400E]">
+          {disabledReason}
+        </div>
+      ) : null}
+
       {onSubmit ? (
         <div className="flex justify-end">
           <button
             type="button"
             onClick={onSubmit}
-            disabled={loading}
+            disabled={loading || disabled}
             className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Guardando..." : submitLabel}

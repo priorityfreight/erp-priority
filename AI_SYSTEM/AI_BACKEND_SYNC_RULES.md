@@ -147,6 +147,29 @@ Before large-volume modules are extended:
 
 
 --------------------------------------------------
+PERMISSION REGISTRY SYNC RULE
+--------------------------------------------------
+
+The permissions system is metadata-driven.
+
+When a live module or route is added:
+
+1. register or update permission_modules
+2. register or update permission_submodules
+3. register or update permission_resources
+4. register or update permission_fields when the screen contains sensitive fields
+5. seed role_resource_permissions defaults
+6. seed role_field_permissions defaults when field-level control is required
+7. keep proxy/server route checks aligned with the registered route matchers
+8. for registered sensitive fields, no explicit role_field_permissions rule must mean deny-by-default
+9. expose sensitive quotation economics through masked reads such as quotation_summary_view and quotation_cost_line_secure_view
+10. before activating owner_only or assigned_branch_only on a live resource, backfill canonical owner_id and branch_id data for existing records
+11. if a resource inherits scope from a parent entity, document that derivation explicitly and validate it with temporary multi-user smoke tests
+
+Do not ship a live route, sidebar link, or protected workflow without a matching permission registry path.
+
+
+--------------------------------------------------
 VALIDATION CHECKLIST
 --------------------------------------------------
 

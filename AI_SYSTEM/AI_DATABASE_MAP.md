@@ -26,11 +26,23 @@ service_transport_types
 sales_accounting_concepts
 
 
-CRM
+Organization / Security
 
 branches
 roles
 users
+permission_modules
+permission_submodules
+permission_actions
+permission_conditions
+permission_resources
+permission_fields
+role_resource_permissions
+role_field_permissions
+
+
+CRM
+
 prospects
 clients
 contacts
@@ -111,6 +123,19 @@ users.role_id → roles.id
 users.branch_id → branches.id
 users.auth_user_id → auth.users.id
 
+permission_submodules.module_id → permission_modules.id
+permission_resources.module_id → permission_modules.id
+permission_resources.submodule_id → permission_submodules.id
+permission_fields.resource_id → permission_resources.id
+role_resource_permissions.role_id → roles.id
+role_resource_permissions.resource_id → permission_resources.id
+role_resource_permissions.action_id → permission_actions.id
+role_resource_permissions.condition_id → permission_conditions.id
+role_field_permissions.role_id → roles.id
+role_field_permissions.field_id → permission_fields.id
+role_field_permissions.action_id → permission_actions.id
+role_field_permissions.condition_id → permission_conditions.id
+
 unlocodes.source_id → external_data_sources.id
 clients.city_unlocode → unlocodes.unlocode (logical reference, not yet a foreign key)
 clients.city_unlocode_id → unlocodes.id
@@ -176,6 +201,9 @@ roles
 external_data_sources
 incoterms
 providers
+permission_modules
+permission_actions
+permission_conditions
 
 
 Level 2
@@ -186,11 +214,16 @@ service_transport_types
 prospects
 provider_contacts
 provider_service_offerings
+permission_submodules
+permission_resources
 
 
 Level 3
 
 clients
+permission_fields
+role_resource_permissions
+role_field_permissions
 
 
 Level 4
@@ -256,6 +289,33 @@ Security helper used by RLS to allow access only to authenticated active ERP use
 erp_is_admin()
 Security helper used by RLS for admin-only tables and writes.
 
+erp_current_branch_id()
+Returns the current ERP user's branch_id for conditional permission checks.
+
+erp_has_role()
+Checks whether the current ERP user has a specific role name.
+
+erp_access_scope()
+Returns the configured condition code for a resource/action pair in the current role.
+
+erp_has_module_access()
+Checks module-level permission for the current ERP user.
+
+erp_has_submodule_access()
+Checks submodule-level permission for the current ERP user.
+
+erp_has_resource_access()
+Checks resource-level permission for the current ERP user.
+
+erp_has_field_access()
+Checks field-level permission for the current ERP user.
+
+erp_can_access_route()
+Checks whether the current ERP user may open a frontend route path.
+
+get_current_navigation_items()
+Returns the live navigation items visible to the current ERP user.
+
 add_contact_to_client()
 Adds a contact to an existing client.
 
@@ -294,11 +354,32 @@ Assigns the quotation to a pricing owner and moves it to cotizando.
 update_quotation_status()
 Handles the canonical quotation lifecycle transitions.
 
+search_quotations()
+Returns the paginated CRM or Pricing quotation queue without forcing full summary-view scans.
+
+erp_can_view_quotation_cost()
+Returns whether the current role may view quotation purchase-side economics.
+
+erp_can_edit_quotation_purchase_amount()
+Returns whether the current role may edit quotation purchase-side amounts.
+
+erp_can_view_quotation_sale_price()
+Returns whether the current role may view quotation sale amounts.
+
+erp_can_edit_quotation_sale_price()
+Returns whether the current role may edit quotation sale amounts.
+
+erp_can_view_quotation_expected_profit()
+Returns whether the current role may view quotation expected profit.
+
 create_quotation_cost_line()
 Adds a provider/accounting-concept charge line to a quotation.
 
 update_quotation_cost_line()
 Updates a quotation charge line and recalculates totals.
+
+update_quotation_option_sales_amounts()
+Updates all sale amounts for one commercial option in a single batched operation.
 
 delete_quotation_cost_line()
 Deletes a quotation charge line and recalculates totals.
@@ -377,6 +458,7 @@ sales_pipeline_view
 open_opportunities_view
 Canonical opportunity list and summary view with client, service, transport, owner, lane, values, and effective lifecycle status.
 quotation_summary_view
+quotation_cost_line_secure_view
 crm_quotations_view
 pricing_quotations_view
 active_shipments_view

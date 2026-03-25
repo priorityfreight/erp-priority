@@ -43,6 +43,10 @@ provider_contacts_view
 provider_service_offering_view
 unlocode_lookup_view
 service_transport_type_lookup_view
+permission_resource_catalog_view
+permission_field_catalog_view
+role_resource_permission_matrix_view
+role_field_permission_matrix_view
 
 
 --------------------------------------------------
@@ -54,6 +58,8 @@ Use these functions for writes and workflow actions:
 resolve_login_identity()
 link_current_auth_user()
 get_current_erp_user()
+get_current_navigation_items()
+erp_can_access_route()
 create_erp_user_profile()
 update_erp_user_profile()
 create_client_with_contacts()
@@ -63,10 +69,12 @@ create_opportunity()
 update_opportunity_status()
 convert_opportunity_to_quotation()
 create_quotation_from_opportunity()
+search_quotations()
 take_quotation_for_pricing()
 update_quotation_status()
 create_quotation_cost_line()
 update_quotation_cost_line()
+update_quotation_option_sales_amounts()
 delete_quotation_cost_line()
 create_quotation_cargo_line()
 update_quotation_cargo_line()
@@ -106,10 +114,24 @@ Auth-specific rules:
 - public.users is the ERP profile directory, not a password table
 - login may accept username or email, but password validation must still go through Supabase Auth
 - protected routes must validate both session presence and active ERP profile status before allowing access
+- protected routes must also validate route authorization through erp_can_access_route()
 - inactive users must be redirected back to login
 - direct anonymous access to ERP business tables must be blocked by RLS
 - user provisioning with password setup must run through a protected server path that uses the service role key
 - only Admin users may create or update ERP user profiles
+- sidebar navigation must come from get_current_navigation_items() instead of hardcoded role checks
+- route guards and navigation visibility must not infer access from role_name alone when the permission registry exists
+
+
+Permission-specific rules:
+
+- use get_current_navigation_items() for the live sidebar/navigation surface
+- use erp_can_access_route() for server-side route guards and middleware/proxy validation
+- use permission_resource_catalog_view and role_resource_permission_matrix_view for the permissions workspace
+- use permission_field_catalog_view and role_field_permission_matrix_view for field-level permission editing
+- write permission changes through role_resource_permissions and role_field_permissions only from the protected admin permissions workspace
+- treat role_resource_permissions as the current live enforcement layer
+- treat role_field_permissions as the current field-permission registry and UI contract
 
 
 Contact-specific rules:
@@ -149,20 +171,25 @@ Quotation-specific write rules:
 - use request_quotation_pricing() to hand a quotation from CRM draft capture into pricing
 - use take_quotation_for_pricing() when pricing ownership is taken from the pending queue
 - use update_quotation_status() for lifecycle transitions
+- use search_quotations() for CRM and Pricing quotation list screens
 - use create_quotation_cost_line(), update_quotation_cost_line(), and delete_quotation_cost_line() for charge lines
 - use create_quotation_cargo_line(), update_quotation_cargo_line(), and delete_quotation_cargo_line() for service-specific cargo detail lines
+- use update_quotation_option_sales_amounts() when CRM saves sale amounts for an entire option in one action
 - quotation references must be backend-generated from the service-type counter contract:
   QPRIAIR, QPRIFCL, QPRILCL, QPRIFTL, QPRILTL, QPRICOU
 - accepted quotations are no longer auto-converted into shipments
 - accepted quotations may create shipments only through create_booking_from_quotation()
-- CRM list screens should use crm_quotations_view
-- Pricing list screens should use pricing_quotations_view
-- detail screens may read quotation_summary_view plus related quotation_costs rows
-- detail screens may read quotation_summary_view plus related quotation_costs and quotation_cargo_lines rows
+- CRM list screens should use search_quotations(scope = crm) instead of direct full-view reads
+- Pricing list screens should use search_quotations(scope = pricing) instead of direct full-view reads
+- detail screens should read quotation_summary_view for masked economic summary fields
+- charge-line detail screens should read quotation_cost_line_secure_view instead of direct quotation_costs reads when rendering sensitive economics
+- detail screens may read quotation_summary_view plus quotation_cost_line_secure_view and quotation_cargo_lines rows
 - pricing purchase options should be grouped by option_label
 - pricing screens should treat purchase capture and sale capture as separate responsibilities
 - CRM screens may update sale_amount through update_quotation_cost_line() while preserving purchase-side fields
 - CRM should not change purchase_amount values captured by pricing
+- Pricing must not receive sale_amount or expected_profit visibility through the default quotation workflow
+- registered field permissions now use deny-by-default behavior until an explicit role_field_permissions rule exists
 - client-facing commercial documents must hide provider and purchase fields
 - provider-facing internal pricing request documents must not expose commercial sale amounts
 - pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view
@@ -170,6 +197,14 @@ Quotation-specific write rules:
 - expiration_date must be backend-calculated from start_date
 - expired opportunities must surface as vencida
 - if salesperson_id is omitted, create_opportunity() must inherit clients.account_owner_id
+- create_client_with_contacts() must inherit p_account_owner_id from the current ERP user when omitted
+- search_clients() is now owner-aware and must only return rows allowed by crm.clients.list
+- get_client_full() is now owner-aware and must return null instead of leaking records outside crm.clients.record
+- client_overview_view, client_contacts_view, and open_opportunities_view are now scope-aware reads, not broad browse views
+- owner_only for contacts is derived through contacts.client_id -> clients.account_owner_id
+- owner_only for opportunities is derived through opportunities.salesperson_id and the client branch context
+- operations shipment branch access is derived through shipments.client_id -> clients.branch_id
+- use backfill_crm_owner_branch_defaults() only for controlled repair of live data, never as a normal UI workflow
 
 
 Provider-specific rules:

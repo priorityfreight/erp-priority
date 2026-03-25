@@ -1,15 +1,9 @@
-import { redirect } from "next/navigation"
 import { UsersManager } from "@/components/master-data/UsersManager"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { ensureRouteAccessOrRedirect, getCurrentErpUserServer } from "@/lib/permissions/server"
 
 export default async function UsersPage() {
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.rpc("get_current_erp_user")
-  const currentUser = Array.isArray(data) ? data[0] : data
+  await ensureRouteAccessOrRedirect("/master-data/users")
+  const currentUser = await getCurrentErpUserServer()
 
-  if (error || !currentUser || currentUser.role_name !== "Admin") {
-    redirect("/")
-  }
-
-  return <UsersManager currentUserEmail={currentUser.email} />
+  return <UsersManager currentUserEmail={currentUser?.email ?? ""} />
 }

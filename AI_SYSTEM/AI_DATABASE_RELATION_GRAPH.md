@@ -36,6 +36,18 @@ MAIN ENTITY RELATIONSHIP DIAGRAM
 ```mermaid
 erDiagram
     BRANCHES ||--o{ USERS : assigns
+    PERMISSION_MODULES ||--o{ PERMISSION_SUBMODULES : contains
+    PERMISSION_MODULES ||--o{ PERMISSION_RESOURCES : groups
+    PERMISSION_SUBMODULES ||--o{ PERMISSION_RESOURCES : exposes
+    PERMISSION_RESOURCES ||--o{ PERMISSION_FIELDS : contains
+    ROLES ||--o{ ROLE_RESOURCE_PERMISSIONS : grants
+    ROLES ||--o{ ROLE_FIELD_PERMISSIONS : grants
+    PERMISSION_RESOURCES ||--o{ ROLE_RESOURCE_PERMISSIONS : controls
+    PERMISSION_FIELDS ||--o{ ROLE_FIELD_PERMISSIONS : controls
+    PERMISSION_ACTIONS ||--o{ ROLE_RESOURCE_PERMISSIONS : qualifies
+    PERMISSION_ACTIONS ||--o{ ROLE_FIELD_PERMISSIONS : qualifies
+    PERMISSION_CONDITIONS ||--o{ ROLE_RESOURCE_PERMISSIONS : scopes
+    PERMISSION_CONDITIONS ||--o{ ROLE_FIELD_PERMISSIONS : scopes
     EXTERNAL_DATA_SOURCES ||--o{ UNLOCODES : feeds
     BRANCHES ||--o{ PROSPECTS : receives
     BRANCHES ||--o{ CLIENTS : owns
@@ -81,6 +93,42 @@ references branches.id
 
 users.auth_user_id
 references auth.users.id
+
+permission_submodules.module_id
+references permission_modules.id
+
+permission_resources.module_id
+references permission_modules.id
+
+permission_resources.submodule_id
+references permission_submodules.id
+
+permission_fields.resource_id
+references permission_resources.id
+
+role_resource_permissions.role_id
+references roles.id
+
+role_resource_permissions.resource_id
+references permission_resources.id
+
+role_resource_permissions.action_id
+references permission_actions.id
+
+role_resource_permissions.condition_id
+references permission_conditions.id
+
+role_field_permissions.role_id
+references roles.id
+
+role_field_permissions.field_id
+references permission_fields.id
+
+role_field_permissions.action_id
+references permission_actions.id
+
+role_field_permissions.condition_id
+references permission_conditions.id
 
 unlocodes.source_id
 references external_data_sources.id
@@ -210,28 +258,36 @@ DATABASE CREATION ORDER
 1. branches
 2. roles
 3. external_data_sources
-4. users
-5. unlocodes
-6. prospects
-7. clients
-8. contacts
-9. providers
-10. provider_contacts
-11. provider_service_offerings
-12. incoterms
-13. opportunities
-14. quotations
-15. quotation_rejection_reasons
-16. quotation_reference_counters
-17. quotation_costs
-18. quotation_cargo_lines
-19. shipments
-20. shipment_events
-21. client_invoices
-22. provider_invoices
-23. commissions
-24. audit_logs
-25. automation_logs
+4. permission_modules
+5. permission_actions
+6. permission_conditions
+7. users
+8. permission_submodules
+9. unlocodes
+10. prospects
+11. permission_resources
+12. providers
+13. provider_contacts
+14. provider_service_offerings
+15. incoterms
+16. clients
+17. contacts
+18. permission_fields
+19. role_resource_permissions
+20. role_field_permissions
+21. opportunities
+22. quotations
+23. quotation_rejection_reasons
+24. quotation_reference_counters
+25. quotation_costs
+26. quotation_cargo_lines
+27. shipments
+28. shipment_events
+29. client_invoices
+30. provider_invoices
+31. commissions
+32. audit_logs
+33. automation_logs
 
 
 --------------------------------------------------
@@ -246,6 +302,18 @@ service_transport_types
 sales_accounting_concepts
 quotation_rejection_reasons
 quotation_reference_counters
+
+
+SECURITY / ACCESS MODULE
+
+permission_modules
+permission_submodules
+permission_actions
+permission_conditions
+permission_resources
+permission_fields
+role_resource_permissions
+role_field_permissions
 
 
 CRM MODULE

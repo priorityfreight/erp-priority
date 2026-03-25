@@ -61,6 +61,739 @@ as $$
   select coalesce(lower(public.erp_current_role_name()) = 'admin', false);
 $$;
 
+create or replace function erp_current_branch_id()
+returns uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select u.branch_id
+  from public.users u
+  where u.auth_user_id = auth.uid()
+    and u.active = true
+  limit 1;
+$$;
+
+create or replace function erp_has_role(
+  p_role_name text
+)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select coalesce(lower(public.erp_current_role_name()) = lower(btrim(coalesce(p_role_name, ''))), false);
+$$;
+
+create or replace function erp_condition_allows(
+  p_condition_code text,
+  p_owner_user_id uuid default null,
+  p_branch_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  normalized_condition text := lower(coalesce(btrim(p_condition_code), 'none'));
+  current_user_id uuid := public.erp_current_user_id();
+  current_branch_id uuid := public.erp_current_branch_id();
+begin
+  if normalized_condition = 'all' then
+    return true;
+  end if;
+
+  if normalized_condition = 'owner_only' then
+    return p_owner_user_id is not null
+      and current_user_id is not null
+      and p_owner_user_id = current_user_id;
+  end if;
+
+  if normalized_condition = 'assigned_branch_only' then
+    return p_branch_id is not null
+      and current_branch_id is not null
+      and p_branch_id = current_branch_id;
+  end if;
+
+  return false;
+end;
+$$;
+
+create or replace function erp_access_scope(
+  p_resource_key text,
+  p_action_code text
+)
+returns text
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select pc.code
+      from public.role_resource_permissions rrp
+      join public.roles r
+        on r.id = rrp.role_id
+      join public.permission_resources pr
+        on pr.id = rrp.resource_id
+      join public.permission_actions pa
+        on pa.id = rrp.action_id
+      join public.permission_conditions pc
+        on pc.id = rrp.condition_id
+      where lower(r.name) = lower(public.erp_current_role_name())
+        and pr.resource_key = p_resource_key
+        and lower(pa.code) = lower(p_action_code)
+        and rrp.allowed = true
+      limit 1
+    ),
+    'none'
+  );
+$$;
+
+create or replace function erp_has_resource_access(
+  p_resource_key text,
+  p_action_code text default 'view',
+  p_owner_user_id uuid default null,
+  p_branch_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  resolved_scope text;
+  field_registered boolean := false;
+begin
+  if public.erp_is_admin() then
+    return true;
+  end if;
+
+  if not public.erp_is_authenticated_active_user() then
+    return false;
+  end if;
+
+  resolved_scope := public.erp_access_scope(p_resource_key, p_action_code);
+
+  return public.erp_condition_allows(
+    resolved_scope,
+    p_owner_user_id,
+    p_branch_id
+  );
+end;
+$$;
+
+create or replace function erp_has_module_access(
+  p_module_code text,
+  p_action_code text default 'view'
+)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.erp_has_resource_access(
+    lower(coalesce(p_module_code, '')),
+    lower(coalesce(p_action_code, 'view'))
+  );
+$$;
+
+create or replace function erp_has_submodule_access(
+  p_submodule_code text,
+  p_action_code text default 'view'
+)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.erp_has_resource_access(
+    lower(coalesce(p_submodule_code, '')),
+    lower(coalesce(p_action_code, 'view'))
+  );
+$$;
+
+create or replace function erp_has_field_access(
+  p_resource_key text,
+  p_field_key text,
+  p_action_code text default 'view',
+  p_owner_user_id uuid default null,
+  p_branch_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  resolved_scope text;
+  field_registered boolean := false;
+begin
+  if public.erp_is_admin() then
+    return true;
+  end if;
+
+  if not public.erp_is_authenticated_active_user() then
+    return false;
+  end if;
+
+  select exists (
+    select 1
+    from public.permission_fields pf
+    join public.permission_resources pr
+      on pr.id = pf.resource_id
+    where pr.resource_key = p_resource_key
+      and pf.field_key = p_field_key
+      and pf.active = true
+  )
+  into field_registered;
+
+  select coalesce(pc.code, 'none')
+  into resolved_scope
+  from public.role_field_permissions rfp
+  join public.roles r
+    on r.id = rfp.role_id
+  join public.permission_fields pf
+    on pf.id = rfp.field_id
+  join public.permission_resources pr
+    on pr.id = pf.resource_id
+  join public.permission_actions pa
+    on pa.id = rfp.action_id
+  join public.permission_conditions pc
+    on pc.id = rfp.condition_id
+  where lower(r.name) = lower(public.erp_current_role_name())
+    and pr.resource_key = p_resource_key
+    and pf.field_key = p_field_key
+    and lower(pa.code) = lower(p_action_code)
+    and rfp.allowed = true
+  limit 1;
+
+  if resolved_scope is null then
+    if field_registered then
+      return false;
+    end if;
+
+    return public.erp_has_resource_access(
+      p_resource_key,
+      p_action_code,
+      p_owner_user_id,
+      p_branch_id
+    );
+  end if;
+
+  if resolved_scope = 'none' then
+    return false;
+  end if;
+
+  return public.erp_condition_allows(
+    resolved_scope,
+    p_owner_user_id,
+    p_branch_id
+  );
+end;
+$$;
+
+create or replace function erp_can_access_client_resource(
+  p_resource_key text,
+  p_action_code text default 'view',
+  p_client_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  client_owner_id uuid;
+  client_branch_id uuid;
+begin
+  if p_client_id is null then
+    return false;
+  end if;
+
+  select
+    c.account_owner_id,
+    c.branch_id
+  into client_owner_id, client_branch_id
+  from public.clients c
+  where c.id = p_client_id
+    and c.is_deleted = false;
+
+  if not found then
+    return false;
+  end if;
+
+  return public.erp_has_resource_access(
+    p_resource_key,
+    p_action_code,
+    client_owner_id,
+    client_branch_id
+  );
+end;
+$$;
+
+create or replace function erp_can_access_opportunity_resource(
+  p_resource_key text,
+  p_action_code text default 'view',
+  p_salesperson_id uuid default null,
+  p_client_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  client_branch_id uuid;
+begin
+  if p_client_id is not null then
+    select c.branch_id
+    into client_branch_id
+    from public.clients c
+    where c.id = p_client_id
+      and c.is_deleted = false;
+  end if;
+
+  return public.erp_has_resource_access(
+    p_resource_key,
+    p_action_code,
+    p_salesperson_id,
+    client_branch_id
+  );
+end;
+$$;
+
+create or replace function erp_can_access_crm_quotation_resource(
+  p_resource_key text,
+  p_action_code text default 'view',
+  p_created_by uuid default null,
+  p_client_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  client_branch_id uuid;
+begin
+  if p_client_id is not null then
+    select c.branch_id
+    into client_branch_id
+    from public.clients c
+    where c.id = p_client_id
+      and c.is_deleted = false;
+  end if;
+
+  return public.erp_has_resource_access(
+    p_resource_key,
+    p_action_code,
+    p_created_by,
+    client_branch_id
+  );
+end;
+$$;
+
+create or replace function resolve_default_branch_for_backfill()
+returns uuid
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  resolved_branch_id uuid;
+  branch_count integer;
+begin
+  select count(*)
+  into branch_count
+  from public.branches;
+
+  if branch_count = 1 then
+    select b.id
+    into resolved_branch_id
+    from public.branches b
+    limit 1;
+
+    return resolved_branch_id;
+  end if;
+
+  return null;
+end;
+$$;
+
+create or replace function resolve_default_crm_owner_for_backfill()
+returns uuid
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  resolved_owner_id uuid;
+  owner_count integer;
+begin
+  select count(*)
+  into owner_count
+  from public.users u
+  join public.roles r
+    on r.id = u.role_id
+  where u.active = true
+    and lower(r.name) in ('ventas', 'admin');
+
+  if owner_count = 1 then
+    select u.id
+    into resolved_owner_id
+    from public.users u
+    join public.roles r
+      on r.id = u.role_id
+    where u.active = true
+      and lower(r.name) in ('ventas', 'admin')
+    limit 1;
+
+    return resolved_owner_id;
+  end if;
+
+  return null;
+end;
+$$;
+
+create or replace function backfill_crm_owner_branch_defaults(
+  p_default_owner_id uuid default null,
+  p_default_branch_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_owner_id uuid := coalesce(
+    p_default_owner_id,
+    public.resolve_default_crm_owner_for_backfill()
+  );
+  resolved_branch_id uuid := coalesce(
+    p_default_branch_id,
+    public.resolve_default_branch_for_backfill()
+  );
+  updated_users integer := 0;
+  updated_clients_owner integer := 0;
+  updated_clients_branch integer := 0;
+  updated_opportunities integer := 0;
+begin
+  if resolved_branch_id is not null then
+    update public.users u
+    set branch_id = resolved_branch_id
+    where u.active = true
+      and u.branch_id is null;
+
+    get diagnostics updated_users = row_count;
+  end if;
+
+  with owner_candidates as (
+    select
+      c.id as client_id,
+      coalesce(
+        c.account_owner_id,
+        (
+          select o.salesperson_id
+          from public.opportunities o
+          where o.client_id = c.id
+            and o.salesperson_id is not null
+          order by o.created_at desc
+          limit 1
+        ),
+        (
+          select q.created_by
+          from public.quotations q
+          where q.client_id = c.id
+            and q.created_by is not null
+          order by q.created_at desc
+          limit 1
+        ),
+        resolved_owner_id
+      ) as resolved_owner_id
+    from public.clients c
+    where c.is_deleted = false
+  )
+  update public.clients c
+  set account_owner_id = oc.resolved_owner_id
+  from owner_candidates oc
+  where c.id = oc.client_id
+    and c.account_owner_id is null
+    and oc.resolved_owner_id is not null;
+
+  get diagnostics updated_clients_owner = row_count;
+
+  update public.clients c
+  set branch_id = coalesce(u.branch_id, resolved_branch_id)
+  from public.users u
+  where c.is_deleted = false
+    and c.account_owner_id = u.id
+    and c.branch_id is null
+    and coalesce(u.branch_id, resolved_branch_id) is not null;
+
+  get diagnostics updated_clients_branch = row_count;
+
+  update public.opportunities o
+  set salesperson_id = c.account_owner_id
+  from public.clients c
+  where o.client_id = c.id
+    and o.salesperson_id is null
+    and c.account_owner_id is not null;
+
+  get diagnostics updated_opportunities = row_count;
+
+  return jsonb_build_object(
+    'resolved_default_owner_id', resolved_owner_id,
+    'resolved_default_branch_id', resolved_branch_id,
+    'updated_users_branch_id', updated_users,
+    'updated_clients_owner', updated_clients_owner,
+    'updated_clients_branch', updated_clients_branch,
+    'updated_opportunities_salesperson', updated_opportunities
+  );
+end;
+$$;
+
+create or replace function erp_can_access_pricing_quotation(
+  p_action_code text default 'view',
+  p_status text default null,
+  p_pricing_owner_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  normalized_action text := lower(coalesce(btrim(p_action_code), 'view'));
+  normalized_status text := lower(coalesce(btrim(p_status), ''));
+begin
+  if normalized_action = 'pricing_take' then
+    return normalized_status in ('pendiente', 'renegociar_tarifa')
+      and public.erp_has_resource_access('pricing.quotations', 'pricing_take');
+  end if;
+
+  if normalized_action = 'view' and normalized_status in ('pendiente', 'renegociar_tarifa') then
+    return public.erp_has_resource_access('pricing.quotations.queue', 'view');
+  end if;
+
+  if normalized_action = 'view' then
+    return public.erp_has_resource_access(
+      'pricing.quotations.workspace',
+      'view',
+      p_pricing_owner_id,
+      null
+    );
+  end if;
+
+  return public.erp_has_resource_access(
+    'pricing.quotations.workspace',
+    normalized_action,
+    p_pricing_owner_id,
+    null
+  );
+end;
+$$;
+
+create or replace function erp_can_access_operations_shipment(
+  p_action_code text default 'view',
+  p_client_id uuid default null
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  client_branch_id uuid;
+begin
+  if p_client_id is null then
+    return false;
+  end if;
+
+  select c.branch_id
+  into client_branch_id
+  from public.clients c
+  where c.id = p_client_id
+    and c.is_deleted = false;
+
+  if not found then
+    return false;
+  end if;
+
+  return public.erp_has_resource_access(
+    'operations.shipments.record',
+    p_action_code,
+    null,
+    client_branch_id
+  );
+end;
+$$;
+
+create or replace function erp_can_view_quotation_cost()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    public.erp_has_field_access('crm.quotations.record', 'cost', 'view')
+    or public.erp_has_field_access('pricing.quotations.cost_section', 'purchase_amount', 'view');
+$$;
+
+create or replace function erp_can_edit_quotation_purchase_amount()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.erp_has_field_access('pricing.quotations.cost_section', 'purchase_amount', 'edit');
+$$;
+
+create or replace function erp_can_view_quotation_sale_price()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    public.erp_has_field_access('crm.quotations.record', 'sale_price', 'view')
+    or public.erp_has_field_access('pricing.quotations.cost_section', 'sale_amount', 'view');
+$$;
+
+create or replace function erp_can_edit_quotation_sale_price()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    public.erp_has_field_access('crm.quotations.record', 'sale_price', 'edit')
+    or public.erp_has_field_access('pricing.quotations.cost_section', 'sale_amount', 'edit');
+$$;
+
+create or replace function erp_can_view_quotation_expected_profit()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    public.erp_has_field_access('crm.quotations.record', 'expected_profit', 'view')
+    or public.erp_has_field_access('pricing.quotations.cost_section', 'profit_amount', 'view');
+$$;
+
+create or replace function erp_can_access_route(
+  p_route_path text,
+  p_action_code text default 'view'
+)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  with normalized as (
+    select case
+      when nullif(btrim(coalesce(p_route_path, '')), '') is null then '/'
+      when p_route_path = '/' then '/'
+      else regexp_replace(btrim(p_route_path), '/+$', '')
+    end as route_path
+  ),
+  candidate_matchers as (
+    select
+      ps.code,
+      coalesce(nullif(btrim(matcher), ''), ps.route_path) as matcher
+    from public.permission_submodules ps
+    cross join lateral unnest(
+      case
+        when array_length(ps.route_matchers, 1) is null or array_length(ps.route_matchers, 1) = 0
+          then array[coalesce(ps.route_path, '')]::text[]
+        else ps.route_matchers
+      end
+    ) as matcher
+    where ps.active = true
+  ),
+  matched_route as (
+    select cm.code
+    from normalized n
+    join candidate_matchers cm
+      on (
+        n.route_path = cm.matcher
+        or (
+          cm.matcher <> '/'
+          and n.route_path like cm.matcher || '/%'
+        )
+      )
+    order by char_length(cm.matcher) desc
+    limit 1
+  )
+  select exists (
+    select 1
+    from matched_route mr
+    where public.erp_has_submodule_access(mr.code, p_action_code)
+  );
+$$;
+
+create or replace function get_current_navigation_items()
+returns table (
+  module_code text,
+  module_name text,
+  module_icon_key text,
+  module_sort_order integer,
+  submodule_code text,
+  submodule_name text,
+  route_path text,
+  route_matchers text[],
+  submodule_sort_order integer
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    pm.code as module_code,
+    pm.name as module_name,
+    pm.icon_key as module_icon_key,
+    pm.sort_order as module_sort_order,
+    ps.code as submodule_code,
+    ps.name as submodule_name,
+    ps.route_path,
+    ps.route_matchers,
+    ps.sort_order as submodule_sort_order
+  from public.permission_submodules ps
+  join public.permission_modules pm
+    on pm.id = ps.module_id
+  where ps.active = true
+    and pm.active = true
+    and public.erp_has_submodule_access(ps.code, 'view')
+  order by
+    pm.sort_order asc,
+    ps.sort_order asc,
+    ps.name asc;
+$$;
+
 create or replace function resolve_login_identity(
   p_login text
 )
@@ -307,6 +1040,7 @@ security definer
 as $$
 declare
   new_client_id uuid;
+  resolved_account_owner_id uuid := coalesce(p_account_owner_id, public.erp_current_user_id());
 begin
   insert into clients (
     company_name,
@@ -332,7 +1066,7 @@ begin
     p_postal_code,
     p_city,
     p_city_unlocode,
-    p_account_owner_id
+    resolved_account_owner_id
   )
   returning id into new_client_id;
 
@@ -905,7 +1639,31 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  quotation_created_by uuid;
+  quotation_client_id uuid;
 begin
+  select
+    q.created_by,
+    q.client_id
+  into quotation_created_by, quotation_client_id
+  from quotations q
+  where q.id = p_quotation_id;
+
+  if quotation_client_id is null then
+    raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if not public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'edit',
+    quotation_created_by,
+    quotation_client_id
+  ) then
+    raise exception 'You do not have permission to send this quotation to pricing'
+      using errcode = '42501';
+  end if;
+
   update quotations
   set status = 'pendiente'
   where id = p_quotation_id;
@@ -938,11 +1696,30 @@ set search_path = public
 as $$
 declare
   resolved_pricing_owner_id uuid;
+  current_status text;
 begin
   resolved_pricing_owner_id := coalesce(p_pricing_owner_id, erp_current_user_id());
 
   if resolved_pricing_owner_id is null then
     raise exception 'Pricing owner is required';
+  end if;
+
+  select q.status
+  into current_status
+  from quotations q
+  where q.id = p_quotation_id;
+
+  if current_status is null then
+    raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if not public.erp_can_access_pricing_quotation(
+    'pricing_take',
+    current_status,
+    null
+  ) then
+    raise exception 'You do not have permission to take this quotation'
+      using errcode = '42501';
   end if;
 
   update quotations
@@ -968,6 +1745,9 @@ set search_path = public
 as $$
 declare
   normalized_status text;
+  quotation_created_by uuid;
+  quotation_pricing_owner_id uuid;
+  quotation_client_id uuid;
 begin
   normalized_status := lower(btrim(coalesce(p_status, '')));
 
@@ -983,6 +1763,60 @@ begin
     raise exception 'A target rate is required when requesting renegotiation';
   end if;
 
+  select
+    q.created_by,
+    q.pricing_owner_id,
+    q.client_id
+  into quotation_created_by, quotation_pricing_owner_id, quotation_client_id
+  from quotations q
+  where q.id = p_quotation_id;
+
+  if quotation_client_id is null then
+    raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if normalized_status = 'lista_para_enviar' then
+    if not public.erp_can_access_pricing_quotation(
+      'edit',
+      normalized_status,
+      quotation_pricing_owner_id
+    ) then
+      raise exception 'You do not have permission to complete the pricing proposal'
+        using errcode = '42501';
+    end if;
+  elsif normalized_status = 'enviada' then
+    if not public.erp_has_resource_access('crm.quotations', 'send_quote')
+      or not public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.customer_actions',
+        'edit',
+        quotation_created_by,
+        quotation_client_id
+      ) then
+      raise exception 'You do not have permission to send this quotation'
+        using errcode = '42501';
+    end if;
+  elsif normalized_status in ('cancelada', 'rechazada', 'renegociar_tarifa', 'aceptada') then
+    if not public.erp_can_access_crm_quotation_resource(
+      'crm.quotations.customer_actions',
+      'edit',
+      quotation_created_by,
+      quotation_client_id
+    ) then
+      raise exception 'You do not have permission to change this quotation status'
+        using errcode = '42501';
+    end if;
+  elsif normalized_status = 'pendiente' then
+    if not public.erp_can_access_crm_quotation_resource(
+      'crm.quotations.record',
+      'edit',
+      quotation_created_by,
+      quotation_client_id
+    ) then
+      raise exception 'You do not have permission to request pricing for this quotation'
+        using errcode = '42501';
+    end if;
+  end if;
+
   update quotations
   set
     status = normalized_status,
@@ -995,6 +1829,260 @@ begin
     target_rate = case when normalized_status = 'renegociar_tarifa' then p_target_rate else null end
   where id = p_quotation_id;
 end;
+$$;
+
+create or replace function search_quotations(
+  p_scope text default 'crm',
+  p_query text default null,
+  p_status text default null,
+  p_limit integer default 25,
+  p_offset integer default 0
+)
+returns table (
+  id uuid,
+  client_id uuid,
+  opportunity_id uuid,
+  created_by uuid,
+  pricing_owner_id uuid,
+  reference_number text,
+  status text,
+  service_type text,
+  transport_type text,
+  operation_type text,
+  incoterm_id uuid,
+  incoterm_code text,
+  origin text,
+  origin_unlocode text,
+  origin_unlocode_id uuid,
+  destination text,
+  destination_unlocode text,
+  destination_unlocode_id uuid,
+  pickup_address text,
+  delivery_address text,
+  commodities text,
+  quantity integer,
+  weight numeric,
+  volume numeric,
+  required_quote_date date,
+  purchase_valid_until date,
+  sales_valid_until date,
+  rejection_reason_id uuid,
+  rejection_reason text,
+  rejection_notes text,
+  cancellation_notes text,
+  target_rate numeric,
+  currency text,
+  estimated_cost numeric,
+  estimated_price numeric,
+  expected_profit numeric,
+  can_view_cost boolean,
+  can_edit_purchase_amount boolean,
+  can_view_sale_price boolean,
+  can_edit_sale_price boolean,
+  can_view_expected_profit boolean,
+  total_charge_lines bigint,
+  created_at timestamptz,
+  updated_at timestamptz,
+  client_name text,
+  opportunity_title text,
+  salesperson_id uuid,
+  salesperson_name text,
+  pricing_owner_name text,
+  created_by_name text,
+  total_count bigint
+)
+language sql
+security definer
+set search_path = public
+as $$
+  with params as (
+    select
+      lower(coalesce(nullif(btrim(p_scope), ''), 'crm')) as normalized_scope,
+      lower(nullif(btrim(p_query), '')) as normalized_query,
+      lower(nullif(btrim(p_status), '')) as normalized_status,
+      greatest(coalesce(p_limit, 25), 1) as normalized_limit,
+      greatest(coalesce(p_offset, 0), 0) as normalized_offset,
+      public.erp_can_view_quotation_cost() as can_view_cost,
+      public.erp_can_edit_quotation_purchase_amount() as can_edit_purchase_amount,
+      public.erp_can_view_quotation_sale_price() as can_view_sale_price,
+      public.erp_can_edit_quotation_sale_price() as can_edit_sale_price,
+      public.erp_can_view_quotation_expected_profit() as can_view_expected_profit
+  ),
+  filtered as (
+    select
+      q.id,
+      q.client_id,
+      q.opportunity_id,
+      q.created_by,
+      q.pricing_owner_id,
+      q.reference_number,
+      q.status,
+      q.service_type,
+      q.transport_type,
+      q.operation_type,
+      q.incoterm_id,
+      i.code as incoterm_code,
+      q.origin,
+      q.origin_unlocode,
+      q.origin_unlocode_id,
+      q.destination,
+      q.destination_unlocode,
+      q.destination_unlocode_id,
+      q.pickup_address,
+      q.delivery_address,
+      q.commodities,
+      q.quantity,
+      q.weight,
+      q.volume,
+      q.required_quote_date,
+      q.purchase_valid_until,
+      q.sales_valid_until,
+      q.rejection_reason_id,
+      rr.reason as rejection_reason,
+      q.rejection_notes,
+      q.cancellation_notes,
+      q.target_rate,
+      q.currency,
+      case when p.can_view_cost then q.estimated_cost else null end as estimated_cost,
+      case when p.can_view_sale_price then q.estimated_price else null end as estimated_price,
+      case when p.can_view_expected_profit then q.expected_profit else null end as expected_profit,
+      p.can_view_cost,
+      p.can_edit_purchase_amount,
+      p.can_view_sale_price,
+      p.can_edit_sale_price,
+      p.can_view_expected_profit,
+      (
+        select count(*)
+        from quotation_costs qc
+        where qc.quotation_id = q.id
+      ) as total_charge_lines,
+      q.created_at,
+      q.updated_at,
+      c.company_name as client_name,
+      o.title as opportunity_title,
+      o.salesperson_id,
+      concat_ws(' ', su.first_name, su.last_name) as salesperson_name,
+      concat_ws(' ', pu.first_name, pu.last_name) as pricing_owner_name,
+      concat_ws(' ', cu.first_name, cu.last_name) as created_by_name,
+      case
+        when p.normalized_query is null then 0
+        when lower(coalesce(q.reference_number, '')) = p.normalized_query then 1000
+        when lower(coalesce(q.reference_number, '')) like p.normalized_query || '%' then 950
+        when lower(c.company_name) = p.normalized_query then 900
+        when lower(c.company_name) like p.normalized_query || '%' then 875
+        when lower(coalesce(o.title, '')) like p.normalized_query || '%' then 850
+        when upper(coalesce(q.origin_unlocode, '')) = upper(p.normalized_query) then 825
+        when upper(coalesce(q.destination_unlocode, '')) = upper(p.normalized_query) then 825
+        else greatest(
+          similarity(q.search_text, p.normalized_query),
+          similarity(c.search_text, p.normalized_query),
+          similarity(lower(coalesce(o.title, '')), p.normalized_query)
+        ) * 100
+      end as match_rank
+    from quotations q
+    join clients c on c.id = q.client_id
+    join opportunities o on o.id = q.opportunity_id
+    left join incoterms i on i.id = q.incoterm_id
+    left join quotation_rejection_reasons rr on rr.id = q.rejection_reason_id
+    left join users pu on pu.id = q.pricing_owner_id
+    left join users cu on cu.id = q.created_by
+    left join users su on su.id = o.salesperson_id
+    cross join params p
+    where c.is_deleted = false
+      and (
+        (
+          p.normalized_scope = 'crm'
+          and public.erp_can_access_crm_quotation_resource(
+            'crm.quotations.list',
+            'view',
+            q.created_by,
+            q.client_id
+          )
+        )
+        or (
+          p.normalized_scope = 'pricing'
+          and q.status in ('pendiente', 'cotizando', 'lista_para_enviar', 'renegociar_tarifa')
+          and public.erp_can_access_pricing_quotation(
+            'view',
+            q.status,
+            q.pricing_owner_id
+          )
+        )
+      )
+      and (
+        p.normalized_status is null
+        or q.status = p.normalized_status
+      )
+      and (
+        p.normalized_query is null
+        or q.search_text % p.normalized_query
+        or q.search_text ilike '%' || p.normalized_query || '%'
+        or c.search_text % p.normalized_query
+        or c.search_text ilike '%' || p.normalized_query || '%'
+        or lower(coalesce(o.title, '')) ilike '%' || p.normalized_query || '%'
+        or lower(concat_ws(' ', pu.first_name, pu.last_name)) ilike '%' || p.normalized_query || '%'
+      )
+  )
+  select
+    filtered.id,
+    filtered.client_id,
+    filtered.opportunity_id,
+    filtered.created_by,
+    filtered.pricing_owner_id,
+    filtered.reference_number,
+    filtered.status,
+    filtered.service_type,
+    filtered.transport_type,
+    filtered.operation_type,
+    filtered.incoterm_id,
+    filtered.incoterm_code,
+    filtered.origin,
+    filtered.origin_unlocode,
+    filtered.origin_unlocode_id,
+    filtered.destination,
+    filtered.destination_unlocode,
+    filtered.destination_unlocode_id,
+    filtered.pickup_address,
+    filtered.delivery_address,
+    filtered.commodities,
+    filtered.quantity,
+    filtered.weight,
+    filtered.volume,
+    filtered.required_quote_date,
+    filtered.purchase_valid_until,
+    filtered.sales_valid_until,
+    filtered.rejection_reason_id,
+    filtered.rejection_reason,
+    filtered.rejection_notes,
+    filtered.cancellation_notes,
+    filtered.target_rate,
+    filtered.currency,
+    filtered.estimated_cost,
+    filtered.estimated_price,
+    filtered.expected_profit,
+    filtered.can_view_cost,
+    filtered.can_edit_purchase_amount,
+    filtered.can_view_sale_price,
+    filtered.can_edit_sale_price,
+    filtered.can_view_expected_profit,
+    filtered.total_charge_lines,
+    filtered.created_at,
+    filtered.updated_at,
+    filtered.client_name,
+    filtered.opportunity_title,
+    filtered.salesperson_id,
+    filtered.salesperson_name,
+    filtered.pricing_owner_name,
+    filtered.created_by_name,
+    count(*) over() as total_count
+  from filtered
+  cross join params p
+  order by
+    filtered.match_rank desc,
+    filtered.created_at desc,
+    filtered.id desc
+  limit (select normalized_limit from params)
+  offset (select normalized_offset from params);
 $$;
 
 create or replace function approve_quotation(
@@ -1029,7 +2117,40 @@ as $$
 declare
   new_line_id uuid;
   concept_row sales_accounting_concepts%rowtype;
+  quotation_pricing_owner_id uuid;
+  quotation_status text;
 begin
+  select
+    q.pricing_owner_id,
+    q.status
+  into quotation_pricing_owner_id, quotation_status
+  from quotations q
+  where q.id = p_quotation_id;
+
+  if quotation_status is null then
+    raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if not public.erp_has_resource_access(
+    'pricing.quotations.cost_section',
+    'create',
+    quotation_pricing_owner_id,
+    null
+  ) then
+    raise exception 'You do not have permission to create quotation costs'
+      using errcode = '42501';
+  end if;
+
+  if p_purchase_amount is not null and not public.erp_can_edit_quotation_purchase_amount() then
+    raise exception 'You do not have permission to edit quotation cost'
+      using errcode = '42501';
+  end if;
+
+  if p_sale_amount is not null and not public.erp_can_edit_quotation_sale_price() then
+    raise exception 'You do not have permission to edit quotation sale price'
+      using errcode = '42501';
+  end if;
+
   if p_sales_accounting_concept_id is not null then
     select *
     into concept_row
@@ -1095,7 +2216,14 @@ set search_path = public
 as $$
 declare
   quotation_id_value uuid;
+  quotation_created_by uuid;
+  quotation_pricing_owner_id uuid;
+  quotation_client_id uuid;
   concept_row sales_accounting_concepts%rowtype;
+  current_purchase_amount numeric;
+  current_sale_amount numeric;
+  can_edit_pricing boolean := false;
+  can_edit_sales boolean := false;
 begin
   select quotation_id
   into quotation_id_value
@@ -1104,6 +2232,66 @@ begin
 
   if quotation_id_value is null then
     raise exception 'Quotation cost line % not found', p_id;
+  end if;
+
+  select
+    purchase_amount,
+    sale_amount
+  into current_purchase_amount, current_sale_amount
+  from quotation_costs
+  where id = p_id;
+
+  select
+    q.created_by,
+    q.pricing_owner_id,
+    q.client_id
+  into quotation_created_by, quotation_pricing_owner_id, quotation_client_id
+  from quotations q
+  where q.id = quotation_id_value;
+
+  can_edit_pricing := public.erp_has_resource_access(
+    'pricing.quotations.cost_section',
+    'edit',
+    quotation_pricing_owner_id,
+    null
+  );
+
+  can_edit_sales := public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.customer_actions',
+    'edit',
+    quotation_created_by,
+    quotation_client_id
+  );
+
+  if not can_edit_pricing and not can_edit_sales then
+    raise exception 'You do not have permission to update quotation costs'
+      using errcode = '42501';
+  end if;
+
+  if not can_edit_pricing and (
+    p_purchase_amount is not null
+    or p_provider_id is not null
+    or p_sales_accounting_concept_id is not null
+    or p_vat_rate is not null
+    or p_notes is not null
+  ) then
+    raise exception 'You do not have permission to edit purchase-side quotation costs'
+      using errcode = '42501';
+  end if;
+
+  if p_purchase_amount is not null and not public.erp_can_edit_quotation_purchase_amount() then
+    raise exception 'You do not have permission to edit quotation cost'
+      using errcode = '42501';
+  end if;
+
+  if p_sale_amount is not null and not can_edit_sales then
+    raise exception 'You do not have permission to edit quotation sale price'
+      using errcode = '42501';
+  end if;
+
+  if p_sale_amount is not null and not public.erp_can_edit_quotation_sale_price() then
+    raise exception 'You do not have permission to edit quotation sale price'
+      using errcode = '42501';
   end if;
 
   if p_sales_accounting_concept_id is not null then
@@ -1124,17 +2312,76 @@ begin
     sales_accounting_concept_id = p_sales_accounting_concept_id,
     service_name = coalesce(concept_row.concept, service_name),
     cost = coalesce(p_purchase_amount, cost),
-    purchase_amount = p_purchase_amount,
-    sale_amount = p_sale_amount,
+    purchase_amount = coalesce(p_purchase_amount, purchase_amount),
+    sale_amount = coalesce(p_sale_amount, sale_amount),
     profit_amount = case
-      when p_sale_amount is null or p_purchase_amount is null then null
-      else p_sale_amount - p_purchase_amount
+      when coalesce(p_sale_amount, current_sale_amount) is null
+        or coalesce(p_purchase_amount, current_purchase_amount) is null then null
+      else coalesce(p_sale_amount, current_sale_amount) - coalesce(p_purchase_amount, current_purchase_amount)
     end,
     vat_rate = coalesce(p_vat_rate, concept_row.vat_rate, vat_rate),
     notes = nullif(btrim(coalesce(p_notes, '')), '')
   where id = p_id;
 
   perform recalculate_quotation_totals(quotation_id_value);
+end;
+$$;
+
+create or replace function update_quotation_option_sales_amounts(
+  p_quotation_id uuid,
+  p_option_label text,
+  p_sales_amounts jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_option_label text := coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), 'Opcion 1');
+begin
+  if not exists (
+    select 1
+    from quotations q
+    where q.id = p_quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.customer_actions',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  ) then
+    raise exception 'You do not have permission to edit sale amounts for this quotation'
+      using errcode = '42501';
+  end if;
+
+  if not public.erp_can_edit_quotation_sale_price() then
+    raise exception 'You do not have permission to edit quotation sale price'
+      using errcode = '42501';
+  end if;
+
+  if p_sales_amounts is null or jsonb_typeof(p_sales_amounts) <> 'object' then
+    raise exception 'Sales amounts payload must be a JSON object keyed by quotation cost line id';
+  end if;
+
+  update quotation_costs qc
+  set
+    sale_amount = updates.sale_amount,
+    profit_amount = case
+      when updates.sale_amount is null or qc.purchase_amount is null then null
+      else updates.sale_amount - qc.purchase_amount
+    end
+  from (
+    select
+      key::uuid as line_id,
+      nullif(btrim(value), '')::numeric as sale_amount
+    from jsonb_each_text(p_sales_amounts)
+  ) as updates
+  where qc.id = updates.line_id
+    and qc.quotation_id = p_quotation_id
+    and qc.option_label = normalized_option_label;
+
+  perform recalculate_quotation_totals(p_quotation_id);
 end;
 $$;
 
@@ -1148,11 +2395,31 @@ set search_path = public
 as $$
 declare
   quotation_id_value uuid;
+  quotation_pricing_owner_id uuid;
 begin
   select quotation_id
   into quotation_id_value
   from quotation_costs
   where id = p_id;
+
+  select q.pricing_owner_id
+  into quotation_pricing_owner_id
+  from quotations q
+  where q.id = quotation_id_value;
+
+  if quotation_id_value is null then
+    raise exception 'Quotation cost line % not found', p_id;
+  end if;
+
+  if not public.erp_has_resource_access(
+    'pricing.quotations.cost_section',
+    'delete',
+    quotation_pricing_owner_id,
+    null
+  ) then
+    raise exception 'You do not have permission to delete quotation costs'
+      using errcode = '42501';
+  end if;
 
   delete from quotation_costs
   where id = p_id;
@@ -1184,7 +2451,30 @@ set search_path = public
 as $$
 declare
   new_id uuid;
+  quotation_created_by uuid;
+  quotation_client_id uuid;
 begin
+  select
+    q.created_by,
+    q.client_id
+  into quotation_created_by, quotation_client_id
+  from quotations q
+  where q.id = p_quotation_id;
+
+  if quotation_client_id is null then
+    raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if not public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'edit',
+    quotation_created_by,
+    quotation_client_id
+  ) then
+    raise exception 'You do not have permission to edit quotation cargo lines'
+      using errcode = '42501';
+  end if;
+
   insert into quotation_cargo_lines (
     quotation_id,
     load_type,
@@ -1238,7 +2528,32 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  quotation_created_by uuid;
+  quotation_client_id uuid;
 begin
+  select
+    q.created_by,
+    q.client_id
+  into quotation_created_by, quotation_client_id
+  from quotations q
+  join quotation_cargo_lines qcl on qcl.quotation_id = q.id
+  where qcl.id = p_id;
+
+  if quotation_client_id is null then
+    raise exception 'Quotation cargo line % not found', p_id;
+  end if;
+
+  if not public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'edit',
+    quotation_created_by,
+    quotation_client_id
+  ) then
+    raise exception 'You do not have permission to edit quotation cargo lines'
+      using errcode = '42501';
+  end if;
+
   update quotation_cargo_lines
   set
     load_type = nullif(btrim(coalesce(p_load_type, '')), ''),
@@ -1264,7 +2579,32 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  quotation_created_by uuid;
+  quotation_client_id uuid;
 begin
+  select
+    q.created_by,
+    q.client_id
+  into quotation_created_by, quotation_client_id
+  from quotations q
+  join quotation_cargo_lines qcl on qcl.quotation_id = q.id
+  where qcl.id = p_id;
+
+  if quotation_client_id is null then
+    raise exception 'Quotation cargo line % not found', p_id;
+  end if;
+
+  if not public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'edit',
+    quotation_created_by,
+    quotation_client_id
+  ) then
+    raise exception 'You do not have permission to delete quotation cargo lines'
+      using errcode = '42501';
+  end if;
+
   delete from quotation_cargo_lines
   where id = p_id;
 end;
@@ -1280,15 +2620,31 @@ set search_path = public
 as $$
 declare
   current_status text;
+  quotation_created_by uuid;
+  quotation_client_id uuid;
   shipment_id uuid;
 begin
-  select status
-  into current_status
+  select
+    q.status,
+    q.created_by,
+    q.client_id
+  into current_status, quotation_created_by, quotation_client_id
   from quotations
   where id = p_quotation_id;
 
   if current_status is null then
     raise exception 'Quotation % not found', p_quotation_id;
+  end if;
+
+  if not public.erp_has_resource_access('crm.quotations', 'create_booking')
+    or not public.erp_can_access_crm_quotation_resource(
+      'crm.quotations.customer_actions',
+      'edit',
+      quotation_created_by,
+      quotation_client_id
+    ) then
+    raise exception 'You do not have permission to create a booking from this quotation'
+      using errcode = '42501';
   end if;
 
   if current_status <> 'aceptada' then
@@ -1465,6 +2821,14 @@ as $$
 declare
   result jsonb;
 begin
+  if not public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'view',
+    p_client_id
+  ) then
+    return null;
+  end if;
+
   select jsonb_build_object(
     'client', to_jsonb(c),
     'contacts', coalesce(
@@ -1558,6 +2922,11 @@ as $$
   from clients c
   cross join params p
   where c.is_deleted = false
+    and public.erp_can_access_client_resource(
+      'crm.clients.list',
+      'view',
+      c.id
+    )
     and (
       p.normalized_query is null
       or c.search_text ilike '%' || p.normalized_query || '%'

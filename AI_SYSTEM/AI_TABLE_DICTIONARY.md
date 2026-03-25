@@ -136,6 +136,386 @@ Last update timestamp.
 
 
 --------------------------------------------------
+TABLE: permission_modules
+--------------------------------------------------
+
+Purpose
+
+Stores the top-level ERP permission modules used for navigation and authorization grouping.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+code
+Type: text
+Stable unique module code such as crm, pricing, operations, master_data, or finance.
+
+name
+Type: text
+User-facing module label.
+
+icon_key
+Type: text
+Optional UI icon reference.
+
+sort_order
+Type: integer
+Controls display order in permission-aware navigation.
+
+active
+Type: boolean
+Whether the module is currently part of the live permission surface.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: permission_submodules
+--------------------------------------------------
+
+Purpose
+
+Stores the live or planned ERP submodules that map to routes and permission-aware navigation items.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+module_id
+Type: uuid
+Foreign key referencing permission_modules.id.
+
+code
+Type: text
+Stable unique submodule code such as crm.clients or pricing.quotations.
+
+name
+Type: text
+User-facing submodule label.
+
+route_path
+Type: text
+Primary route used for navigation.
+
+route_matchers
+Type: text[]
+Allowed route prefixes used by erp_can_access_route() for shared detail routes.
+
+sort_order
+Type: integer
+Controls ordering inside the module tree and sidebar.
+
+active
+Type: boolean
+Whether the submodule should be visible in current live navigation.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: permission_actions
+--------------------------------------------------
+
+Purpose
+
+Stores canonical permission actions such as view, create, edit, delete, pricing_take, send_quote, or create_booking.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+code
+Type: text
+Stable action identifier.
+
+name
+Type: text
+User-facing action name.
+
+scope_type
+Type: text
+Allowed values: resource, field, or both.
+
+active
+Type: boolean
+Whether the action is currently available in the permission registry.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: permission_conditions
+--------------------------------------------------
+
+Purpose
+
+Stores the canonical access scope conditions used by role permissions.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+code
+Type: text
+Stable condition code such as all, owner_only, assigned_branch_only, or none.
+
+name
+Type: text
+User-facing condition label.
+
+description
+Type: text
+Readable explanation of the condition.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: permission_resources
+--------------------------------------------------
+
+Purpose
+
+Stores logical ERP resources that can be protected independently from whole modules.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+module_id
+Type: uuid
+Foreign key referencing permission_modules.id.
+
+submodule_id
+Type: uuid
+Nullable foreign key referencing permission_submodules.id.
+
+resource_key
+Type: text
+Stable unique resource identifier such as crm.clients.record or pricing.quotations.cost_section.
+
+name
+Type: text
+User-facing resource label.
+
+resource_type
+Type: text
+Classification such as module, submodule, page, section, list, record, or action_group.
+
+resource_group
+Type: text
+Optional UI grouping label used by the permissions workspace.
+
+table_name
+Type: text
+Optional canonical table associated with the resource.
+
+view_name
+Type: text
+Optional canonical view associated with the resource.
+
+rpc_name
+Type: text
+Optional canonical RPC associated with the resource.
+
+entity_owner_field
+Type: text
+Optional ownership field for future owner_only enforcement.
+
+entity_branch_field
+Type: text
+Optional branch field for future assigned_branch_only enforcement.
+
+sort_order
+Type: integer
+Display order inside a submodule.
+
+active
+Type: boolean
+Whether the resource participates in live authorization.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: permission_fields
+--------------------------------------------------
+
+Purpose
+
+Stores field-level permission targets for sensitive or section-specific UI fields.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+resource_id
+Type: uuid
+Foreign key referencing permission_resources.id.
+
+field_key
+Type: text
+Stable field identifier inside the resource.
+
+label
+Type: text
+User-facing field label.
+
+data_type
+Type: text
+Field datatype hint for permission UX and enforcement planning.
+
+field_group
+Type: text
+Visual section grouping such as Company Information or Pricing.
+
+sort_order
+Type: integer
+Display order inside the field drawer.
+
+active
+Type: boolean
+Whether the field is live in the permission registry.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: role_resource_permissions
+--------------------------------------------------
+
+Purpose
+
+Stores the live coarse-grained permission rules by role, resource, action, and scope condition.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+role_id
+Type: uuid
+Foreign key referencing roles.id.
+
+resource_id
+Type: uuid
+Foreign key referencing permission_resources.id.
+
+action_id
+Type: uuid
+Foreign key referencing permission_actions.id.
+
+condition_id
+Type: uuid
+Foreign key referencing permission_conditions.id.
+
+allowed
+Type: boolean
+Whether the role may perform the action.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
+TABLE: role_field_permissions
+--------------------------------------------------
+
+Purpose
+
+Stores field-level permission rules by role, field, action, and scope condition.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+role_id
+Type: uuid
+Foreign key referencing roles.id.
+
+field_id
+Type: uuid
+Foreign key referencing permission_fields.id.
+
+action_id
+Type: uuid
+Foreign key referencing permission_actions.id.
+
+condition_id
+Type: uuid
+Foreign key referencing permission_conditions.id.
+
+allowed
+Type: boolean
+Whether the role may perform the field action.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
 TABLE: external_data_sources
 --------------------------------------------------
 
@@ -1101,6 +1481,10 @@ expected_profit
 Type: numeric
 Expected profit.
 
+search_text
+Type: text
+Denormalized search text used by paginated quotation list lookup.
+
 valid_until
 Type: date
 Quotation validity date.
@@ -1151,18 +1535,22 @@ Provider or accounting-concept label stored on the line.
 cost
 Type: numeric
 Provider cost amount.
+Must be treated as sensitive purchase-side data and exposed through quotation_cost_line_secure_view or masked quotation summary reads.
 
 purchase_amount
 Type: numeric
 Commercial purchase amount for the line.
+Visible to Pricing and Ventas only when the corresponding field permission is granted.
 
 sale_amount
 Type: numeric
 Commercial sale amount for the line.
+Must remain hidden from Pricing unless explicitly granted through role_field_permissions.
 
 profit_amount
 Type: numeric
 Line profit calculated as sale - purchase.
+Must remain hidden from Pricing unless explicitly granted through role_field_permissions.
 
 vat_rate
 Type: numeric
@@ -1175,6 +1563,12 @@ Cost currency.
 notes
 Type: text
 Additional cost notes.
+
+Security Notes
+
+- quotation_costs is the write table
+- quotation_cost_line_secure_view is the canonical masked read for role-aware UI access
+- registered sensitive quotation fields use deny-by-default field permission behavior until an explicit role_field_permissions rule exists
 
 created_at
 Type: timestamptz

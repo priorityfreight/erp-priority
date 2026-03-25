@@ -1,47 +1,87 @@
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { getCurrentNavigationItems } from "@/lib/db"
 import { Brand } from "./Brand"
 
 type NavItem = {
   href: string
   label: string
   section: "Dashboard" | "CRM" | "Pricing" | "Master Data"
+  requiredSubmoduleCode: string
 }
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", section: "Dashboard" },
-  { href: "/clients", label: "Clients", section: "CRM" },
-  { href: "/contacts", label: "Contacts", section: "CRM" },
-  { href: "/opportunities", label: "Opportunities", section: "CRM" },
-  { href: "/quotations", label: "Quotations", section: "CRM" },
-  { href: "/pricing/providers", label: "Providers", section: "Pricing" },
-  { href: "/pricing/quotations", label: "Pricing / Quotations", section: "Pricing" },
-  { href: "/master-data", label: "Master Data", section: "Master Data" },
-  { href: "/master-data/users", label: "Usuarios", section: "Master Data" },
+  { href: "/", label: "Dashboard", section: "Dashboard", requiredSubmoduleCode: "dashboard.home" },
+  { href: "/clients", label: "Clients", section: "CRM", requiredSubmoduleCode: "crm.clients" },
+  { href: "/contacts", label: "Contacts", section: "CRM", requiredSubmoduleCode: "crm.contacts" },
+  { href: "/opportunities", label: "Opportunities", section: "CRM", requiredSubmoduleCode: "crm.opportunities" },
+  { href: "/quotations", label: "Quotations", section: "CRM", requiredSubmoduleCode: "crm.quotations" },
+  { href: "/pricing/providers", label: "Providers", section: "Pricing", requiredSubmoduleCode: "pricing.providers" },
+  { href: "/pricing/quotations", label: "Pricing / Quotations", section: "Pricing", requiredSubmoduleCode: "pricing.quotations" },
+  { href: "/master-data", label: "Master Data", section: "Master Data", requiredSubmoduleCode: "master_data.overview" },
+  { href: "/master-data/users", label: "Usuarios", section: "Master Data", requiredSubmoduleCode: "master_data.users" },
+  { href: "/master-data/users/roles", label: "Roles y permisos", section: "Master Data", requiredSubmoduleCode: "master_data.roles" },
   {
     href: "/master-data/sales/service-types",
     label: "Ventas / Tipos de servicio",
     section: "Master Data",
+    requiredSubmoduleCode: "master_data.sales.service_types",
   },
   {
     href: "/master-data/sales/accounting-concepts",
     label: "Ventas / Conceptos contables",
     section: "Master Data",
+    requiredSubmoduleCode: "master_data.sales.accounting_concepts",
   },
   {
     href: "/master-data/sales/quotation-rejection-reasons",
     label: "Ventas / Motivos rechazo",
     section: "Master Data",
+    requiredSubmoduleCode: "master_data.sales.rejection_reasons",
   },
-  { href: "/master-data/unlocode", label: "UN/LOCODE", section: "Master Data" },
+  { href: "/master-data/unlocode", label: "UN/LOCODE", section: "Master Data", requiredSubmoduleCode: "master_data.unlocode" },
 ]
 
 const sectionOrder: NavItem["section"][] = ["Dashboard", "CRM", "Pricing", "Master Data"]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [allowedSubmodules, setAllowedSubmodules] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadNavigationPermissions() {
+      try {
+        const items = await getCurrentNavigationItems()
+
+        if (!cancelled) {
+          setAllowedSubmodules(new Set(items.map((item) => item.submodule_code)))
+        }
+      } catch {
+        if (!cancelled) {
+          setAllowedSubmodules(new Set(["dashboard.home"]))
+        }
+      }
+    }
+
+    void loadNavigationPermissions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const visibleItems = useMemo(() => {
+    if (!allowedSubmodules) {
+      return navItems.filter((item) => item.requiredSubmoduleCode === "dashboard.home")
+    }
+
+    return navItems.filter((item) => allowedSubmodules.has(item.requiredSubmoduleCode))
+  }, [allowedSubmodules])
 
   return (
     <aside className="brand-shell sticky top-0 hidden min-h-screen w-72 shrink-0 flex-col overflow-hidden text-white lg:flex">
@@ -60,7 +100,7 @@ export function Sidebar() {
 
       <nav className="relative flex-1 space-y-6 px-4 pb-6">
         {sectionOrder.map((section) => {
-          const items = navItems.filter((item) => item.section === section)
+          const items = visibleItems.filter((item) => item.section === section)
           if (items.length === 0) return null
 
           return (

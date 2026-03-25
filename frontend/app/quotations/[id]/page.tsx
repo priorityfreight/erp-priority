@@ -14,7 +14,7 @@ import {
   getQuotationRejectionReasons,
   requestQuotationPricing,
   updateQuotation,
-  updateQuotationChargeLine,
+  updateQuotationOptionSalesAmounts,
   updateQuotationCargoLine,
   updateQuotationStatus,
   type Contact,
@@ -330,6 +330,60 @@ export default function QuotationDetailPage() {
     [chargeOptionSummaries, selectedSalesOption]
   )
 
+  async function refreshQuotation(id: string) {
+    const quotation = await getQuotationById(id)
+
+    if (!quotation) {
+      setDetails(null)
+      return null
+    }
+
+    setDetails((current) => {
+      if (!current) {
+        return null
+      }
+
+      return {
+        ...current,
+        quotation,
+      }
+    })
+    setQuoteFormValues(buildQuotationFormValues(quotation))
+    setStatusFormValues(buildStatusFormValues(quotation))
+
+    return quotation
+  }
+
+  async function refreshChargeLines(id: string) {
+    const chargeLines = await getQuotationChargeLines(id)
+    setDetails((current) => {
+      if (!current) {
+        return null
+      }
+
+      return {
+        ...current,
+        chargeLines,
+      }
+    })
+    return chargeLines
+  }
+
+  async function refreshCargoLines(id: string) {
+    const cargoLines = await getQuotationCargoLines(id)
+    setDetails((current) => {
+      if (!current) {
+        return null
+      }
+
+      return {
+        ...current,
+        cargoLines,
+      }
+    })
+    return cargoLines
+  }
+
   async function loadDetails(id: string) {
     try {
       setLoading(true)
@@ -340,13 +394,12 @@ export default function QuotationDetailPage() {
         return
       }
 
-      const [chargeLines, cargoLines, rejectionReasons, clientContacts] =
-        await Promise.all([
-          getQuotationChargeLines(id),
-          getQuotationCargoLines(id),
-          getQuotationRejectionReasons(),
-          getContactsByClientId(quotation.client_id),
-        ])
+      const [chargeLines, cargoLines, rejectionReasons, clientContacts] = await Promise.all([
+        getQuotationChargeLines(id),
+        getQuotationCargoLines(id),
+        getQuotationRejectionReasons(),
+        getContactsByClientId(quotation.client_id),
+      ])
 
       setDetails({
         quotation,
@@ -396,7 +449,7 @@ export default function QuotationDetailPage() {
     try {
       setRequestingPricing(true)
       await requestQuotationPricing(details.quotation.id)
-      await loadDetails(details.quotation.id)
+      await refreshQuotation(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo solicitar la cotizacion a pricing")
@@ -424,7 +477,7 @@ export default function QuotationDetailPage() {
         sales_valid_until: quoteFormValues.salesValidUntil || null,
       })
       setShowEditModal(false)
-      await loadDetails(details.quotation.id)
+      await refreshQuotation(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo guardar la cotizacion")
@@ -504,7 +557,7 @@ export default function QuotationDetailPage() {
 
       setShowCargoModal(false)
       resetCargoForm()
-      await loadDetails(details.quotation.id)
+      await refreshCargoLines(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo guardar el detalle de carga")
@@ -522,7 +575,7 @@ export default function QuotationDetailPage() {
     try {
       setDeletingCargoId(id)
       await deleteQuotationCargoLine(id)
-      await loadDetails(details.quotation.id)
+      await refreshCargoLines(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo eliminar el detalle de carga")
@@ -545,7 +598,7 @@ export default function QuotationDetailPage() {
         targetRate: statusFormValues.targetRate ? Number(statusFormValues.targetRate) : null,
       })
       setShowStatusModal(false)
-      await loadDetails(details.quotation.id)
+      await refreshQuotation(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo actualizar el estatus")
@@ -559,26 +612,26 @@ export default function QuotationDetailPage() {
       return
     }
 
+    if (!details.quotation.can_edit_sale_price) {
+      alert("Tu rol no tiene permiso para editar la venta de esta cotizacion")
+      return
+    }
+
     try {
       setSavingSales(true)
-      await Promise.all(
-        selectedSalesOptionSummary.lines.map((line) =>
-          updateQuotationChargeLine(line.id, {
-            option_label: line.option_label,
-            provider_id: line.provider_id,
-            sales_accounting_concept_id: line.sales_accounting_concept_id,
-            purchase_amount: line.purchase_amount,
-            sale_amount: salesDraft[line.id] ? Number(salesDraft[line.id]) : null,
-            vat_rate: line.vat_rate,
-            notes: line.notes,
-          })
-        )
+      await updateQuotationOptionSalesAmounts(
+        details.quotation.id,
+        selectedSalesOptionSummary.optionLabel,
+        salesDraft
       )
 
       setShowSalesModal(false)
       setSelectedSalesOption(null)
       setSalesDraft({})
-      await loadDetails(details.quotation.id)
+      await Promise.all([
+        refreshQuotation(details.quotation.id),
+        refreshChargeLines(details.quotation.id),
+      ])
     } catch (error) {
       console.error(error)
       alert("No se pudo guardar la venta de la opcion")
@@ -589,6 +642,11 @@ export default function QuotationDetailPage() {
 
   async function handleSendQuotation() {
     if (!details) {
+      return
+    }
+
+    if (!details.quotation.can_edit_sale_price) {
+      alert("Tu rol no tiene permiso para preparar la salida comercial de esta cotizacion")
       return
     }
 
@@ -604,7 +662,7 @@ export default function QuotationDetailPage() {
       if (typeof window !== "undefined") {
         window.open(documentHref, "_blank", "noopener,noreferrer")
       }
-      await loadDetails(details.quotation.id)
+      await refreshQuotation(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo enviar la cotizacion")
@@ -621,7 +679,7 @@ export default function QuotationDetailPage() {
     try {
       setMarkingAccepted(true)
       await updateQuotationStatus(details.quotation.id, "aceptada")
-      await loadDetails(details.quotation.id)
+      await refreshQuotation(details.quotation.id)
     } catch (error) {
       console.error(error)
       alert("No se pudo marcar la cotizacion como aceptada")
@@ -678,11 +736,15 @@ export default function QuotationDetailPage() {
 
   const { quotation, chargeLines, cargoLines, clientContacts, rejectionReasons } =
     details
+  const canViewCost = quotation.can_view_cost ?? false
+  const canViewSalePrice = quotation.can_view_sale_price ?? false
+  const canEditSalePrice = quotation.can_edit_sale_price ?? false
+  const canViewExpectedProfit = quotation.can_view_expected_profit ?? false
   const usesCargoLines = shouldUseCargoLines(quotation.service_type)
   const canSeePricingOutcome = canShowCommercialPricing(quotation.status)
   const canSeeCommercialActions = canShowCommercialActions(quotation.status)
   const canPrepareCommercial = canPrepareCommercialProposal(quotation.status)
-  const canEditCommercialSale = canEditSalesOption(quotation.status)
+  const canEditCommercialSale = canEditSalesOption(quotation.status) && canEditSalePrice
   const hasSendableOption = chargeOptionSummaries.some((summary) => summary.hasCompleteSale)
   const pricingSummary = chargeLines.reduce(
     (accumulator, line) => {
@@ -826,22 +888,26 @@ export default function QuotationDetailPage() {
               {quotation.service_type || "No definido"}
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Costo estimado
+          {canViewCost ? (
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
+                Costo estimado
+              </div>
+              <div className="mt-2 text-base font-semibold text-[#111827]">
+                {formatCurrency(quotation.estimated_cost)}
+              </div>
             </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {formatCurrency(quotation.estimated_cost)}
+          ) : null}
+          {canViewExpectedProfit ? (
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
+                Profit estimado
+              </div>
+              <div className="mt-2 text-base font-semibold text-[#111827]">
+                {formatCurrency(quotation.expected_profit)}
+              </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Profit estimado
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {formatCurrency(quotation.expected_profit)}
-            </div>
-          </div>
+          ) : null}
         </section>
 
         <InfoCard title="Informacion de la cotizacion">
@@ -970,7 +1036,7 @@ export default function QuotationDetailPage() {
                     <button
                       type="button"
                       onClick={() => void handleSendQuotation()}
-                      disabled={sendingQuotation || !hasSendableOption}
+                      disabled={sendingQuotation || !hasSendableOption || !canEditSalePrice}
                       className="rounded-md bg-[#2563EB] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {sendingQuotation ? "Enviando..." : "Enviar cotizacion"}
@@ -991,7 +1057,11 @@ export default function QuotationDetailPage() {
                       Preparar renegociacion
                     </button>
                   </div>
-                  {!hasSendableOption ? (
+                  {!canEditSalePrice ? (
+                    <div className="mt-3 text-sm text-[#92400E]">
+                      Tu rol no tiene permiso para capturar venta o enviar esta cotizacion al cliente.
+                    </div>
+                  ) : !hasSendableOption ? (
                     <div className="mt-3 text-sm text-[#92400E]">
                       Aun no hay una opcion con venta capturada para enviar al cliente.
                     </div>
@@ -1006,37 +1076,43 @@ export default function QuotationDetailPage() {
             )}
           </section>
 
-          {canSeePricingOutcome ? (
+          {canSeePricingOutcome && (canViewCost || canViewSalePrice || canViewExpectedProfit) ? (
             <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-[#111827]">Resumen economico</h2>
               <p className="mt-1 text-sm text-[#6B7280]">
                 Consolidado de venta, compra, profit e IVA segun las opciones capturadas.
               </p>
               <div className="mt-5 grid gap-3">
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    Compra total
+                {canViewCost ? (
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Compra total
+                    </div>
+                    <div className="mt-1 text-base font-semibold text-[#111827]">
+                      {formatCurrency(pricingSummary.purchase)}
+                    </div>
                   </div>
-                  <div className="mt-1 text-base font-semibold text-[#111827]">
-                    {formatCurrency(pricingSummary.purchase)}
+                ) : null}
+                {canViewSalePrice ? (
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Venta total
+                    </div>
+                    <div className="mt-1 text-base font-semibold text-[#111827]">
+                      {formatCurrency(pricingSummary.sale)}
+                    </div>
                   </div>
-                </div>
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    Venta total
+                ) : null}
+                {canViewExpectedProfit ? (
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      Profit
+                    </div>
+                    <div className="mt-1 text-base font-semibold text-[#111827]">
+                      {formatCurrency(pricingSummary.profit)}
+                    </div>
                   </div>
-                  <div className="mt-1 text-base font-semibold text-[#111827]">
-                    {formatCurrency(pricingSummary.sale)}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    Profit
-                  </div>
-                  <div className="mt-1 text-base font-semibold text-[#111827]">
-                    {formatCurrency(pricingSummary.profit)}
-                  </div>
-                </div>
+                ) : null}
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
                     IVA estimado
@@ -1236,21 +1312,27 @@ export default function QuotationDetailPage() {
                   <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
                     {summary.optionLabel}
                   </div>
-                  <div className="mt-2 text-lg font-semibold text-[#111827]">
-                    {formatCurrency(summary.totalPurchase)}
-                  </div>
+                  {canViewCost ? (
+                    <div className="mt-2 text-lg font-semibold text-[#111827]">
+                      {formatCurrency(summary.totalPurchase)}
+                    </div>
+                  ) : null}
                   <div className="mt-1 text-sm text-[#6B7280]">
                     Proveedores:{" "}
                     {summary.providers.size > 0
                       ? Array.from(summary.providers).join(", ")
                       : "Sin proveedor"}
                   </div>
-                  <div className="mt-1 text-sm text-[#6B7280]">
-                    Venta: {formatCurrency(summary.totalSale)}
-                  </div>
-                  <div className="mt-1 text-sm text-[#6B7280]">
-                    Profit: {formatCurrency(summary.totalProfit)}
-                  </div>
+                  {canViewSalePrice ? (
+                    <div className="mt-1 text-sm text-[#6B7280]">
+                      Venta: {formatCurrency(summary.totalSale)}
+                    </div>
+                  ) : null}
+                  {canViewExpectedProfit ? (
+                    <div className="mt-1 text-sm text-[#6B7280]">
+                      Profit: {formatCurrency(summary.totalProfit)}
+                    </div>
+                  ) : null}
                   {canEditCommercialSale ? (
                     <div className="mt-3">
                       <button
@@ -1279,9 +1361,9 @@ export default function QuotationDetailPage() {
                     <th className="px-4 py-3">Opcion</th>
                     <th className="px-4 py-3">Proveedor</th>
                     <th className="px-4 py-3">Concepto</th>
-                    <th className="px-4 py-3">Compra</th>
-                    <th className="px-4 py-3">Venta</th>
-                    <th className="px-4 py-3">Profit</th>
+                    {canViewCost ? <th className="px-4 py-3">Compra</th> : null}
+                    {canViewSalePrice ? <th className="px-4 py-3">Venta</th> : null}
+                    {canViewExpectedProfit ? <th className="px-4 py-3">Profit</th> : null}
                     <th className="px-4 py-3">IVA</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
@@ -1296,15 +1378,21 @@ export default function QuotationDetailPage() {
                       <td className="px-4 py-3 text-[#475569]">
                         {line.accounting_concept || line.service_name}
                       </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {formatCurrency(line.purchase_amount)}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {formatCurrency(line.sale_amount)}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {formatCurrency(line.profit_amount)}
-                      </td>
+                      {canViewCost ? (
+                        <td className="px-4 py-3 text-[#475569]">
+                          {formatCurrency(line.purchase_amount)}
+                        </td>
+                      ) : null}
+                      {canViewSalePrice ? (
+                        <td className="px-4 py-3 text-[#475569]">
+                          {formatCurrency(line.sale_amount)}
+                        </td>
+                      ) : null}
+                      {canViewExpectedProfit ? (
+                        <td className="px-4 py-3 text-[#475569]">
+                          {formatCurrency(line.profit_amount)}
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
                       <td className="px-4 py-3 text-right text-[#6B7280]">
                         {canEditCommercialSale ? (
@@ -1336,7 +1424,7 @@ export default function QuotationDetailPage() {
         ) : null}
       </div>
 
-      {showSalesModal && selectedSalesOptionSummary ? (
+      {showSalesModal && selectedSalesOptionSummary && canEditSalePrice ? (
         <Modal
           title={`Venta comercial · ${selectedSalesOptionSummary.optionLabel}`}
           description="Ventas define la propuesta comercial por opcion sin modificar la compra capturada por pricing."
@@ -1356,14 +1444,16 @@ export default function QuotationDetailPage() {
                   {selectedSalesOptionSummary.optionLabel}
                 </div>
               </div>
-              <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Compra total
+              {canViewCost ? (
+                <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                    Compra total
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-[#111827]">
+                    {formatCurrency(selectedSalesOptionSummary.totalPurchase)}
+                  </div>
                 </div>
-                <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {formatCurrency(selectedSalesOptionSummary.totalPurchase)}
-                </div>
-              </div>
+              ) : null}
               <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
                   Proveedores
@@ -1382,9 +1472,9 @@ export default function QuotationDetailPage() {
                   <tr>
                     <th className="px-4 py-3">Proveedor</th>
                     <th className="px-4 py-3">Concepto</th>
-                    <th className="px-4 py-3">Compra</th>
+                    {canViewCost ? <th className="px-4 py-3">Compra</th> : null}
                     <th className="px-4 py-3">Venta</th>
-                    <th className="px-4 py-3">Profit</th>
+                    {canViewExpectedProfit ? <th className="px-4 py-3">Profit</th> : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB] bg-white">
@@ -1403,9 +1493,11 @@ export default function QuotationDetailPage() {
                         <td className="px-4 py-3 text-[#475569]">
                           {line.accounting_concept || line.service_name}
                         </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {formatCurrency(line.purchase_amount)}
-                        </td>
+                        {canViewCost ? (
+                          <td className="px-4 py-3 text-[#475569]">
+                            {formatCurrency(line.purchase_amount)}
+                          </td>
+                        ) : null}
                         <td className="px-4 py-3">
                           <input
                             className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
@@ -1420,9 +1512,11 @@ export default function QuotationDetailPage() {
                             }
                           />
                         </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {profitValue != null ? formatCurrency(profitValue) : "No disponible"}
-                        </td>
+                        {canViewExpectedProfit ? (
+                          <td className="px-4 py-3 text-[#475569]">
+                            {profitValue != null ? formatCurrency(profitValue) : "No disponible"}
+                          </td>
+                        ) : null}
                       </tr>
                     )
                   })}

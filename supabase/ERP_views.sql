@@ -67,7 +67,12 @@ left join users u on u.id = c.account_owner_id
 left join opportunity_stats os on os.client_id = c.id
 left join quotation_stats qs on qs.client_id = c.id
 left join shipment_stats ss on ss.client_id = c.id
-where c.is_deleted = false;
+where c.is_deleted = false
+  and public.erp_can_access_client_resource(
+    'crm.clients.list',
+    'view',
+    c.id
+  );
 
 
 -- =========================================
@@ -139,7 +144,13 @@ from opportunities o
 join clients c on c.id = o.client_id
 left join users u on u.id = o.salesperson_id
 left join incoterms i on i.id = o.incoterm_id
-where c.is_deleted = false;
+where c.is_deleted = false
+  and public.erp_can_access_opportunity_resource(
+    'crm.opportunities.list',
+    'view',
+    o.salesperson_id,
+    o.client_id
+  );
 
 
 -- =========================================
@@ -161,15 +172,13 @@ order by country_code asc;
 -- =========================================
 
 create or replace view quotation_summary_view as
-with charge_totals as (
+with permission_flags as (
   select
-    qc.quotation_id,
-    count(*) as total_charge_lines,
-    coalesce(sum(coalesce(qc.purchase_amount, qc.cost, 0)), 0) as total_purchase_amount,
-    coalesce(sum(coalesce(qc.sale_amount, 0)), 0) as total_sale_amount,
-    coalesce(sum(coalesce(qc.profit_amount, coalesce(qc.sale_amount, 0) - coalesce(qc.purchase_amount, qc.cost, 0))), 0) as total_profit_amount
-  from quotation_costs qc
-  group by qc.quotation_id
+    public.erp_can_view_quotation_cost() as can_view_cost,
+    public.erp_can_edit_quotation_purchase_amount() as can_edit_purchase_amount,
+    public.erp_can_view_quotation_sale_price() as can_view_sale_price,
+    public.erp_can_edit_quotation_sale_price() as can_edit_sale_price,
+    public.erp_can_view_quotation_expected_profit() as can_view_expected_profit
 )
 select
   q.id,
@@ -203,10 +212,14 @@ select
   q.rejection_notes,
   q.cancellation_notes,
   q.currency,
-  coalesce(ct.total_purchase_amount, q.estimated_cost, 0) as estimated_cost,
-  coalesce(ct.total_sale_amount, q.estimated_price, 0) as estimated_price,
-  coalesce(ct.total_profit_amount, q.expected_profit, 0) as expected_profit,
-  coalesce(ct.total_charge_lines, 0) as total_charge_lines,
+  case when pf.can_view_cost then q.estimated_cost else null end as estimated_cost,
+  case when pf.can_view_sale_price then q.estimated_price else null end as estimated_price,
+  case when pf.can_view_expected_profit then q.expected_profit else null end as expected_profit,
+  (
+    select count(*)
+    from quotation_costs qc
+    where qc.quotation_id = q.id
+  ) as total_charge_lines,
   q.created_at,
   q.updated_at,
   c.id as client_id,
@@ -214,7 +227,12 @@ select
   o.id as opportunity_id,
   o.title as opportunity_title,
   o.salesperson_id,
-  concat_ws(' ', su.first_name, su.last_name) as salesperson_name
+  concat_ws(' ', su.first_name, su.last_name) as salesperson_name,
+  pf.can_view_cost,
+  pf.can_edit_purchase_amount,
+  pf.can_view_sale_price,
+  pf.can_edit_sale_price,
+  pf.can_view_expected_profit
 from quotations q
 join clients c on c.id = q.client_id
 join opportunities o on o.id = q.opportunity_id
@@ -223,13 +241,86 @@ left join users pu on pu.id = q.pricing_owner_id
 left join users cu on cu.id = q.created_by
 left join users su on su.id = o.salesperson_id
 left join quotation_rejection_reasons rr on rr.id = q.rejection_reason_id
-left join charge_totals ct on ct.quotation_id = q.id
-where c.is_deleted = false;
+cross join permission_flags pf
+where c.is_deleted = false
+  and (
+    public.erp_can_access_crm_quotation_resource(
+      'crm.quotations.record',
+      'view',
+      q.created_by,
+      q.client_id
+    )
+    or public.erp_can_access_pricing_quotation(
+      'view',
+      q.status,
+      q.pricing_owner_id
+    )
+    or public.erp_can_access_operations_shipment(
+      'view',
+      q.client_id
+    )
+  );
+
+create or replace view quotation_cost_line_secure_view as
+with permission_flags as (
+  select
+    public.erp_can_view_quotation_cost() as can_view_cost,
+    public.erp_can_edit_quotation_purchase_amount() as can_edit_purchase_amount,
+    public.erp_can_view_quotation_sale_price() as can_view_sale_price,
+    public.erp_can_edit_quotation_sale_price() as can_edit_sale_price,
+    public.erp_can_view_quotation_expected_profit() as can_view_expected_profit
+)
+select
+  qc.id,
+  qc.quotation_id,
+  qc.option_label,
+  qc.provider_id,
+  p.name as provider_name,
+  qc.sales_accounting_concept_id,
+  sac.concept as accounting_concept,
+  qc.service_name,
+  case when pf.can_view_cost then qc.cost else null end as cost,
+  case when pf.can_view_cost then qc.purchase_amount else null end as purchase_amount,
+  case when pf.can_view_sale_price then qc.sale_amount else null end as sale_amount,
+  case when pf.can_view_expected_profit then qc.profit_amount else null end as profit_amount,
+  qc.vat_rate,
+  qc.currency,
+  qc.notes,
+  qc.created_at,
+  pf.can_view_cost,
+  pf.can_edit_purchase_amount,
+  pf.can_view_sale_price,
+  pf.can_edit_sale_price,
+  pf.can_view_expected_profit
+from quotation_costs qc
+join quotations q on q.id = qc.quotation_id
+left join providers p on p.id = qc.provider_id
+left join sales_accounting_concepts sac on sac.id = qc.sales_accounting_concept_id
+cross join permission_flags pf
+where
+  public.erp_has_resource_access(
+    'pricing.quotations.cost_section',
+    'view',
+    q.pricing_owner_id,
+    null
+  )
+  or public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.pricing_options',
+    'view',
+    q.created_by,
+    q.client_id
+  );
 
 create or replace view crm_quotations_view as
 select *
 from quotation_summary_view
-where status in (
+where public.erp_can_access_crm_quotation_resource(
+  'crm.quotations.list',
+  'view',
+  created_by,
+  client_id
+)
+and status in (
   'borrador',
   'pendiente',
   'cotizando',
@@ -244,7 +335,12 @@ where status in (
 create or replace view pricing_quotations_view as
 select *
 from quotation_summary_view
-where status in (
+where public.erp_can_access_pricing_quotation(
+  'view',
+  status,
+  pricing_owner_id
+)
+and status in (
   'pendiente',
   'cotizando',
   'lista_para_enviar',
@@ -398,7 +494,12 @@ select
   c.company_name as client_name
 from contacts ct
 join clients c on c.id = ct.client_id
-where c.is_deleted = false;
+where c.is_deleted = false
+  and public.erp_can_access_client_resource(
+    'crm.contacts.list',
+    'view',
+    ct.client_id
+  );
 
 
 -- =========================================
@@ -538,3 +639,169 @@ select
   sac.updated_at
 from sales_accounting_concepts sac
 order by sac.service_type asc, sac.operation_type asc, sac.concept asc;
+
+
+-- =========================================
+-- PERMISSION RESOURCE CATALOG
+-- =========================================
+
+create or replace view permission_resource_catalog_view as
+select
+  pm.id as module_id,
+  pm.code as module_code,
+  pm.name as module_name,
+  pm.icon_key as module_icon_key,
+  pm.sort_order as module_sort_order,
+  pm.active as module_active,
+  ps.id as submodule_id,
+  ps.code as submodule_code,
+  ps.name as submodule_name,
+  ps.route_path,
+  ps.route_matchers,
+  ps.sort_order as submodule_sort_order,
+  ps.active as submodule_active,
+  pr.id as resource_id,
+  pr.resource_key,
+  pr.name as resource_name,
+  pr.resource_type,
+  pr.resource_group,
+  pr.table_name,
+  pr.view_name,
+  pr.rpc_name,
+  pr.entity_owner_field,
+  pr.entity_branch_field,
+  pr.sort_order as resource_sort_order,
+  pr.active as resource_active,
+  pr.created_at,
+  pr.updated_at
+from permission_resources pr
+join permission_modules pm on pm.id = pr.module_id
+left join permission_submodules ps on ps.id = pr.submodule_id
+order by
+  pm.sort_order asc,
+  coalesce(ps.sort_order, 0) asc,
+  pr.sort_order asc,
+  pr.name asc;
+
+
+-- =========================================
+-- PERMISSION FIELD CATALOG
+-- =========================================
+
+create or replace view permission_field_catalog_view as
+select
+  pr.resource_key,
+  pr.name as resource_name,
+  pf.id as field_id,
+  pf.resource_id,
+  pf.field_key,
+  pf.label,
+  pf.data_type,
+  pf.field_group,
+  pf.sort_order,
+  pf.active,
+  pf.created_at,
+  pf.updated_at
+from permission_fields pf
+join permission_resources pr on pr.id = pf.resource_id
+order by
+  pr.sort_order asc,
+  pf.field_group asc,
+  pf.sort_order asc,
+  pf.label asc;
+
+
+-- =========================================
+-- ROLE RESOURCE PERMISSION MATRIX
+-- =========================================
+
+create or replace view role_resource_permission_matrix_view as
+select
+  r.id as role_id,
+  r.name as role_name,
+  prc.module_id,
+  prc.module_code,
+  prc.module_name,
+  prc.module_icon_key,
+  prc.module_sort_order,
+  prc.submodule_id,
+  prc.submodule_code,
+  prc.submodule_name,
+  prc.route_path,
+  prc.route_matchers,
+  prc.submodule_sort_order,
+  prc.resource_id,
+  prc.resource_key,
+  prc.resource_name,
+  prc.resource_type,
+  prc.resource_group,
+  pa.id as action_id,
+  pa.code as action_code,
+  pa.name as action_name,
+  coalesce(rrp.allowed, false) as allowed,
+  pc.id as condition_id,
+  coalesce(pc.code, 'none') as condition_code,
+  coalesce(pc.name, 'None') as condition_name,
+  rrp.id as role_permission_id
+from roles r
+cross join permission_resource_catalog_view prc
+cross join permission_actions pa
+left join role_resource_permissions rrp
+  on rrp.role_id = r.id
+ and rrp.resource_id = prc.resource_id
+ and rrp.action_id = pa.id
+left join permission_conditions pc
+  on pc.id = rrp.condition_id
+where pa.active = true
+  and pa.scope_type in ('resource', 'both')
+  and prc.resource_active = true
+order by
+  r.name asc,
+  prc.module_sort_order asc,
+  coalesce(prc.submodule_sort_order, 0) asc,
+  prc.resource_sort_order asc,
+  pa.name asc;
+
+
+-- =========================================
+-- ROLE FIELD PERMISSION MATRIX
+-- =========================================
+
+create or replace view role_field_permission_matrix_view as
+select
+  r.id as role_id,
+  r.name as role_name,
+  pfc.resource_key,
+  pfc.resource_name,
+  pfc.field_id,
+  pfc.field_key,
+  pfc.label as field_label,
+  pfc.data_type,
+  pfc.field_group,
+  pfc.sort_order as field_sort_order,
+  pa.id as action_id,
+  pa.code as action_code,
+  pa.name as action_name,
+  coalesce(rfp.allowed, false) as allowed,
+  pc.id as condition_id,
+  coalesce(pc.code, 'none') as condition_code,
+  coalesce(pc.name, 'None') as condition_name,
+  rfp.id as role_field_permission_id
+from roles r
+cross join permission_field_catalog_view pfc
+cross join permission_actions pa
+left join role_field_permissions rfp
+  on rfp.role_id = r.id
+ and rfp.field_id = pfc.field_id
+ and rfp.action_id = pa.id
+left join permission_conditions pc
+  on pc.id = rfp.condition_id
+where pa.active = true
+  and pa.scope_type in ('field', 'both')
+  and pfc.active = true
+order by
+  r.name asc,
+  pfc.resource_key asc,
+  pfc.field_group asc,
+  pfc.sort_order asc,
+  pa.name asc;

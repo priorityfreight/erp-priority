@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { PageContainer } from "@/components/layout/PageContainer"
@@ -193,13 +194,21 @@ export function UsersManager({ currentUserEmail }: UsersManagerProps) {
       title="Usuarios"
       description="Directorio de acceso ERP para usuarios asignados, roles y estatus de acceso."
       actions={
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-        >
-          Anadir usuario
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/master-data/users/roles"
+            className="rounded-md border border-[#CBD5E1] bg-white px-4 py-2 text-sm font-medium text-[#334155] shadow-sm hover:bg-[#F8FAFC]"
+          >
+            Roles y permisos
+          </Link>
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
+          >
+            Anadir usuario
+          </button>
+        </div>
       }
     >
       <div className="space-y-8">

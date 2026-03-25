@@ -34,6 +34,7 @@ export async function proxy(request: NextRequest) {
   )
 
   const isLoginRoute = request.nextUrl.pathname === "/login"
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/")
   const { data: authData } = await supabase.auth.getUser()
   const authUser = authData.user
 
@@ -65,6 +66,22 @@ export async function proxy(request: NextRequest) {
     homeUrl.pathname = "/"
     homeUrl.search = ""
     return NextResponse.redirect(homeUrl)
+  }
+
+  if (isApiRoute) {
+    return response
+  }
+
+  const { data: routeAccess, error: routeError } = await supabase.rpc("erp_can_access_route", {
+    p_route_path: request.nextUrl.pathname,
+    p_action_code: "view",
+  })
+
+  if (routeError || !routeAccess) {
+    const fallbackUrl = request.nextUrl.clone()
+    fallbackUrl.pathname = "/"
+    fallbackUrl.searchParams.set("reason", "forbidden")
+    return NextResponse.redirect(fallbackUrl)
   }
 
   return response

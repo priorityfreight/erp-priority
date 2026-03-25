@@ -14,6 +14,7 @@ import {
   createQuotationChargeLine,
   deleteQuotationChargeLine,
   getProviderPricingCandidates,
+  getQuotationById,
   getProviders,
   getQuotationChargeLines,
   getQuotations,
@@ -170,11 +171,14 @@ function buildProviderWhatsAppLink(
 
 export default function PricingQuotationsPage() {
   const [items, setItems] = useState<QuotationSummary[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [takingId, setTakingId] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
   const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
+  const pageSize = 25
 
   const [selectedQuotation, setSelectedQuotation] = useState<QuotationSummary | null>(null)
   const [showProvidersModal, setShowProvidersModal] = useState(false)
@@ -192,15 +196,18 @@ export default function PricingQuotationsPage() {
   const [chargeFormValues, setChargeFormValues] =
     useState<QuotationChargeLineFormValues>(emptyChargeForm)
 
-  async function loadItems(search = "", status = "all") {
+  async function loadItems(search = "", status = "all", nextPage = 1) {
     try {
       setLoading(true)
       const data = await getQuotations({
         scope: "pricing",
         query: search,
         status,
+        page: nextPage,
+        pageSize,
       })
-      setItems(data)
+      setItems(data.items)
+      setTotalCount(data.totalCount)
     } catch (error) {
       console.error(error)
     } finally {
@@ -209,8 +216,12 @@ export default function PricingQuotationsPage() {
   }
 
   useEffect(() => {
-    void loadItems(deferredQuery, statusFilter)
+    setPage(1)
   }, [deferredQuery, statusFilter])
+
+  useEffect(() => {
+    void loadItems(deferredQuery, statusFilter, page)
+  }, [deferredQuery, page, statusFilter])
 
   function resetChargeForm() {
     setEditingChargeId(null)
@@ -221,7 +232,7 @@ export default function PricingQuotationsPage() {
     try {
       setTakingId(id)
       await takeQuotationForPricing(id)
-      await loadItems(deferredQuery, statusFilter)
+      await loadItems(deferredQuery, statusFilter, page)
     } catch (error) {
       console.error(error)
       alert("No se pudo tomar la cotizacion")
@@ -255,20 +266,25 @@ export default function PricingQuotationsPage() {
       setLoadingCharges(true)
       resetChargeForm()
 
-      const [lines, accountingConcepts, candidates, providers] = await Promise.all([
+      const [lines, accountingConcepts, candidates] = await Promise.all([
         getQuotationChargeLines(quotation.id),
         getSalesAccountingConcepts(),
         getProviderPricingCandidates({
           serviceType: quotation.service_type,
           transportType: quotation.transport_type,
         }),
-        getProviders(),
       ])
 
       setChargeLines(lines)
       setConcepts(accountingConcepts)
       setProviderCandidates(candidates)
-      setAllProviders(providers.filter((provider) => provider.status === "activo"))
+
+      if (candidates.length === 0) {
+        const providers = await getProviders()
+        setAllProviders(providers.filter((provider) => provider.status === "activo"))
+      } else {
+        setAllProviders([])
+      }
     } catch (error) {
       console.error(error)
       alert("No se pudieron cargar los cargos de la cotizacion")
@@ -278,21 +294,35 @@ export default function PricingQuotationsPage() {
   }
 
   async function reloadChargeContext(quotation: QuotationSummary) {
-    const [lines, refreshedItems] = await Promise.all([
+    const [lines, refreshedQuotation] = await Promise.all([
       getQuotationChargeLines(quotation.id),
-      getQuotations({
-        scope: "pricing",
-        query: deferredQuery,
-        status: statusFilter,
-      }),
+      getQuotationById(quotation.id),
     ])
 
     setChargeLines(lines)
-    setItems(refreshedItems)
 
-    const refreshedSelected =
-      refreshedItems.find((item) => item.id === quotation.id) ?? selectedQuotation ?? quotation
-    setSelectedQuotation(refreshedSelected)
+    if (refreshedQuotation) {
+      let removedFromCurrentList = false
+
+      setItems((current) => {
+        if (statusFilter !== "all" && refreshedQuotation.status !== statusFilter) {
+          const nextItems = current.filter((item) => item.id !== refreshedQuotation.id)
+          removedFromCurrentList = nextItems.length !== current.length
+          return nextItems
+        }
+
+        return current.map((item) => (item.id === refreshedQuotation.id ? refreshedQuotation : item))
+      })
+
+      if (removedFromCurrentList) {
+        setTotalCount((count) => Math.max(count - 1, 0))
+      }
+
+      setSelectedQuotation(refreshedQuotation)
+      return
+    }
+
+    setSelectedQuotation(selectedQuotation ?? quotation)
   }
 
   async function handleSaveChargeLine() {
@@ -321,7 +351,7 @@ export default function PricingQuotationsPage() {
             ? Number(chargeFormValues.purchaseAmount)
             : null,
           option_label: chargeFormValues.optionLabel.trim() || "Opcion 1",
-          sale_amount: chargeFormValues.saleAmount ? Number(chargeFormValues.saleAmount) : null,
+          sale_amount: null,
           vat_rate: chargeFormValues.vatRate ? Number(chargeFormValues.vatRate) : undefined,
           notes: chargeFormValues.notes.trim() || null,
         })
@@ -334,7 +364,7 @@ export default function PricingQuotationsPage() {
           purchase_amount: chargeFormValues.purchaseAmount
             ? Number(chargeFormValues.purchaseAmount)
             : null,
-          sale_amount: chargeFormValues.saleAmount ? Number(chargeFormValues.saleAmount) : null,
+          sale_amount: null,
           vat_rate: chargeFormValues.vatRate ? Number(chargeFormValues.vatRate) : undefined,
           notes: chargeFormValues.notes.trim() || null,
         })
@@ -408,8 +438,53 @@ export default function PricingQuotationsPage() {
   }, [providerCandidates])
 
   const providersForChargeForm = recommendedProviders.length > 0 ? recommendedProviders : allProviders
+  const filteredConceptsForQuotation = useMemo(
+    () =>
+      concepts.filter((concept) => {
+        const matchesService =
+          concept.service_type === "GENERAL" ||
+          concept.service_type === (selectedQuotation?.service_type || "")
+        const matchesOperation =
+          !selectedQuotation?.operation_type ||
+          concept.operation_type === selectedQuotation.operation_type.toUpperCase()
+        return matchesService && matchesOperation
+      }),
+    [concepts, selectedQuotation?.operation_type, selectedQuotation?.service_type]
+  )
+  const pricingChargeDisabledReason = useMemo(() => {
+    if (loadingCharges) {
+      return null
+    }
+
+    if (!selectedQuotation?.can_edit_purchase_amount) {
+      return "Tu rol no tiene permiso para editar costos de compra en esta cotizacion."
+    }
+
+    if (providersForChargeForm.length === 0 && filteredConceptsForQuotation.length === 0) {
+      return "No hay proveedores activos ni conceptos contables compatibles para esta cotizacion. Configura ambos catalogos antes de capturar compra."
+    }
+
+    if (providersForChargeForm.length === 0) {
+      return "No hay proveedores activos compatibles con este servicio y transporte. Configura proveedores antes de capturar compra."
+    }
+
+    if (filteredConceptsForQuotation.length === 0) {
+      return "No hay conceptos contables compatibles con este servicio y operacion. Configura el catalogo antes de capturar compra."
+    }
+
+    return null
+  }, [
+    filteredConceptsForQuotation.length,
+    loadingCharges,
+    providersForChargeForm.length,
+    selectedQuotation?.can_edit_purchase_amount,
+  ])
+  const canCaptureCharges = !pricingChargeDisabledReason
 
   const totalPurchase = chargeLines.reduce((sum, line) => sum + (line.purchase_amount ?? 0), 0)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const showingFrom = totalCount === 0 ? 0 : (page - 1) * pageSize + 1
+  const showingTo = totalCount === 0 ? 0 : Math.min(page * pageSize, totalCount)
   const chargeOptionSummaries = useMemo(() => {
     const grouped = new Map<
       string,
@@ -454,7 +529,7 @@ export default function PricingQuotationsPage() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
               Cotizaciones activas
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{items.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">{totalCount}</div>
           </div>
           <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
@@ -564,7 +639,7 @@ export default function PricingQuotationsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-[#475569]">
-                        {formatCurrency(item.estimated_cost)}
+                        {item.can_view_cost ? formatCurrency(item.estimated_cost) : "Sin permiso"}
                       </td>
                       <td className="px-4 py-3 text-[#475569]">
                         {item.status === "renegociar_tarifa" ? (
@@ -625,6 +700,35 @@ export default function PricingQuotationsPage() {
               </table>
             </div>
           )}
+
+          {totalCount > 0 ? (
+            <div className="flex flex-col gap-3 border-t border-[#E5E7EB] pt-4 text-sm text-[#6B7280] sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                Mostrando {showingFrom} a {showingTo} de {totalCount} cotizaciones
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                  disabled={page === 1 || loading}
+                  className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Anterior
+                </button>
+                <div className="min-w-[96px] text-center">
+                  Pagina {page} de {totalPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
+                  disabled={page >= totalPages || loading}
+                  className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
 
@@ -680,9 +784,10 @@ export default function PricingQuotationsPage() {
             {loadingProviders ? (
               <p className="text-sm text-[#6B7280]">Cargando proveedores sugeridos...</p>
             ) : providerCandidates.length === 0 ? (
-              <p className="text-sm text-[#6B7280]">
-                No hay proveedores activos configurados para este servicio y transporte.
-              </p>
+              <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
+                No hay proveedores activos configurados para este servicio y transporte. Pricing
+                no podra capturar compra hasta que exista al menos un proveedor compatible.
+              </div>
             ) : (
               <div className="space-y-3">
                 {providerCandidates.map((candidate) => {
@@ -809,7 +914,7 @@ export default function PricingQuotationsPage() {
                   Compra acumulada
                 </div>
                 <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {formatCurrency(totalPurchase)}
+                  {selectedQuotation.can_view_cost ? formatCurrency(totalPurchase) : "Sin permiso"}
                 </div>
               </div>
             </div>
@@ -831,7 +936,9 @@ export default function PricingQuotationsPage() {
                       <button
                         type="button"
                         onClick={() => void handleMoveToReadyForSend()}
-                        disabled={movingToReadyId === selectedQuotation.id}
+                        disabled={
+                          movingToReadyId === selectedQuotation.id || !canCaptureCharges
+                        }
                         className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {movingToReadyId === selectedQuotation.id
@@ -852,7 +959,9 @@ export default function PricingQuotationsPage() {
                             {summary.optionLabel}
                           </div>
                           <div className="mt-2 text-lg font-semibold text-[#111827]">
-                            {formatCurrency(summary.totalPurchase)}
+                            {selectedQuotation.can_view_cost
+                              ? formatCurrency(summary.totalPurchase)
+                              : "Sin permiso"}
                           </div>
                           <div className="mt-1 text-sm text-[#6B7280]">
                             {summary.lineCount} cargo(s)
@@ -895,7 +1004,9 @@ export default function PricingQuotationsPage() {
                                 {line.accounting_concept || line.service_name}
                               </td>
                               <td className="px-4 py-3 text-[#475569]">
-                                {formatCurrency(line.purchase_amount)}
+                                {selectedQuotation.can_view_cost
+                                  ? formatCurrency(line.purchase_amount)
+                                  : "Sin permiso"}
                               </td>
                               <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
                               <td className="px-4 py-3">
@@ -919,6 +1030,7 @@ export default function PricingQuotationsPage() {
                                         notes: line.notes || "",
                                       })
                                     }}
+                                    disabled={!selectedQuotation.can_edit_purchase_amount}
                                     className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
                                   >
                                     Editar
@@ -926,7 +1038,10 @@ export default function PricingQuotationsPage() {
                                   <button
                                     type="button"
                                     onClick={() => void handleDeleteChargeLine(line.id)}
-                                    disabled={deletingChargeId === line.id}
+                                    disabled={
+                                      deletingChargeId === line.id ||
+                                      !selectedQuotation.can_edit_purchase_amount
+                                    }
                                     className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
                                   >
                                     {deletingChargeId === line.id ? "Eliminando..." : "Eliminar"}
@@ -949,6 +1064,8 @@ export default function PricingQuotationsPage() {
                   concepts={concepts}
                   serviceType={selectedQuotation.service_type}
                   operationType={selectedQuotation.operation_type}
+                  disabled={!canCaptureCharges}
+                  disabledReason={pricingChargeDisabledReason}
                   onChange={(field, value) => {
                     setChargeFormValues((current) => ({
                       ...current,

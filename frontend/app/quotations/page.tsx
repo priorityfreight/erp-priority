@@ -31,20 +31,26 @@ function formatCurrency(value: number | null | undefined) {
 
 export default function QuotationsPage() {
   const [items, setItems] = useState<QuotationSummary[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
   const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
+  const pageSize = 25
 
-  async function loadItems(search = "", status = "all") {
+  async function loadItems(search = "", status = "all", nextPage = 1) {
     try {
       setLoading(true)
       const data = await getQuotations({
         scope: "crm",
         query: search,
         status,
+        page: nextPage,
+        pageSize,
       })
-      setItems(data)
+      setItems(data.items)
+      setTotalCount(data.totalCount)
     } catch (error) {
       console.error(error)
     } finally {
@@ -53,10 +59,17 @@ export default function QuotationsPage() {
   }
 
   useEffect(() => {
-    void loadItems(deferredQuery, statusFilter)
+    setPage(1)
   }, [deferredQuery, statusFilter])
 
+  useEffect(() => {
+    void loadItems(deferredQuery, statusFilter, page)
+  }, [deferredQuery, page, statusFilter])
+
   const totalSales = items.reduce((sum, item) => sum + (item.estimated_price ?? 0), 0)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const showingFrom = totalCount === 0 ? 0 : (page - 1) * pageSize + 1
+  const showingTo = totalCount === 0 ? 0 : Math.min(page * pageSize, totalCount)
 
   return (
     <PageContainer
@@ -69,7 +82,7 @@ export default function QuotationsPage() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
               Cotizaciones
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{items.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">{totalCount}</div>
           </div>
           <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
@@ -194,6 +207,35 @@ export default function QuotationsPage() {
               </table>
             </div>
           )}
+
+          {totalCount > 0 ? (
+            <div className="flex flex-col gap-3 border-t border-[#E5E7EB] pt-4 text-sm text-[#6B7280] sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                Mostrando {showingFrom} a {showingTo} de {totalCount} cotizaciones
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                  disabled={page === 1 || loading}
+                  className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Anterior
+                </button>
+                <div className="min-w-[96px] text-center">
+                  Pagina {page} de {totalPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
+                  disabled={page >= totalPages || loading}
+                  className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </PageContainer>

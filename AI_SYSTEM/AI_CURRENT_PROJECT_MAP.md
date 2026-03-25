@@ -68,6 +68,7 @@ Status summary:
 - legacy compatibility remains in code only as temporary rollback safety, but it is no longer the active backend mode
 - route access is now protected by login before homepage
 - current auth implementation uses Supabase Auth sessions plus public.users active-profile validation
+- route and sidebar access are now also permission-aware through the metadata-driven permissions registry
 - AI_QUERY_LIBRARY.md documents the current frontend query layer
 - AI_BACKEND_SYNC_RULES.md defines how SQL, types, query modules, and fallback safety must remain synchronized
 - UI/design/component documents still contain target-state guidance beyond the current implementation
@@ -96,6 +97,7 @@ Canonical files:
 Current database coverage:
 
 - organization tables
+- permissions registry tables
 - master data tables
 - CRM tables
 - commercial tables
@@ -131,16 +133,23 @@ Current route files:
 - frontend/app/page.tsx
 - frontend/app/dashboard/page.tsx
 - frontend/app/master-data/users/page.tsx
+- frontend/app/master-data/users/roles/page.tsx
 - frontend/app/clients/page.tsx
 - frontend/app/clients/[id]/page.tsx
 - frontend/app/contacts/page.tsx
 - frontend/app/opportunities/page.tsx
 - frontend/app/opportunities/[id]/page.tsx
+- frontend/app/quotations/page.tsx
+- frontend/app/quotations/[id]/page.tsx
+- frontend/app/quotations/[id]/document/page.tsx
+- frontend/app/quotations/[id]/pricing-request/page.tsx
 - frontend/app/pricing/providers/page.tsx
 - frontend/app/pricing/providers/[id]/page.tsx
+- frontend/app/pricing/quotations/page.tsx
 - frontend/app/master-data/page.tsx
 - frontend/app/master-data/sales/service-types/page.tsx
 - frontend/app/master-data/sales/accounting-concepts/page.tsx
+- frontend/app/master-data/sales/quotation-rejection-reasons/page.tsx
 - frontend/app/master-data/unlocode/page.tsx
 
 Current shared layout files:
@@ -159,6 +168,7 @@ Current shared CRM/UI components:
 - frontend/src/components/forms/UserForm.tsx
 - frontend/src/components/master-data/ServiceTransportTypeManager.tsx
 - frontend/src/components/master-data/UsersManager.tsx
+- frontend/src/components/master-data/RolesPermissionsManager.tsx
 
 Current query layer:
 
@@ -173,6 +183,7 @@ Current query layer:
 - frontend/src/lib/auth.ts
 - frontend/src/lib/supabase/server.ts
 - frontend/src/lib/db/users.ts
+- frontend/src/lib/db/permissions.ts
 
 Current server-side master data utilities:
 
@@ -188,12 +199,17 @@ Current implemented frontend modules:
 - login access gate
 - dashboard shell
 - master data users
+- master data roles and permissions
 - clients
 - contacts
 - opportunities
+- quotations
 - pricing/providers
+- pricing/quotations
 - master data
 - sales service types catalog
+- sales accounting concepts catalog
+- quotation rejection reasons catalog
 - UN/LOCODE lookup
 
 Pricing module status:

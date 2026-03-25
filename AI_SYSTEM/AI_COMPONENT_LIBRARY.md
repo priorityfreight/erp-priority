@@ -138,6 +138,18 @@ Breadcrumb
 Displays navigation hierarchy.
 
 
+ModuleTreeNav
+
+Permission-aware tree used in the Roles and Permissions workspace.
+
+Must support:
+
+- module groups
+- submodule rows
+- active/inactive states
+- quick visual summary of configured access
+
+
 
 --------------------------------------------------
 DATA COMPONENTS
@@ -169,6 +181,31 @@ Created At
 DetailPanel
 
 Side panel showing detailed record information.
+
+
+PermissionsMatrix
+
+Hybrid grid component for coarse-grained role permissions.
+
+Features
+
+- item label column
+- view/create/edit/delete toggles
+- summarized action state
+- scope selector
+- low-clutter enterprise presentation
+
+
+FieldPermissionDrawer
+
+Right-side drawer used by the permissions workspace.
+
+Features
+
+- grouped field-level permissions
+- advanced action toggles
+- clear section labels
+- dirty-state awareness before save
 
 
 

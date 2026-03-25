@@ -10,6 +10,13 @@ const submodules = [
     notes: "Administra usuarios del ERP, rol, username, estatus y aprovisionamiento de acceso.",
   },
   {
+    title: "Usuarios / Roles y permisos",
+    href: "/master-data/users/roles",
+    status: "Live",
+    coverage: "Workspace visual de permisos por rol",
+    notes: "Configura acceso por modulo, submodulo, recurso y campos sensibles desde una matriz visual.",
+  },
+  {
     title: "Ventas / Tipos de servicio",
     href: "/master-data/sales/service-types",
     status: "Live",
@@ -63,7 +70,7 @@ export function MasterDataOverview() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
               Active Submodules
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">5</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">6</div>
           </div>
           <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">

@@ -16,6 +16,11 @@ import type {
 
 type QuotationScope = "crm" | "pricing"
 
+export type QuotationListResult = {
+  items: QuotationSummary[]
+  totalCount: number
+}
+
 function mapQuotation(row: Record<string, unknown>): Quotation {
   return {
     id: String(row.id),
@@ -54,6 +59,11 @@ function mapQuotation(row: Record<string, unknown>): Quotation {
     estimated_cost: (row.estimated_cost as number | null | undefined) ?? null,
     estimated_price: (row.estimated_price as number | null | undefined) ?? null,
     expected_profit: (row.expected_profit as number | null | undefined) ?? null,
+    can_view_cost: Boolean(row.can_view_cost),
+    can_edit_purchase_amount: Boolean(row.can_edit_purchase_amount),
+    can_view_sale_price: Boolean(row.can_view_sale_price),
+    can_edit_sale_price: Boolean(row.can_edit_sale_price),
+    can_view_expected_profit: Boolean(row.can_view_expected_profit),
     total_charge_lines: (row.total_charge_lines as number | null | undefined) ?? undefined,
     created_at: String(row.created_at ?? new Date(0).toISOString()),
     updated_at: (row.updated_at as string | null | undefined) ?? null,
@@ -73,29 +83,25 @@ function mapQuotationSummary(row: Record<string, unknown>): QuotationSummary {
 }
 
 function mapQuotationChargeLine(row: Record<string, unknown>): QuotationChargeLine {
-  const provider = row.providers
-  const concept = row.sales_accounting_concepts
-
   return {
     id: String(row.id),
     quotation_id: String(row.quotation_id),
     option_label: String(row.option_label ?? "Opcion 1"),
     provider_id: (row.provider_id as string | null | undefined) ?? null,
-    provider_name:
-      provider && typeof provider === "object"
-        ? ((provider as Record<string, unknown>).name as string | null | undefined) ?? null
-        : null,
+    provider_name: (row.provider_name as string | null | undefined) ?? null,
     sales_accounting_concept_id:
       (row.sales_accounting_concept_id as string | null | undefined) ?? null,
-    accounting_concept:
-      concept && typeof concept === "object"
-        ? ((concept as Record<string, unknown>).concept as string | null | undefined) ?? null
-        : null,
+    accounting_concept: (row.accounting_concept as string | null | undefined) ?? null,
     service_name: String(row.service_name ?? ""),
-    cost: Number(row.cost ?? 0),
+    cost: (row.cost as number | null | undefined) ?? null,
     purchase_amount: (row.purchase_amount as number | null | undefined) ?? null,
     sale_amount: (row.sale_amount as number | null | undefined) ?? null,
     profit_amount: (row.profit_amount as number | null | undefined) ?? null,
+    can_view_cost: Boolean(row.can_view_cost),
+    can_edit_purchase_amount: Boolean(row.can_edit_purchase_amount),
+    can_view_sale_price: Boolean(row.can_view_sale_price),
+    can_edit_sale_price: Boolean(row.can_edit_sale_price),
+    can_view_expected_profit: Boolean(row.can_view_expected_profit),
     vat_rate: Number(row.vat_rate ?? 0),
     currency: String(row.currency ?? "USD"),
     notes: (row.notes as string | null | undefined) ?? null,
@@ -145,30 +151,30 @@ export async function getQuotations(params?: {
   scope?: QuotationScope
   query?: string
   status?: string
-}): Promise<QuotationSummary[]> {
-  const scope = params?.scope ?? "crm"
-  const source = scope === "pricing" ? "pricing_quotations_view" : "crm_quotations_view"
+  page?: number
+  pageSize?: number
+}): Promise<QuotationListResult> {
+  const page = Math.max(params?.page ?? 1, 1)
+  const pageSize = Math.max(params?.pageSize ?? 25, 1)
+  const { data, error } = await supabase.rpc("search_quotations", {
+    p_scope: params?.scope ?? "crm",
+    p_query: params?.query?.trim() || null,
+    p_status:
+      params?.status?.trim() && params.status !== "all" ? params.status.trim() : null,
+    p_limit: pageSize,
+    p_offset: (page - 1) * pageSize,
+  } as never)
 
-  let request = supabase.from(source).select("*").order("created_at", { ascending: false })
-
-  const normalizedQuery = params?.query?.trim()
-  if (normalizedQuery) {
-    request = request.or(
-      `reference_number.ilike.%${normalizedQuery}%,client_name.ilike.%${normalizedQuery}%,opportunity_title.ilike.%${normalizedQuery}%,service_type.ilike.%${normalizedQuery}%,transport_type.ilike.%${normalizedQuery}%,operation_type.ilike.%${normalizedQuery}%,origin.ilike.%${normalizedQuery}%,destination.ilike.%${normalizedQuery}%,pricing_owner_name.ilike.%${normalizedQuery}%`
-    )
-  }
-
-  const normalizedStatus = params?.status?.trim()
-  if (normalizedStatus && normalizedStatus !== "all") {
-    request = request.eq("status", normalizedStatus)
-  }
-
-  const { data, error } = await request
   if (error) {
     throw error
   }
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => mapQuotationSummary(row))
+  const rows = (data ?? []) as Record<string, unknown>[]
+
+  return {
+    items: rows.map((row) => mapQuotationSummary(row)),
+    totalCount: rows.length > 0 ? Number(rows[0].total_count ?? 0) : 0,
+  }
 }
 
 export async function getQuotationById(id: string): Promise<QuotationSummary | null> {
@@ -191,10 +197,8 @@ export async function getQuotationById(id: string): Promise<QuotationSummary | n
 
 export async function getQuotationChargeLines(quotationId: string): Promise<QuotationChargeLine[]> {
   const { data, error } = await supabase
-    .from("quotation_costs")
-    .select(
-      "id,quotation_id,option_label,provider_id,sales_accounting_concept_id,service_name,cost,purchase_amount,sale_amount,profit_amount,vat_rate,currency,notes,created_at,providers(name),sales_accounting_concepts(concept)"
-    )
+    .from("quotation_cost_line_secure_view")
+    .select("*")
     .eq("quotation_id", quotationId)
     .order("created_at", { ascending: true })
 
@@ -343,6 +347,26 @@ export async function updateQuotationChargeLine(
     p_sale_amount: payload.sale_amount ?? null,
     p_vat_rate: payload.vat_rate ?? null,
     p_notes: payload.notes ?? null,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function updateQuotationOptionSalesAmounts(
+  quotationId: string,
+  optionLabel: string,
+  salesAmounts: Record<string, string | null | undefined>
+): Promise<void> {
+  const payload = Object.fromEntries(
+    Object.entries(salesAmounts).map(([lineId, value]) => [lineId, value ?? ""])
+  )
+
+  const { error } = await supabase.rpc("update_quotation_option_sales_amounts", {
+    p_quotation_id: quotationId,
+    p_option_label: optionLabel,
+    p_sales_amounts: payload,
   } as never)
 
   if (error) {

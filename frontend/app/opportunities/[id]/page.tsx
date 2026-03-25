@@ -87,6 +87,40 @@ function formatCurrency(value: number | null | undefined) {
   })}`
 }
 
+function getQuotationReadinessIssues(opportunity: OpportunityWithClient) {
+  const issues: string[] = []
+
+  if (!opportunity.client_id) {
+    issues.push("cliente")
+  }
+
+  if (!opportunity.service_type) {
+    issues.push("tipo de servicio")
+  }
+
+  if (!opportunity.transport_type) {
+    issues.push("tipo de transporte")
+  }
+
+  if (!opportunity.operation_type) {
+    issues.push("tipo de operacion")
+  }
+
+  if (!opportunity.incoterm_id) {
+    issues.push("incoterm")
+  }
+
+  if (!opportunity.origin_unlocode) {
+    issues.push("origen UN/LOCODE")
+  }
+
+  if (!opportunity.destination_unlocode) {
+    issues.push("destino UN/LOCODE")
+  }
+
+  return issues
+}
+
 export default function OpportunityDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -314,6 +348,14 @@ export default function OpportunityDetailPage() {
       return
     }
 
+    const readinessIssues = getQuotationReadinessIssues(details.opportunity)
+    if (readinessIssues.length > 0) {
+      alert(
+        `La oportunidad debe completar estos campos antes de cotizar: ${readinessIssues.join(", ")}`
+      )
+      return
+    }
+
     try {
       setCreatingQuote(true)
       const quotationId = await createQuotation({
@@ -377,6 +419,8 @@ export default function OpportunityDetailPage() {
   }
 
   const { opportunity, clients, users, serviceTransportTypes, incoterms } = details
+  const quotationReadinessIssues = getQuotationReadinessIssues(opportunity)
+  const canCreateQuotation = quotationReadinessIssues.length === 0
   const estimatedValue =
     opportunity.expected_profit_usd != null && opportunity.service_quantity != null
       ? opportunity.expected_profit_usd * opportunity.service_quantity
@@ -426,13 +470,21 @@ export default function OpportunityDetailPage() {
           >
             Editar informacion
           </button>
-          <button
-            type="button"
-            onClick={() => setShowQuoteModal(true)}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-          >
-            Cotizar
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowQuoteModal(true)}
+              disabled={!canCreateQuotation}
+              className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:bg-[#93C5FD]"
+            >
+              Cotizar
+            </button>
+            {!canCreateQuotation ? (
+              <div className="max-w-[320px] text-right text-[11px] text-[#B45309]">
+                Completa antes de cotizar: {quotationReadinessIssues.join(", ")}.
+              </div>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={handleDelete}
@@ -578,28 +630,35 @@ export default function OpportunityDetailPage() {
             })
           }}
         >
-          <QuotationForm
-            title="Nueva cotizacion"
-            description="Completa detalles de carga y fechas; la ficha base se toma desde la oportunidad."
-            values={quoteFormValues}
-            clientName={opportunity.clients?.company_name || null}
-            origin={opportunity.origin}
-            destination={opportunity.destination}
-            serviceType={opportunity.service_type}
-            transportType={opportunity.transport_type}
-            operationType={opportunity.operation_type}
-            incotermCode={opportunity.incoterm_code || null}
-            createdAt={new Date().toISOString()}
-            onChange={(field, value) => {
-              setQuoteFormValues((current) => ({
-                ...current,
-                [field]: value,
-              }))
-            }}
-            onSubmit={handleCreateQuotation}
-            submitLabel="Crear cotizacion"
-            loading={creatingQuote}
-          />
+          {!canCreateQuotation ? (
+            <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-4 text-sm text-[#92400E]">
+              Completa estos campos en la oportunidad antes de crear una cotizacion:{" "}
+              {quotationReadinessIssues.join(", ")}.
+            </div>
+          ) : (
+            <QuotationForm
+              title="Nueva cotizacion"
+              description="Completa detalles de carga y fechas; la ficha base se toma desde la oportunidad."
+              values={quoteFormValues}
+              clientName={opportunity.clients?.company_name || null}
+              origin={opportunity.origin}
+              destination={opportunity.destination}
+              serviceType={opportunity.service_type}
+              transportType={opportunity.transport_type}
+              operationType={opportunity.operation_type}
+              incotermCode={opportunity.incoterm_code || null}
+              createdAt={new Date().toISOString()}
+              onChange={(field, value) => {
+                setQuoteFormValues((current) => ({
+                  ...current,
+                  [field]: value,
+                }))
+              }}
+              onSubmit={handleCreateQuotation}
+              submitLabel="Crear cotizacion"
+              loading={creatingQuote}
+            />
+          )}
         </Modal>
       ) : null}
     </PageContainer>

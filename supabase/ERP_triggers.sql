@@ -32,6 +32,46 @@ before update on users
 for each row
 execute function set_updated_at();
 
+create trigger set_permission_modules_updated_at
+before update on permission_modules
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_submodules_updated_at
+before update on permission_submodules
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_actions_updated_at
+before update on permission_actions
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_conditions_updated_at
+before update on permission_conditions
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_resources_updated_at
+before update on permission_resources
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_fields_updated_at
+before update on permission_fields
+for each row
+execute function set_updated_at();
+
+create trigger set_role_resource_permissions_updated_at
+before update on role_resource_permissions
+for each row
+execute function set_updated_at();
+
+create trigger set_role_field_permissions_updated_at
+before update on role_field_permissions
+for each row
+execute function set_updated_at();
+
 create trigger set_external_data_sources_updated_at
 before update on external_data_sources
 for each row
@@ -295,6 +335,37 @@ begin
 end;
 $$;
 
+create or replace function apply_client_owner_branch_defaults()
+returns trigger
+language plpgsql
+as $$
+declare
+  resolved_branch_id uuid;
+begin
+  if new.account_owner_id is null then
+    new.account_owner_id := public.erp_current_user_id();
+  end if;
+
+  if new.account_owner_id is not null and new.branch_id is null then
+    select u.branch_id
+    into resolved_branch_id
+    from public.users u
+    where u.id = new.account_owner_id;
+
+    new.branch_id := resolved_branch_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_client_owner_branch_defaults on clients;
+
+create trigger set_client_owner_branch_defaults
+before insert or update on clients
+for each row
+execute function apply_client_owner_branch_defaults();
+
 drop trigger if exists set_client_location_fields on clients;
 
 create trigger set_client_location_fields
@@ -463,6 +534,30 @@ begin
 end;
 $$;
 
+create or replace function apply_opportunity_owner_defaults()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.salesperson_id is null and new.client_id is not null then
+    select c.account_owner_id
+    into new.salesperson_id
+    from public.clients c
+    where c.id = new.client_id
+      and c.is_deleted = false;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_opportunity_owner_defaults on opportunities;
+
+create trigger set_opportunity_owner_defaults
+before insert or update on opportunities
+for each row
+execute function apply_opportunity_owner_defaults();
+
 create trigger set_opportunity_computed_fields
 before insert or update on opportunities
 for each row
@@ -520,6 +615,29 @@ begin
       new.destination := destination_reference.resolved_city;
     end if;
   end if;
+
+  new.search_text := lower(
+    regexp_replace(
+      concat_ws(
+        ' ',
+        coalesce(new.reference_number, ''),
+        coalesce(new.status, ''),
+        coalesce(new.service_type, ''),
+        coalesce(new.transport_type, ''),
+        coalesce(new.operation_type, ''),
+        coalesce(new.origin, ''),
+        coalesce(new.origin_unlocode, ''),
+        coalesce(new.destination, ''),
+        coalesce(new.destination_unlocode, ''),
+        coalesce(new.pickup_address, ''),
+        coalesce(new.delivery_address, ''),
+        coalesce(new.commodities, '')
+      ),
+      '\s+',
+      ' ',
+      'g'
+    )
+  );
 
   return new;
 end;

@@ -238,6 +238,36 @@ Current corporate palette:
 Current brand assets:
 
 - shared Priority mark
+
+
+--------------------------------------------------
+RULE 14 — PERMISSION REGISTRY SYNC
+--------------------------------------------------
+
+When adding or exposing a new live ERP module, submodule, or sensitive section:
+
+1 register it in the permission registry
+2 define the route matcher used by erp_can_access_route()
+3 decide its default role permissions
+4 ensure sidebar visibility comes from the permission-aware navigation layer
+5 update AI docs in the same change
+
+Do not expose a new live route in navigation without registering its permission surface.
+
+
+--------------------------------------------------
+RULE 15 — SECURITY IS BACKEND FIRST
+--------------------------------------------------
+
+Frontend visibility is not enough for security.
+
+When access is sensitive, the AI must:
+
+1 enforce the route in the protected proxy or server path
+2 enforce the data boundary in RLS or protected functions
+3 only then add frontend visibility and editability rules
+
+Do not rely on hidden buttons as the only protection for business-critical actions.
 - shared Priority lockup / wordmark
 
 The AI must not introduce unrelated palettes, random gradients, or inconsistent logo treatments once the corporate brand has been established.

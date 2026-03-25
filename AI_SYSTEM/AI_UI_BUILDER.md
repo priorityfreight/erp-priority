@@ -151,6 +151,46 @@ RIGHT PANEL (optional)
 Details or quick edit view.
 
 
+--------------------------------------------------
+PERMISSIONS WORKSPACE RULE
+--------------------------------------------------
+
+The permissions manager under Master Data / Users / Roles must follow a hybrid enterprise workspace pattern:
+
+1 role-first selector at the top
+2 left module and submodule tree
+3 center permission matrix for coarse-grained actions
+4 right detail drawer for advanced actions and field permissions
+
+The permissions UI must feel visual, not technical.
+
+Do not expose raw SQL concepts in the main workspace.
+Users should think in:
+
+module
+screen
+section
+field
+
+not in:
+
+table
+policy
+join
+
+Matrix rule:
+
+- keep the center matrix focused on view, create, edit, delete, actions, and scope
+- summarize extra actions visually instead of exploding too many columns
+- use the right drawer for advanced action toggles and field-level permissions
+
+Tree rule:
+
+- modules must be grouped visually on the left
+- submodules must inherit the same icon and color language as the live sidebar
+- inactive or not-configured items should be visually muted, not hidden from admins
+
+
 
 --------------------------------------------------
 DETAIL PAGE STANDARD

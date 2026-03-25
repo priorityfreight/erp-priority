@@ -34,7 +34,7 @@ Auth/session support:
 - frontend/src/lib/auth.ts resolves username-or-email login and reads the current ERP profile
 - frontend/src/lib/supabaseClient.ts uses the browser SSR client so authenticated queries share the current session
 - frontend/src/lib/supabase/server.ts is the server-side companion for protected access
-- frontend/proxy.ts blocks route access when there is no valid session or no active ERP user profile
+- frontend/proxy.ts blocks route access when there is no valid session, no active ERP user profile, or no permission for the requested route
 - frontend/app/api/admin/users/route.ts provisions auth credentials and ERP user profiles through an admin-only server path
 
 frontend/src/lib/db/clients.ts
@@ -171,8 +171,7 @@ Exports:
 
 Uses:
 
-- crm_quotations_view
-- pricing_quotations_view
+- search_quotations()
 - quotation_summary_view
 - quotations
 - quotation_costs
@@ -184,6 +183,7 @@ Uses:
 - update_quotation_status()
 - create_quotation_cost_line()
 - update_quotation_cost_line()
+- update_quotation_option_sales_amounts()
 - delete_quotation_cost_line()
 - create_quotation_cargo_line()
 - update_quotation_cargo_line()
@@ -206,10 +206,23 @@ Quotation current rules:
 - pricing quotations page can capture provider-side purchase lines before moving the quotation to lista_para_enviar
 - provider-side purchase lines may store multiple commercial options through option_label
 - pricing captures purchase only; sales-side sale capture remains a later commercial step
-- CRM quotation detail can capture sale_amount per line once pricing returns the quotation as lista_para_enviar
+- quotation_summary_view now masks estimated_cost, estimated_price, and expected_profit according to field permissions
+- quotation_cost_line_secure_view is the canonical line-level masked read for quotation economics
+- default role intent is:
+  Ventas → may view cost, sale price, and expected profit on quotations
+  Pricing → may view purchase-side cost only, not sale price or expected profit
+- clients, contacts, and opportunities now inherit real owner-aware visibility:
+  Ventas should only see their own clients
+  Ventas should only see contacts linked to their own clients
+  Ventas should only see opportunities where salesperson_id matches their ERP user
+- shipments now inherit real branch-aware visibility:
+  Operaciones should only see shipments whose client branch matches users.branch_id
+- backfill_crm_owner_branch_defaults() is the controlled repair entry point used before activating new owner_only or assigned_branch_only rollouts
+- CRM quotation detail captures sale amounts by option through one batched save action once pricing returns the quotation as lista_para_enviar
 - CRM may mark the quotation as enviada after at least one option has complete sale amounts
 - enviada quotations expose the commercial document and accepted quotations expose Create booking
 - renegociar_tarifa must surface target_rate and sales comments back to pricing
+- quotation list screens are paginated and must not full-fetch all quotations from a summary view
 
 
 frontend/src/lib/db/users.ts
@@ -314,6 +327,45 @@ Provider service offering canonical fields:
 - terms_and_conditions
 - created_at
 - updated_at
+
+
+frontend/src/lib/db/permissions.ts
+
+Exports:
+
+- getCurrentNavigationItems()
+- canCurrentUserAccessRoute()
+- getPermissionActions()
+- getPermissionConditions()
+- getPermissionResourceCatalog()
+- getPermissionFieldCatalog()
+- getRoleResourcePermissions()
+- getRoleFieldPermissions()
+- upsertRoleResourcePermission()
+- upsertRoleFieldPermission()
+
+Uses:
+
+- get_current_navigation_items()
+- erp_can_access_route()
+- permission_resource_catalog_view
+- permission_field_catalog_view
+- role_resource_permission_matrix_view
+- role_field_permission_matrix_view
+- permission_actions
+- permission_conditions
+- role_resource_permissions
+- role_field_permissions
+
+Permission current rules:
+
+- sidebar visibility must be driven by get_current_navigation_items()
+- route protection must use erp_can_access_route() through the protected proxy/server path
+- Master Data / Users / Roles is the live admin-only workspace for permissions
+- coarse-grained module, submodule, and resource permissions are already enforced in RLS
+- field-level permissions are already configurable in the UI and query layer
+- quotation detail and pricing quotation screens already consume sensitive field permissions for cost, sale price, and expected profit
+- any future sensitive screen must follow the same masked-read plus UI-permission pattern before going live
 
 
 --------------------------------------------------

@@ -49,6 +49,128 @@ create index idx_users_branch_id on users(branch_id);
 create index idx_users_active on users(active);
 create unique index idx_users_username_unique on users(lower(username));
 
+create table permission_modules (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  icon_key text,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_permission_modules_sort_order on permission_modules(sort_order);
+
+create table permission_submodules (
+  id uuid primary key default gen_random_uuid(),
+  module_id uuid not null references permission_modules(id) on delete cascade,
+  code text not null unique,
+  name text not null,
+  route_path text,
+  route_matchers text[] not null default '{}',
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_permission_submodules_module_id on permission_submodules(module_id);
+create index idx_permission_submodules_route_path on permission_submodules(route_path);
+create index idx_permission_submodules_sort_order on permission_submodules(sort_order);
+
+create table permission_actions (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  scope_type text not null default 'resource',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint permission_actions_scope_type_check
+    check (scope_type in ('resource', 'field', 'both'))
+);
+
+create table permission_conditions (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  description text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table permission_resources (
+  id uuid primary key default gen_random_uuid(),
+  module_id uuid not null references permission_modules(id) on delete cascade,
+  submodule_id uuid references permission_submodules(id) on delete cascade,
+  resource_key text not null unique,
+  name text not null,
+  resource_type text not null,
+  resource_group text,
+  table_name text,
+  view_name text,
+  rpc_name text,
+  entity_owner_field text,
+  entity_branch_field text,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_permission_resources_module_id on permission_resources(module_id);
+create index idx_permission_resources_submodule_id on permission_resources(submodule_id);
+create index idx_permission_resources_resource_type on permission_resources(resource_type);
+create index idx_permission_resources_sort_order on permission_resources(sort_order);
+
+create table permission_fields (
+  id uuid primary key default gen_random_uuid(),
+  resource_id uuid not null references permission_resources(id) on delete cascade,
+  field_key text not null,
+  label text not null,
+  data_type text,
+  field_group text,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint permission_fields_resource_field_unique unique (resource_id, field_key)
+);
+
+create index idx_permission_fields_resource_id on permission_fields(resource_id);
+create index idx_permission_fields_group on permission_fields(field_group);
+
+create table role_resource_permissions (
+  id uuid primary key default gen_random_uuid(),
+  role_id uuid not null references roles(id) on delete cascade,
+  resource_id uuid not null references permission_resources(id) on delete cascade,
+  action_id uuid not null references permission_actions(id) on delete cascade,
+  condition_id uuid not null references permission_conditions(id),
+  allowed boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint role_resource_permissions_unique unique (role_id, resource_id, action_id)
+);
+
+create index idx_role_resource_permissions_role_id on role_resource_permissions(role_id);
+create index idx_role_resource_permissions_resource_id on role_resource_permissions(resource_id);
+
+create table role_field_permissions (
+  id uuid primary key default gen_random_uuid(),
+  role_id uuid not null references roles(id) on delete cascade,
+  field_id uuid not null references permission_fields(id) on delete cascade,
+  action_id uuid not null references permission_actions(id) on delete cascade,
+  condition_id uuid not null references permission_conditions(id),
+  allowed boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint role_field_permissions_unique unique (role_id, field_id, action_id)
+);
+
+create index idx_role_field_permissions_role_id on role_field_permissions(role_id);
+create index idx_role_field_permissions_field_id on role_field_permissions(field_id);
+
 
 -- =========================================================
 -- MASTER DATA LAYER
@@ -416,6 +538,7 @@ create table quotations (
   estimated_cost numeric,
   estimated_price numeric,
   expected_profit numeric,
+  search_text text not null default '',
   valid_until date,
   created_at timestamptz not null default now(),
   updated_at timestamptz,
@@ -443,6 +566,9 @@ create index idx_quotations_client_created_at on quotations(client_id, created_a
 create index idx_quotations_opportunity_created_at
   on quotations(opportunity_id, created_at desc);
 create index idx_quotations_status_created_at on quotations(status, created_at desc);
+create index idx_quotations_pricing_owner_status_created_at
+  on quotations(pricing_owner_id, status, created_at desc);
+create index idx_quotations_search_text_trgm on quotations using gin(search_text gin_trgm_ops);
 
 create table quotation_costs (
   id uuid primary key default gen_random_uuid(),
