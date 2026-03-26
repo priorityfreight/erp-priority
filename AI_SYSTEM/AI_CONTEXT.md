@@ -166,6 +166,9 @@ CURRENT QUOTATION NORMALIZATION
 - all service types must use quotation_cargo_lines as the canonical load-detail structure
 - quotation_options is now the canonical grouping layer for customer-facing commercial options inside a quotation
 - one quotation option may contain multiple separate charge lines from different providers and accounting concepts
+- quotation request capture must only store one commercial date on the header: required_quote_date
+- purchase validity now lives per quotation option, not on the quotation header
+- sales validity must mirror purchase validity by default and only Admin may override it per option
 - CRM may decide which quotation options are included in the customer-facing proposal through include_in_customer_quote
 - provider purchase capture and CRM sale capture may use MXN, USD, or EUR
 - accounting totals and profit must be normalized to MXN using the latest available exchange rate dated on or before the previous day

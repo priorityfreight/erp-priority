@@ -8,20 +8,19 @@ type BrandProps = {
   light?: boolean
 }
 
-export function Brand({ compact = false, light = false }: BrandProps) {
-  const horizontalLogo = light
-    ? "/assets/logo-horizontal-transparent.png"
-    : "/assets/logo-horizontal-dark-transparent.png"
+export function Brand({ compact = false }: BrandProps) {
+  const verticalLogo = "/assets/logo-vertical-dark-transparent.png"
 
   if (compact) {
     return (
       <div className="flex items-center justify-center">
         <Image
-          src="/assets/logo-app-transparent.png"
+          src={verticalLogo}
           alt="Priority Freight Intelligence"
-          width={56}
-          height={56}
-          className="h-12 w-12 object-contain"
+          width={64}
+          height={64}
+          className="h-14 w-14 object-contain"
+          unoptimized
           priority
         />
       </div>
@@ -31,11 +30,12 @@ export function Brand({ compact = false, light = false }: BrandProps) {
   return (
     <div className="flex items-center">
       <Image
-        src={horizontalLogo}
+        src={verticalLogo}
         alt="Priority Freight Intelligence"
-        width={700}
-        height={180}
-        className="h-auto w-full max-w-[15.75rem] object-contain"
+        width={420}
+        height={420}
+        className="h-auto w-full max-w-[8.75rem] object-contain"
+        unoptimized
         priority
       />
     </div>

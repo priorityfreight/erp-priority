@@ -329,6 +329,12 @@ export type Quotation = {
   updated_at: string | null
 }
 
+export type QuotationOptionValidity = {
+  option_purchase_valid_until?: string | null
+  option_sales_valid_until?: string | null
+  option_sales_validity_overridden?: boolean | null
+}
+
 export type QuotationSummary = Quotation & {
   client_name: string | null
   opportunity_title: string | null
@@ -345,6 +351,9 @@ export type QuotationChargeLine = {
   option_label: string
   option_sort_order?: number | null
   include_in_customer_quote?: boolean
+  option_purchase_valid_until?: string | null
+  option_sales_valid_until?: string | null
+  option_sales_validity_overridden?: boolean | null
   provider_id: string | null
   provider_name?: string | null
   sales_accounting_concept_id: string | null
@@ -609,8 +618,6 @@ export type NewQuotation = {
   pickup_address?: string | null
   delivery_address?: string | null
   required_quote_date?: string | null
-  purchase_valid_until?: string | null
-  sales_valid_until?: string | null
 }
 export type UpdateQuotation = Partial<
   Pick<
@@ -618,8 +625,6 @@ export type UpdateQuotation = Partial<
     | "pickup_address"
     | "delivery_address"
     | "required_quote_date"
-    | "purchase_valid_until"
-    | "sales_valid_until"
     | "target_rate"
     | "rejection_reason_id"
     | "rejection_notes"
@@ -636,6 +641,9 @@ export type NewQuotationChargeLine = Pick<QuotationChargeLine, "quotation_id"> &
       | "sales_accounting_concept_id"
       | "purchase_amount"
       | "purchase_currency"
+      | "option_purchase_valid_until"
+      | "option_sales_valid_until"
+      | "option_sales_validity_overridden"
       | "sale_amount"
       | "sale_currency"
       | "vat_rate"
@@ -651,6 +659,9 @@ export type UpdateQuotationChargeLine = Partial<
     | "sales_accounting_concept_id"
     | "purchase_amount"
     | "purchase_currency"
+    | "option_purchase_valid_until"
+    | "option_sales_valid_until"
+    | "option_sales_validity_overridden"
     | "sale_amount"
     | "sale_currency"
     | "vat_rate"

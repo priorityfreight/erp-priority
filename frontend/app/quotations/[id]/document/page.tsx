@@ -56,6 +56,15 @@ function getPrimaryContact(contacts: Contact[]) {
   )
 }
 
+const priorityPalette = {
+  navy: "#0B1F3B",
+  burgundy: "#800020",
+  burgundyLight: "#B33A5B",
+  gray: "#909EAE",
+  lightText: "#E5E5E5",
+  softGray: "#CFCFCF",
+}
+
 export default function QuotationDocumentPage() {
   const params = useParams()
   const quotationId = typeof params?.id === "string" ? params.id : undefined
@@ -148,6 +157,7 @@ export default function QuotationDocumentPage() {
         optionLabel: string
         sortOrder: number
         lines: QuotationChargeLine[]
+        salesValidUntil: string | null
         subtotalMxn: number
         totalMxn: number
       }
@@ -160,6 +170,8 @@ export default function QuotationDocumentPage() {
         optionLabel: line.option_label || `Opcion ${line.option_sort_order ?? 1}`,
         sortOrder: line.option_sort_order ?? 1,
         lines: [],
+        salesValidUntil:
+          line.option_sales_valid_until ?? line.option_purchase_valid_until ?? null,
         subtotalMxn: 0,
         totalMxn: 0,
       }
@@ -192,8 +204,13 @@ export default function QuotationDocumentPage() {
   const primaryContact = getPrimaryContact(clientContacts)
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8 text-[#0F172A] print:bg-white print:px-0 print:py-0">
-      <div className="mx-auto max-w-5xl space-y-6 rounded-3xl border border-[#E5E7EB] bg-white p-8 shadow-sm print:max-w-none print:rounded-none print:border-0 print:shadow-none">
+    <main
+      className="min-h-screen px-4 py-8 text-[#0F172A] print:bg-white print:px-0 print:py-0"
+      style={{
+        background: `linear-gradient(180deg, ${priorityPalette.navy} 0%, #10294d 34%, #F6F8FB 34%, #F6F8FB 100%)`,
+      }}
+    >
+      <div className="mx-auto max-w-5xl space-y-6 rounded-[2rem] border border-[#D7DEE8] bg-white p-8 shadow-[0_30px_80px_rgba(11,31,59,0.16)] print:max-w-none print:rounded-none print:border-0 print:shadow-none">
         <div className="flex flex-col gap-3 print:hidden md:flex-row md:items-center md:justify-between">
           <Link
             href={`/quotations/${quotation.id}`}
@@ -210,40 +227,89 @@ export default function QuotationDocumentPage() {
           </button>
         </div>
 
-        <header className="flex flex-col gap-4 border-b border-[#E5E7EB] pb-6 md:flex-row md:items-start md:justify-between">
-          <div>
-            <Image
-              src="/assets/logo-horizontal-dark-transparent.png"
-              alt="Priority Freight Intelligence"
-              width={520}
-              height={120}
-              className="h-auto w-full max-w-[18rem] object-contain"
-              priority
-            />
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#64748B]">
-              Priority Freight Intelligence
+        <header
+          className="overflow-hidden rounded-[1.75rem] border pb-0 md:flex md:items-stretch md:justify-between"
+          style={{
+            borderColor: "#D7DEE8",
+            background: `linear-gradient(135deg, ${priorityPalette.navy} 0%, #122B52 60%, ${priorityPalette.burgundy} 100%)`,
+          }}
+        >
+          <div className="flex flex-1 flex-col gap-5 px-7 py-7">
+            <div className="flex items-start gap-5">
+              <div className="rounded-2xl bg-white/8 p-3 ring-1 ring-white/10 backdrop-blur-sm">
+                <Image
+                  src="/assets/logo-vertical-dark-transparent.png"
+                  alt="Priority Freight Intelligence"
+                  width={140}
+                  height={140}
+                  className="h-24 w-24 object-contain"
+                  unoptimized
+                  priority
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+                  Priority Freight Intelligence
+                </div>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">
+                  Cotizacion Comercial
+                </h1>
+                <p className="max-w-xl text-sm leading-6 text-[#E5E5E5]">
+                  Propuesta formal de servicio logístico preparada para evaluación comercial.
+                  Los importes mostrados corresponden únicamente a la versión dirigida al cliente.
+                </p>
+              </div>
             </div>
-            <h1 className="mt-3 text-3xl font-semibold text-[#111827]">Cotizacion comercial</h1>
-            <div className="mt-2 text-sm text-[#475569]">
-              Referencia: {quotation.reference_number || "Pendiente"}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                  Referencia
+                </div>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {quotation.reference_number || "Pendiente"}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                  Fecha de emision
+                </div>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {new Date().toLocaleDateString("es-MX")}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                  Estatus
+                </div>
+                <div className="mt-1 text-sm font-semibold uppercase text-white">
+                  {quotation.status.replaceAll("_", " ")}
+                </div>
+              </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] px-5 py-4 text-sm">
-            <div className="font-semibold text-[#111827]">{quotation.client_name || "Cliente"}</div>
-            <div className="mt-1 text-[#475569]">{primaryContact?.name || "Sin contacto principal"}</div>
-            <div className="mt-1 text-[#475569]">{primaryContact?.email || "Sin correo"}</div>
-            <div className="mt-1 text-[#475569]">{primaryContact?.phone || "Sin telefono"}</div>
+          <div className="border-t px-6 py-7 text-sm md:w-[18.5rem] md:border-l md:border-t-0" style={{ borderColor: "rgba(229,229,229,0.12)", backgroundColor: "rgba(255,255,255,0.06)" }}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">
+              Dirigido a
+            </div>
+            <div className="mt-3 text-xl font-semibold text-white">
+              {quotation.client_name || "Cliente"}
+            </div>
+            <div className="mt-5 space-y-2 text-sm text-[#E5E5E5]">
+              <div>{primaryContact?.name || "Sin contacto principal"}</div>
+              <div>{primaryContact?.email || "Sin correo"}</div>
+              <div>{primaryContact?.phone || "Sin telefono"}</div>
+            </div>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Servicio
             </div>
             <div className="mt-1 text-sm font-medium text-[#111827]">{quotation.service_type || "—"}</div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Transporte
             </div>
@@ -251,7 +317,7 @@ export default function QuotationDocumentPage() {
               {quotation.transport_type || "—"}
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Tipo de operacion
             </div>
@@ -259,7 +325,7 @@ export default function QuotationDocumentPage() {
               {quotation.operation_type || "—"}
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Incoterm
             </div>
@@ -270,8 +336,10 @@ export default function QuotationDocumentPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <section className="space-y-4 rounded-2xl border border-[#E5E7EB] p-5">
-            <h2 className="text-lg font-semibold text-[#111827]">Informacion de la ruta</h2>
+          <section className="space-y-4 rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+            <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+              Informacion de la Ruta
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
@@ -306,34 +374,30 @@ export default function QuotationDocumentPage() {
             </div>
           </section>
 
-          <section className="space-y-4 rounded-2xl border border-[#E5E7EB] p-5">
-            <h2 className="text-lg font-semibold text-[#111827]">Vigencias comerciales</h2>
+          <section className="space-y-4 rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+            <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+              Seguimiento Comercial
+            </h2>
             <div className="grid gap-4">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Validez de compra
+                  Fecha requerida de la solicitud
                 </div>
                 <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.purchase_valid_until || "No disponible"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Validez de venta
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.sales_valid_until || "No disponible"}
+                  {quotation.required_quote_date || "No disponible"}
                 </div>
               </div>
             </div>
           </section>
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Informacion de carga</h2>
-          <div className="mt-5 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+        <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+            Informacion de Carga
+          </h2>
+          <div className="mt-5 overflow-x-auto rounded-xl border border-[#E7EAF0]">
             <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-              <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+              <thead className="text-left text-xs font-semibold uppercase tracking-wide text-white" style={{ backgroundColor: priorityPalette.navy }}>
                 <tr>
                   <th className="px-4 py-3">Tipo</th>
                   <th className="px-4 py-3">Cantidad</th>
@@ -383,8 +447,10 @@ export default function QuotationDocumentPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Opciones de la cotizacion</h2>
+        <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+            Opciones de la Cotizacion
+          </h2>
           <p className="mt-1 text-sm text-[#6B7280]">
             Vista comercial para cliente. No incluye proveedor ni costo de compra.
           </p>
@@ -396,17 +462,26 @@ export default function QuotationDocumentPage() {
           ) : (
             <div className="mt-5 space-y-4">
               {visibleOptionSummaries.map((option) => (
-                <section key={option.optionId} className="rounded-xl border border-[#E5E7EB]">
-                  <div className="flex flex-col gap-3 border-b border-[#E5E7EB] bg-[#F8FAFC] px-4 py-4 md:flex-row md:items-center md:justify-between">
+                <section key={option.optionId} className="overflow-hidden rounded-xl border border-[#E7EAF0]">
+                  <div
+                    className="flex flex-col gap-3 border-b px-4 py-4 md:flex-row md:items-center md:justify-between"
+                    style={{
+                      borderColor: "#E7EAF0",
+                      background: `linear-gradient(90deg, ${priorityPalette.navy} 0%, #15315d 70%, ${priorityPalette.burgundy} 100%)`,
+                    }}
+                  >
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-white/70">
                         {option.optionLabel}
                       </div>
-                      <div className="mt-1 text-sm text-[#64748B]">
+                      <div className="mt-1 text-sm text-[#E5E5E5]">
                         {option.lines.length} cargo(s) comerciales
                       </div>
+                      <div className="mt-1 text-sm text-[#E5E5E5]">
+                        Vigencia de la propuesta: {option.salesValidUntil || "No disponible"}
+                      </div>
                     </div>
-                    <div className="grid gap-1 text-sm text-[#111827] md:text-right">
+                    <div className="grid gap-1 text-sm text-white md:text-right">
                       <div>Subtotal MXN: {formatOptionCurrency(option.subtotalMxn)}</div>
                       <div className="font-semibold">Total MXN: {formatOptionCurrency(option.totalMxn)}</div>
                     </div>
@@ -414,7 +489,7 @@ export default function QuotationDocumentPage() {
 
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                      <thead className="bg-white text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                      <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                         <tr>
                           <th className="px-4 py-3">Concepto</th>
                           <th className="px-4 py-3">Venta</th>
@@ -451,17 +526,25 @@ export default function QuotationDocumentPage() {
           )}
 
           <div className="mt-5 ml-auto grid max-w-sm gap-3">
-            <div className="flex items-center justify-between rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
+            <div className="flex items-center justify-between rounded-lg border border-[#E7EAF0] bg-[#F8FAFC] px-4 py-3">
               <span className="text-sm font-medium text-[#475569]">Subtotal</span>
               <span className="text-sm font-semibold text-[#111827]">{formatCurrency(totals.sale)}</span>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
+            <div className="flex items-center justify-between rounded-lg border border-[#E7EAF0] bg-[#F8FAFC] px-4 py-3">
               <span className="text-sm font-medium text-[#475569]">IVA</span>
               <span className="text-sm font-semibold text-[#111827]">{formatCurrency(totals.vat)}</span>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3">
-              <span className="text-sm font-semibold text-[#1D4ED8]">Total</span>
-              <span className="text-base font-semibold text-[#1E3A8A]">
+            <div
+              className="flex items-center justify-between rounded-lg border px-4 py-3"
+              style={{
+                borderColor: "#D8C4CB",
+                background: `linear-gradient(135deg, rgba(128,0,32,0.08) 0%, rgba(11,31,59,0.06) 100%)`,
+              }}
+            >
+              <span className="text-sm font-semibold" style={{ color: priorityPalette.burgundy }}>
+                Total
+              </span>
+              <span className="text-base font-semibold" style={{ color: priorityPalette.navy }}>
                 {formatCurrency(totals.grandTotal)}
               </span>
             </div>

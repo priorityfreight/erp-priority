@@ -8,6 +8,7 @@ import {
   createQuotationCargoLine,
   deleteQuotationCargoLine,
   getContactsByClientId,
+  updateQuotationOptionValidity,
   getQuotationCargoLines,
   getQuotationById,
   getQuotationChargeLines,
@@ -26,6 +27,7 @@ import {
   type QuotationStatus,
   type Shipment,
 } from "@/lib/db"
+import { getCurrentErpUser } from "@/lib/auth"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { Modal } from "@/components/data/Modal"
 import {
@@ -75,6 +77,9 @@ type SalesOptionSummary = {
   optionLabel: string
   optionSortOrder: number
   includeInCustomerQuote: boolean
+  purchaseValidUntil: string | null
+  salesValidUntil: string | null
+  salesValidityOverridden: boolean
   totalPurchase: number
   totalPurchaseMxn: number
   totalSale: number
@@ -155,8 +160,6 @@ function buildQuotationFormValues(quotation: QuotationSummary): QuotationFormVal
     pickupAddress: quotation.pickup_address || "",
     deliveryAddress: quotation.delivery_address || "",
     requiredQuoteDate: quotation.required_quote_date || "",
-    purchaseValidUntil: quotation.purchase_valid_until || "",
-    salesValidUntil: quotation.sales_valid_until || "",
   }
 }
 
@@ -265,16 +268,17 @@ export default function QuotationDetailPage() {
   const [editingCargoId, setEditingCargoId] = useState<string | null>(null)
   const [showSalesModal, setShowSalesModal] = useState(false)
   const [savingSales, setSavingSales] = useState(false)
+  const [savingOptionValidityId, setSavingOptionValidityId] = useState<string | null>(null)
   const [selectedSalesOption, setSelectedSalesOption] = useState<string | null>(null)
   const [updatingVisibleOptionId, setUpdatingVisibleOptionId] = useState<string | null>(null)
   const [salesDraft, setSalesDraft] = useState<Record<string, SalesDraftValue>>({})
+  const [salesValidityDrafts, setSalesValidityDrafts] = useState<Record<string, string>>({})
+  const [currentUserRoleName, setCurrentUserRoleName] = useState<string | null>(null)
   const [createdShipment, setCreatedShipment] = useState<Shipment | null>(null)
   const [quoteFormValues, setQuoteFormValues] = useState<QuotationFormValues>({
     pickupAddress: "",
     deliveryAddress: "",
     requiredQuoteDate: "",
-    purchaseValidUntil: "",
-    salesValidUntil: "",
   })
   const [cargoFormValues, setCargoFormValues] =
     useState<QuotationCargoLineFormValues>(emptyCargoForm)
@@ -294,6 +298,9 @@ export default function QuotationDetailPage() {
         optionLabel: string
         optionSortOrder: number
         includeInCustomerQuote: boolean
+        purchaseValidUntil: string | null
+        salesValidUntil: string | null
+        salesValidityOverridden: boolean
         totalPurchase: number
         totalPurchaseMxn: number
         totalSale: number
@@ -314,6 +321,10 @@ export default function QuotationDetailPage() {
         optionLabel,
         optionSortOrder: line.option_sort_order ?? 1,
         includeInCustomerQuote: line.include_in_customer_quote ?? true,
+        purchaseValidUntil: line.option_purchase_valid_until ?? null,
+        salesValidUntil:
+          line.option_sales_valid_until ?? line.option_purchase_valid_until ?? null,
+        salesValidityOverridden: Boolean(line.option_sales_validity_overridden ?? false),
         totalPurchase: 0,
         totalPurchaseMxn: 0,
         totalSale: 0,
@@ -442,6 +453,51 @@ export default function QuotationDetailPage() {
     void loadDetails(quotationId)
   }, [quotationId])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCurrentUser() {
+      try {
+        const currentUser = await getCurrentErpUser()
+        if (!cancelled) {
+          setCurrentUserRoleName(currentUser?.role_name ?? null)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    void loadCurrentUser()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    setSalesValidityDrafts((current) => {
+      const next = { ...current }
+      let changed = false
+
+      for (const summary of chargeOptionSummaries) {
+        const expectedValue = summary.salesValidUntil ?? ""
+        if (next[summary.optionId] !== expectedValue) {
+          next[summary.optionId] = expectedValue
+          changed = true
+        }
+      }
+
+      for (const key of Object.keys(next)) {
+        if (!chargeOptionSummaries.some((summary) => summary.optionId === key)) {
+          delete next[key]
+          changed = true
+        }
+      }
+
+      return changed ? next : current
+    })
+  }, [chargeOptionSummaries])
+
   function resetCargoForm() {
     setEditingCargoId(null)
     setCargoFormValues(emptyCargoForm)
@@ -491,8 +547,6 @@ export default function QuotationDetailPage() {
         pickup_address: quoteFormValues.pickupAddress.trim() || null,
         delivery_address: quoteFormValues.deliveryAddress.trim() || null,
         required_quote_date: quoteFormValues.requiredQuoteDate || null,
-        purchase_valid_until: quoteFormValues.purchaseValidUntil || null,
-        sales_valid_until: quoteFormValues.salesValidUntil || null,
       })
       setShowEditModal(false)
       await refreshQuotation(details.quotation.id)
@@ -725,6 +779,31 @@ export default function QuotationDetailPage() {
       alert("No se pudo actualizar la visibilidad comercial de la opcion")
     } finally {
       setUpdatingVisibleOptionId(null)
+    }
+  }
+
+  async function handleSaveSalesValidity(summary: SalesOptionSummary) {
+    if (!details || currentUserRoleName !== "Admin") {
+      return
+    }
+
+    if (!salesValidityDrafts[summary.optionId]) {
+      alert("Captura la nueva vigencia de venta antes de guardar el override")
+      return
+    }
+
+    try {
+      setSavingOptionValidityId(summary.optionId)
+      await updateQuotationOptionValidity(summary.optionId, {
+        sales_valid_until: salesValidityDrafts[summary.optionId] || null,
+        override_sales_valid_until: true,
+      })
+      await refreshChargeLines(details.quotation.id)
+    } catch (error) {
+      console.error(error)
+      alert("No se pudo actualizar la vigencia de venta de esta opcion")
+    } finally {
+      setSavingOptionValidityId(null)
     }
   }
 
@@ -971,8 +1050,6 @@ export default function QuotationDetailPage() {
         <InfoCard title="Detalles de cotizacion">
           <InfoField label="Fecha creada" value={quotation.created_at} />
           <InfoField label="Requieren cotizacion" value={quotation.required_quote_date} />
-          <InfoField label="Validez compra" value={quotation.purchase_valid_until} />
-          <InfoField label="Validez venta" value={quotation.sales_valid_until} />
           <InfoField label="Target rate" value={quotation.target_rate != null ? formatCurrency(quotation.target_rate) : null} />
           <InfoField label="Motivo rechazo" value={quotation.rejection_reason} />
           <InfoField label="Notas rechazo" value={quotation.rejection_notes} wide />
@@ -1393,6 +1470,17 @@ export default function QuotationDetailPage() {
                       </div>
                     ) : null}
                     <div className="mt-1 text-sm text-[#6B7280]">
+                      Vigencia compra: {summary.purchaseValidUntil || "No disponible"}
+                    </div>
+                    <div className="mt-1 text-sm text-[#6B7280]">
+                      Vigencia venta: {summary.salesValidUntil || "No disponible"}
+                    </div>
+                    {summary.salesValidityOverridden ? (
+                      <div className="mt-1 text-xs font-medium text-[#7C2D12]">
+                        Vigencia de venta ajustada manualmente por Admin
+                      </div>
+                    ) : null}
+                    <div className="mt-1 text-sm text-[#6B7280]">
                       Proveedores:{" "}
                       {summary.providers.size > 0
                         ? Array.from(summary.providers).join(", ")
@@ -1420,6 +1508,37 @@ export default function QuotationDetailPage() {
                             0
                           )
                         )}
+                      </div>
+                    ) : null}
+                    {currentUserRoleName === "Admin" ? (
+                      <div className="mt-4 rounded-lg border border-[#E2E8F0] bg-white p-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                          Override de vigencia de venta
+                        </div>
+                        <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                          <input
+                            type="date"
+                            className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                            value={salesValidityDrafts[summary.optionId] ?? ""}
+                            onChange={(event) =>
+                              setSalesValidityDrafts((current) => ({
+                                ...current,
+                                [summary.optionId]: event.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleSaveSalesValidity(summary)}
+                            disabled={savingOptionValidityId === summary.optionId}
+                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingOptionValidityId === summary.optionId ? "Guardando..." : "Guardar vigencia"}
+                          </button>
+                        </div>
+                        <div className="mt-2 text-xs text-[#64748B]">
+                          Si no se ajusta manualmente, la vigencia de venta replica la vigencia de compra.
+                        </div>
                       </div>
                     ) : null}
                     {canEditCommercialSale ? (
@@ -1531,7 +1650,7 @@ export default function QuotationDetailPage() {
           }}
         >
           <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
                   Proveedor / opcion
@@ -1563,6 +1682,22 @@ export default function QuotationDetailPage() {
                   {selectedSalesOptionSummary.providers.size > 0
                     ? Array.from(selectedSalesOptionSummary.providers).join(", ")
                     : "Sin proveedor"}
+                </div>
+              </div>
+              <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Vigencia compra
+                </div>
+                <div className="mt-1 text-sm font-medium text-[#111827]">
+                  {selectedSalesOptionSummary.purchaseValidUntil || "No disponible"}
+                </div>
+              </div>
+              <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  Vigencia venta
+                </div>
+                <div className="mt-1 text-sm font-medium text-[#111827]">
+                  {selectedSalesOptionSummary.salesValidUntil || "No disponible"}
                 </div>
               </div>
             </div>

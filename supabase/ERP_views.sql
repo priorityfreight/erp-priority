@@ -194,8 +194,8 @@ select
   q.pickup_address,
   q.delivery_address,
   q.required_quote_date,
-  q.purchase_valid_until,
-  q.sales_valid_until,
+  null::date as purchase_valid_until,
+  null::date as sales_valid_until,
   q.target_rate,
   q.pricing_owner_id,
   concat_ws(' ', pu.first_name, pu.last_name) as pricing_owner_name,
@@ -299,7 +299,10 @@ select
   pf.can_view_expected_profit,
   qc.quotation_option_id,
   qo.sort_order as option_sort_order,
-  qo.include_in_customer_quote
+  qo.include_in_customer_quote,
+  qo.purchase_valid_until as option_purchase_valid_until,
+  qo.sales_valid_until as option_sales_valid_until,
+  qo.sales_validity_overridden as option_sales_validity_overridden
 from quotation_costs qc
 join quotations q on q.id = qc.quotation_id
 left join quotation_options qo on qo.id = qc.quotation_option_id

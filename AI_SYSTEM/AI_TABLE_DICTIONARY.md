@@ -1427,11 +1427,13 @@ Requested date to return the quotation.
 
 purchase_valid_until
 Type: date
-Provider-side purchase validity.
+Legacy quotation-level purchase validity.
+New UI flows must keep this unused and store provider-side validity on quotation_options.purchase_valid_until.
 
 sales_valid_until
 Type: date
-Customer-facing sales validity.
+Legacy quotation-level sales validity.
+New UI flows must keep this unused and store customer-facing validity on quotation_options.sales_valid_until.
 
 rejection_reason_id
 Type: uuid
@@ -1641,6 +1643,19 @@ Controls display order inside the quotation.
 include_in_customer_quote
 Type: boolean
 Whether the option is included in the customer-facing proposal and PDF.
+
+purchase_valid_until
+Type: date
+Provider-side validity for this option.
+
+sales_valid_until
+Type: date
+Customer-facing validity for this option.
+Must mirror purchase_valid_until unless Admin overrides it.
+
+sales_validity_overridden
+Type: boolean
+Marks whether the option sales validity was explicitly overridden by Admin.
 
 created_at
 Type: timestamptz

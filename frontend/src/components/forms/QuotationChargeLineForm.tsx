@@ -8,6 +8,7 @@ export type QuotationChargeLineFormValues = {
   salesAccountingConceptId: string
   purchaseAmount: string
   purchaseCurrency: string
+  purchaseValidUntil: string
   saleAmount: string
   saleCurrency: string
   vatRate: string
@@ -132,6 +133,19 @@ export function QuotationChargeLineForm({
           <option value="USD">USD</option>
           <option value="EUR">EUR</option>
         </select>
+
+        <div className="space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+            Validez de tarifa compra
+          </label>
+          <input
+            className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+            type="date"
+            value={values.purchaseValidUntil}
+            disabled={disabled}
+            onChange={(event) => onChange("purchaseValidUntil", event.target.value)}
+          />
+        </div>
 
         {allowSaleAmount ? (
           <>

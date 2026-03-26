@@ -1721,7 +1721,10 @@ returns table (
   id uuid,
   option_label text,
   sort_order integer,
-  include_in_customer_quote boolean
+  include_in_customer_quote boolean,
+  purchase_valid_until date,
+  sales_valid_until date,
+  sales_validity_overridden boolean
 )
 language plpgsql
 security definer
@@ -1738,7 +1741,10 @@ begin
       qo.id,
       qo.option_label,
       qo.sort_order,
-      qo.include_in_customer_quote
+      qo.include_in_customer_quote,
+      qo.purchase_valid_until,
+      qo.sales_valid_until,
+      qo.sales_validity_overridden
     from quotation_options qo
     where qo.id = p_quotation_option_id
       and qo.quotation_id = p_quotation_id;
@@ -1757,7 +1763,10 @@ begin
       qo.id,
       qo.option_label,
       qo.sort_order,
-      qo.include_in_customer_quote
+      qo.include_in_customer_quote,
+      qo.purchase_valid_until,
+      qo.sales_valid_until,
+      qo.sales_validity_overridden
     into existing_option
     from quotation_options qo
     where qo.quotation_id = p_quotation_id
@@ -1769,7 +1778,10 @@ begin
         existing_option.id,
         existing_option.option_label,
         existing_option.sort_order,
-        existing_option.include_in_customer_quote;
+        existing_option.include_in_customer_quote,
+        existing_option.purchase_valid_until,
+        existing_option.sales_valid_until,
+        existing_option.sales_validity_overridden;
       return;
     end if;
   end if;
@@ -1783,19 +1795,28 @@ begin
     quotation_id,
     option_label,
     sort_order,
-    include_in_customer_quote
+    include_in_customer_quote,
+    purchase_valid_until,
+    sales_valid_until,
+    sales_validity_overridden
   )
   values (
     p_quotation_id,
     coalesce(normalized_label, 'Opcion ' || next_sort_order),
     next_sort_order,
-    true
+    true,
+    null,
+    null,
+    false
   )
   returning
     quotation_options.id,
     quotation_options.option_label,
     quotation_options.sort_order,
-    quotation_options.include_in_customer_quote
+    quotation_options.include_in_customer_quote,
+    quotation_options.purchase_valid_until,
+    quotation_options.sales_valid_until,
+    quotation_options.sales_validity_overridden
   into existing_option;
 
   return query
@@ -1803,7 +1824,81 @@ begin
     existing_option.id,
     existing_option.option_label,
     existing_option.sort_order,
-    existing_option.include_in_customer_quote;
+    existing_option.include_in_customer_quote,
+    existing_option.purchase_valid_until,
+    existing_option.sales_valid_until,
+    existing_option.sales_validity_overridden;
+end;
+$$;
+
+create or replace function update_quotation_option_validity(
+  p_quotation_option_id uuid,
+  p_purchase_valid_until date default null,
+  p_sales_valid_until date default null,
+  p_override_sales_valid_until boolean default false
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  quotation_row record;
+  can_edit_pricing boolean := false;
+begin
+  select
+    q.id as quotation_id,
+    q.pricing_owner_id,
+    q.created_by,
+    q.client_id,
+    qo.purchase_valid_until,
+    qo.sales_valid_until,
+    qo.sales_validity_overridden
+  into quotation_row
+  from quotation_options qo
+  join quotations q on q.id = qo.quotation_id
+  where qo.id = p_quotation_option_id;
+
+  if quotation_row is null then
+    raise exception 'Quotation option % not found', p_quotation_option_id;
+  end if;
+
+  can_edit_pricing := public.erp_has_resource_access(
+    'pricing.quotations.cost_section',
+    'edit',
+    quotation_row.pricing_owner_id,
+    null
+  );
+
+  if p_purchase_valid_until is not null and not (can_edit_pricing or public.erp_is_admin()) then
+    raise exception 'You do not have permission to edit purchase validity for this quotation option'
+      using errcode = '42501';
+  end if;
+
+  if p_override_sales_valid_until and not public.erp_is_admin() then
+    raise exception 'Only Admin may override quotation sales validity'
+      using errcode = '42501';
+  end if;
+
+  if p_override_sales_valid_until and p_sales_valid_until is null then
+    raise exception 'Sales validity is required when overriding quotation sales validity';
+  end if;
+
+  update quotation_options
+  set
+    purchase_valid_until = coalesce(p_purchase_valid_until, purchase_valid_until),
+    sales_valid_until = case
+      when p_override_sales_valid_until then p_sales_valid_until
+      when p_purchase_valid_until is not null then p_purchase_valid_until
+      else sales_valid_until
+    end,
+    sales_validity_overridden = case
+      when p_override_sales_valid_until then true
+      when p_purchase_valid_until is not null then false
+      else sales_validity_overridden
+    end,
+    updated_at = now()
+  where id = p_quotation_option_id;
 end;
 $$;
 
@@ -1935,8 +2030,6 @@ create or replace function create_quotation_from_opportunity(
   p_pickup_address text default null,
   p_delivery_address text default null,
   p_required_quote_date date default null,
-  p_purchase_valid_until date default null,
-  p_sales_valid_until date default null,
   p_created_by uuid default null
 )
 returns uuid
@@ -2005,8 +2098,8 @@ begin
     nullif(btrim(coalesce(p_delivery_address, '')), ''),
     opportunity_row.incoterm_id,
     p_required_quote_date,
-    p_purchase_valid_until,
-    p_sales_valid_until
+    null,
+    null
   )
   returning id into new_quotation_id;
 
@@ -2322,8 +2415,8 @@ as $$
       q.pickup_address,
       q.delivery_address,
       q.required_quote_date,
-      q.purchase_valid_until,
-      q.sales_valid_until,
+      null::date as purchase_valid_until,
+      null::date as sales_valid_until,
       q.rejection_reason_id,
       rr.reason as rejection_reason,
       q.rejection_notes,
@@ -2490,6 +2583,7 @@ create or replace function create_quotation_cost_line(
   p_sales_accounting_concept_id uuid default null,
   p_purchase_amount numeric default null,
   p_purchase_currency text default 'USD',
+  p_purchase_valid_until date default null,
   p_sale_amount numeric default null,
   p_sale_currency text default 'USD',
   p_vat_rate numeric default null,
@@ -2610,6 +2704,14 @@ begin
   returning id into new_line_id;
 
   perform public.refresh_quotation_cost_line_mxn(p_quotation_id, current_date);
+  if p_purchase_valid_until is not null then
+    perform public.update_quotation_option_validity(
+      p_quotation_option_id => resolved_option.id,
+      p_purchase_valid_until => p_purchase_valid_until,
+      p_sales_valid_until => null,
+      p_override_sales_valid_until => false
+    );
+  end if;
   perform recalculate_quotation_totals(p_quotation_id);
 
   return new_line_id;
@@ -2624,6 +2726,7 @@ create or replace function update_quotation_cost_line(
   p_sales_accounting_concept_id uuid default null,
   p_purchase_amount numeric default null,
   p_purchase_currency text default null,
+  p_purchase_valid_until date default null,
   p_sale_amount numeric default null,
   p_sale_currency text default null,
   p_vat_rate numeric default null,
@@ -2791,6 +2894,15 @@ begin
     ) then
     delete from quotation_options
     where id = previous_option_id;
+  end if;
+
+  if p_purchase_valid_until is not null then
+    perform public.update_quotation_option_validity(
+      p_quotation_option_id => coalesce(resolved_option.id, previous_option_id),
+      p_purchase_valid_until => p_purchase_valid_until,
+      p_sales_valid_until => null,
+      p_override_sales_valid_until => false
+    );
   end if;
 
   perform public.refresh_quotation_cost_line_mxn(quotation_id_value, current_date);

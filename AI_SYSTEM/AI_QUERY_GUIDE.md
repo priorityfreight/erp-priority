@@ -194,6 +194,9 @@ Quotation-specific write rules:
 - detail screens may read quotation_summary_view plus quotation_cost_line_secure_view and quotation_cargo_lines rows
 - pricing purchase options should be grouped by quotation_options
 - one quotation option may contain multiple charge lines and multiple providers
+- quotation header capture must only use required_quote_date; purchase_valid_until and sales_valid_until must not be captured on the quotation header UI anymore
+- purchase_valid_until must be stored per quotation option
+- sales_valid_until must default to the option purchase_valid_until unless Admin explicitly overrides it through update_quotation_option_validity()
 - pricing screens should treat purchase capture and sale capture as separate responsibilities
 - CRM screens may update sale_amount through update_quotation_cost_line() while preserving purchase-side fields
 - CRM should not change purchase_amount values captured by pricing

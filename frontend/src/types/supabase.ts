@@ -1809,7 +1809,10 @@ export type Database = {
           id: string
           include_in_customer_quote: boolean
           option_label: string
+          purchase_valid_until: string | null
           quotation_id: string
+          sales_valid_until: string | null
+          sales_validity_overridden: boolean
           sort_order: number
           updated_at: string | null
         }
@@ -1818,7 +1821,10 @@ export type Database = {
           id?: string
           include_in_customer_quote?: boolean
           option_label: string
+          purchase_valid_until?: string | null
           quotation_id: string
+          sales_valid_until?: string | null
+          sales_validity_overridden?: boolean
           sort_order: number
           updated_at?: string | null
         }
@@ -1827,7 +1833,10 @@ export type Database = {
           id?: string
           include_in_customer_quote?: boolean
           option_label?: string
+          purchase_valid_until?: string | null
           quotation_id?: string
+          sales_valid_until?: string | null
+          sales_validity_overridden?: boolean
           sort_order?: number
           updated_at?: string | null
         }
@@ -3270,6 +3279,9 @@ export type Database = {
           include_in_customer_quote: boolean | null
           notes: string | null
           option_label: string | null
+          option_purchase_valid_until: string | null
+          option_sales_valid_until: string | null
+          option_sales_validity_overridden: boolean | null
           option_sort_order: number | null
           profit_amount: number | null
           profit_amount_mxn: number | null
@@ -3880,77 +3892,33 @@ export type Database = {
             }
             Returns: string
           }
-      create_quotation_cost_line:
-        | {
-            Args: {
-              p_notes?: string
-              p_option_label?: string
-              p_provider_id?: string
-              p_purchase_amount?: number
-              p_quotation_id: string
-              p_sale_amount?: number
-              p_sales_accounting_concept_id?: string
-              p_vat_rate?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_notes?: string
-              p_provider_id?: string
-              p_purchase_amount?: number
-              p_quotation_id: string
-              p_sale_amount?: number
-              p_sales_accounting_concept_id?: string
-              p_vat_rate?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_notes?: string
-              p_option_label?: string
-              p_provider_id?: string
-              p_purchase_amount?: number
-              p_purchase_currency?: string
-              p_quotation_id: string
-              p_quotation_option_id?: string
-              p_sale_amount?: number
-              p_sale_currency?: string
-              p_sales_accounting_concept_id?: string
-              p_vat_rate?: number
-            }
-            Returns: string
-          }
-      create_quotation_from_opportunity:
-        | {
-            Args: {
-              p_commodities?: string
-              p_created_by?: string
-              p_delivery_address?: string
-              p_opportunity_id: string
-              p_pickup_address?: string
-              p_purchase_valid_until?: string
-              p_quantity?: number
-              p_required_quote_date?: string
-              p_sales_valid_until?: string
-              p_volume?: number
-              p_weight?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_created_by?: string
-              p_delivery_address?: string
-              p_opportunity_id: string
-              p_pickup_address?: string
-              p_purchase_valid_until?: string
-              p_required_quote_date?: string
-              p_sales_valid_until?: string
-            }
-            Returns: string
-          }
+      create_quotation_cost_line: {
+        Args: {
+          p_notes?: string
+          p_option_label?: string
+          p_provider_id?: string
+          p_purchase_amount?: number
+          p_purchase_currency?: string
+          p_purchase_valid_until?: string
+          p_quotation_id: string
+          p_quotation_option_id?: string
+          p_sale_amount?: number
+          p_sale_currency?: string
+          p_sales_accounting_concept_id?: string
+          p_vat_rate?: number
+        }
+        Returns: string
+      }
+      create_quotation_from_opportunity: {
+        Args: {
+          p_created_by?: string
+          p_delivery_address?: string
+          p_opportunity_id: string
+          p_pickup_address?: string
+          p_required_quote_date?: string
+        }
+        Returns: string
+      }
       create_quotation_rejection_reason: {
         Args: { p_reason: string }
         Returns: string
@@ -4002,6 +3970,9 @@ export type Database = {
           id: string
           include_in_customer_quote: boolean
           option_label: string
+          purchase_valid_until: string
+          sales_valid_until: string
+          sales_validity_overridden: boolean
           sort_order: number
         }[]
       }
@@ -4422,53 +4393,37 @@ export type Database = {
             }
             Returns: undefined
           }
-      update_quotation_cost_line:
-        | {
-            Args: {
-              p_id: string
-              p_notes?: string
-              p_option_label?: string
-              p_provider_id?: string
-              p_purchase_amount?: number
-              p_sale_amount?: number
-              p_sales_accounting_concept_id?: string
-              p_vat_rate?: number
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_id: string
-              p_notes?: string
-              p_provider_id?: string
-              p_purchase_amount?: number
-              p_sale_amount?: number
-              p_sales_accounting_concept_id?: string
-              p_vat_rate?: number
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_id: string
-              p_notes?: string
-              p_option_label?: string
-              p_provider_id?: string
-              p_purchase_amount?: number
-              p_purchase_currency?: string
-              p_quotation_option_id?: string
-              p_sale_amount?: number
-              p_sale_currency?: string
-              p_sales_accounting_concept_id?: string
-              p_vat_rate?: number
-            }
-            Returns: undefined
-          }
+      update_quotation_cost_line: {
+        Args: {
+          p_id: string
+          p_notes?: string
+          p_option_label?: string
+          p_provider_id?: string
+          p_purchase_amount?: number
+          p_purchase_currency?: string
+          p_purchase_valid_until?: string
+          p_quotation_option_id?: string
+          p_sale_amount?: number
+          p_sale_currency?: string
+          p_sales_accounting_concept_id?: string
+          p_vat_rate?: number
+        }
+        Returns: undefined
+      }
       update_quotation_option_sales_amounts: {
         Args: {
           p_quotation_id: string
           p_quotation_option_id: string
           p_sales_amounts: Json
+        }
+        Returns: undefined
+      }
+      update_quotation_option_validity: {
+        Args: {
+          p_override_sales_valid_until?: boolean
+          p_purchase_valid_until?: string
+          p_quotation_option_id: string
+          p_sales_valid_until?: string
         }
         Returns: undefined
       }

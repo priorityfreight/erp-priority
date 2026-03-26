@@ -6,8 +6,6 @@ export type QuotationFormValues = {
   pickupAddress: string
   deliveryAddress: string
   requiredQuoteDate: string
-  purchaseValidUntil: string
-  salesValidUntil: string
 }
 
 type QuotationFormProps = {
@@ -123,27 +121,18 @@ export function QuotationForm({
         description="Captura las fechas comerciales necesarias para el seguimiento."
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <input
-            type="date"
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.requiredQuoteDate}
-            onChange={(event) => onChange("requiredQuoteDate", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            type="date"
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.purchaseValidUntil}
-            onChange={(event) => onChange("purchaseValidUntil", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            type="date"
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.salesValidUntil}
-            onChange={(event) => onChange("salesValidUntil", event.target.value)}
-            disabled={disabled}
-          />
+          <label className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+              Fecha que requieren la cotizacion
+            </span>
+            <input
+              type="date"
+              className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              value={values.requiredQuoteDate}
+              onChange={(event) => onChange("requiredQuoteDate", event.target.value)}
+              disabled={disabled}
+            />
+          </label>
         </div>
       </FormSection>
 

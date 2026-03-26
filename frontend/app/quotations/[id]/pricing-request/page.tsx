@@ -16,6 +16,12 @@ type PricingRequestState = {
   cargoLines: QuotationCargoLine[]
 }
 
+const priorityPalette = {
+  navy: "#0B1F3B",
+  burgundy: "#800020",
+  lightText: "#E5E5E5",
+}
+
 export default function QuotationPricingRequestPage() {
   const params = useParams()
   const quotationId = typeof params?.id === "string" ? params.id : undefined
@@ -79,8 +85,13 @@ export default function QuotationPricingRequestPage() {
   const { quotation, cargoLines } = details
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8 text-[#0F172A] print:bg-white print:px-0 print:py-0">
-      <div className="mx-auto max-w-5xl space-y-6 rounded-3xl border border-[#E5E7EB] bg-white p-8 shadow-sm print:max-w-none print:rounded-none print:border-0 print:shadow-none">
+    <main
+      className="min-h-screen px-4 py-8 text-[#0F172A] print:bg-white print:px-0 print:py-0"
+      style={{
+        background: `linear-gradient(180deg, ${priorityPalette.navy} 0%, #10294d 30%, #F6F8FB 30%, #F6F8FB 100%)`,
+      }}
+    >
+      <div className="mx-auto max-w-5xl space-y-6 rounded-[2rem] border border-[#D7DEE8] bg-white p-8 shadow-[0_30px_80px_rgba(11,31,59,0.16)] print:max-w-none print:rounded-none print:border-0 print:shadow-none">
         <div className="flex flex-col gap-3 print:hidden md:flex-row md:items-center md:justify-between">
           <Link
             href={`/quotations/${quotation.id}`}
@@ -97,28 +108,51 @@ export default function QuotationPricingRequestPage() {
           </button>
         </div>
 
-        <header className="border-b border-[#E5E7EB] pb-6">
-          <Image
-            src="/assets/logo-horizontal-dark-transparent.png"
-            alt="Priority Freight Intelligence"
-            width={520}
-            height={120}
-            className="h-auto w-full max-w-[18rem] object-contain"
-            priority
-          />
-          <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#64748B]">
-            Priority Freight Intelligence
-          </div>
-          <h1 className="mt-3 text-3xl font-semibold text-[#111827]">
-            Solicitud de cotizacion a proveedor
-          </h1>
-          <div className="mt-2 text-sm text-[#475569]">
-            Referencia interna: {quotation.reference_number || "Pendiente"} · Uso exclusivo de pricing
+        <header
+          className="rounded-[1.75rem] border px-7 py-7"
+          style={{
+            borderColor: "#D7DEE8",
+            background: `linear-gradient(135deg, ${priorityPalette.navy} 0%, #15315d 65%, ${priorityPalette.burgundy} 100%)`,
+          }}
+        >
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-start gap-5">
+              <div className="rounded-2xl bg-white/8 p-3 ring-1 ring-white/10">
+                <Image
+                  src="/assets/logo-vertical-dark-transparent.png"
+                  alt="Priority Freight Intelligence"
+                  width={140}
+                  height={140}
+                  className="h-24 w-24 object-contain"
+                  unoptimized
+                  priority
+                />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">
+                  Documento interno de pricing
+                </div>
+                <h1 className="mt-3 text-3xl font-semibold text-white">
+                  Solicitud de Cotizacion a Proveedor
+                </h1>
+                <div className="mt-3 max-w-2xl text-sm leading-6" style={{ color: priorityPalette.lightText }}>
+                  Solicitud interna para recopilacion de costos. Este documento no contiene el nombre del cliente ni importes comerciales.
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                Referencia interna
+              </div>
+              <div className="mt-1 text-sm font-semibold text-white">
+                {quotation.reference_number || "Pendiente"}
+              </div>
+            </div>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-3">
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Servicio
             </div>
@@ -127,7 +161,7 @@ export default function QuotationPricingRequestPage() {
                 "No disponible"}
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Tipo de operacion
             </div>
@@ -135,7 +169,7 @@ export default function QuotationPricingRequestPage() {
               {quotation.operation_type || "No disponible"}
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+          <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Incoterm
             </div>
@@ -145,8 +179,10 @@ export default function QuotationPricingRequestPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Informacion de la cotizacion</h2>
+        <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+            Informacion de la Cotizacion
+          </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
@@ -162,11 +198,21 @@ export default function QuotationPricingRequestPage() {
                 {quotation.destination || "No disponible"}
               </div>
             </div>
+            <div className="md:col-span-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                Fecha requerida para la cotizacion
+              </div>
+              <div className="mt-1 text-sm text-[#111827]">
+                {quotation.required_quote_date || "No disponible"}
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Ruta</h2>
+        <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+            Ruta
+          </h2>
           <div className="mt-4 grid gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
@@ -187,11 +233,13 @@ export default function QuotationPricingRequestPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Informacion de carga</h2>
-          <div className="mt-5 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+        <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+            Informacion de Carga
+          </h2>
+          <div className="mt-5 overflow-x-auto rounded-xl border border-[#E7EAF0]">
             <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-              <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+              <thead className="text-left text-xs font-semibold uppercase tracking-wide text-white" style={{ backgroundColor: priorityPalette.navy }}>
                 <tr>
                   <th className="px-4 py-3">Tipo</th>
                   <th className="px-4 py-3">Cantidad</th>

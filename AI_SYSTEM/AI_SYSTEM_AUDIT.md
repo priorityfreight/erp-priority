@@ -39,7 +39,8 @@ CURRENT STATUS
 
 Overall status:
 
-Partially aligned, materially improved after Sprint 1 through Sprint 3 remediation.
+Partially aligned, materially improved after Sprint 1 through Sprint 3 remediation, with the
+quotation RPC stabilization pass completed on 2026-03-25.
 
 What is now aligned:
 
@@ -52,8 +53,9 @@ What is now aligned:
 What still has residual drift:
 
 - UI/design/component documents are more aspirational than descriptive
-- generated Supabase types are not yet restored
+- generated Supabase types can drift again if future schema changes do not explicitly clean legacy RPC signatures
 - some planned ERP modules exist only at the database layer
+- the quotation domain has historically changed faster than its migration cleanup discipline
 
 
 --------------------------------------------------
@@ -127,12 +129,18 @@ PRIMARY RISKS
 1. Database breadth exceeds frontend breadth.
 This is acceptable architecturally, but it remains the biggest source of AI confusion if inventory docs are ignored.
 
-2. frontend/src/types/supabase.ts is not generated from a live Supabase project.
-Type drift can reappear until generation is restored.
+2. frontend/src/types/supabase.ts can drift whenever older RPC signatures remain active remotely.
+The current stabilization pass restored canonical quotation RPC signatures, but the discipline must
+continue in future migrations.
 
 3. UI governance docs still describe a richer shell and component system than the current app implements.
 
 4. The app currently has both "/" and "/dashboard" as user-facing entry points.
+
+5. Quotation process changes must now be treated as a governed area:
+   - one canonical RPC contract per action
+   - explicit `drop function if exists` cleanup for legacy signatures
+   - regenerated frontend types after backend changes
 
 
 --------------------------------------------------
@@ -167,7 +175,7 @@ That issue is now substantially reduced.
 
 The remaining high-impact gaps are:
 
-1. regenerate Supabase types from the real project
+1. keep quotation RPC cleanup discipline in future migrations and regenerate Supabase types after backend changes
 2. decide whether "/" or "/dashboard" is the canonical entry point
 3. implement planned modules before exposing them in navigation or presenting them as complete UI areas
 4. continue tightening UI governance docs so target state and live state are clearly separated

@@ -172,6 +172,9 @@ quotations.incoterm_id → incoterms.id
 quotations.rejection_reason_id → quotation_rejection_reasons.id
 
 quotation_options.quotation_id → quotations.id
+quotation_options.purchase_valid_until → option-level provider validity
+quotation_options.sales_valid_until → option-level customer validity
+quotation_options.sales_validity_overridden → admin override marker for customer validity
 quotation_costs.quotation_id → quotations.id
 quotation_costs.quotation_option_id → quotation_options.id
 quotation_costs.provider_id → providers.id

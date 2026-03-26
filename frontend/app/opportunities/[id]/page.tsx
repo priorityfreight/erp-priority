@@ -153,8 +153,6 @@ export default function OpportunityDetailPage() {
     pickupAddress: "",
     deliveryAddress: "",
     requiredQuoteDate: "",
-    purchaseValidUntil: "",
-    salesValidUntil: "",
   })
   const [status, setStatus] = useState("investigando")
 
@@ -359,8 +357,6 @@ export default function OpportunityDetailPage() {
         pickup_address: quoteFormValues.pickupAddress.trim() || null,
         delivery_address: quoteFormValues.deliveryAddress.trim() || null,
         required_quote_date: quoteFormValues.requiredQuoteDate || null,
-        purchase_valid_until: quoteFormValues.purchaseValidUntil || null,
-        sales_valid_until: quoteFormValues.salesValidUntil || null,
       })
 
       setShowQuoteModal(false)
@@ -368,8 +364,6 @@ export default function OpportunityDetailPage() {
         pickupAddress: "",
         deliveryAddress: "",
         requiredQuoteDate: "",
-        purchaseValidUntil: "",
-        salesValidUntil: "",
       })
       router.push(`/quotations/${quotationId}`)
     } catch (error) {
@@ -605,13 +599,11 @@ export default function OpportunityDetailPage() {
           description="La cotizacion nace desde esta oportunidad y arrastra su informacion comercial principal."
           onClose={() => {
             setShowQuoteModal(false)
-            setQuoteFormValues({
-              pickupAddress: "",
-              deliveryAddress: "",
-              requiredQuoteDate: "",
-              purchaseValidUntil: "",
-              salesValidUntil: "",
-            })
+              setQuoteFormValues({
+                pickupAddress: "",
+                deliveryAddress: "",
+                requiredQuoteDate: "",
+              })
           }}
         >
           {!canCreateQuotation ? (

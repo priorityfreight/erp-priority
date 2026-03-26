@@ -97,6 +97,12 @@ function mapQuotationChargeLine(row: Record<string, unknown>): QuotationChargeLi
     option_sort_order: (row.option_sort_order as number | null | undefined) ?? null,
     include_in_customer_quote:
       (row.include_in_customer_quote as boolean | null | undefined) ?? undefined,
+    option_purchase_valid_until:
+      (row.option_purchase_valid_until as string | null | undefined) ?? null,
+    option_sales_valid_until:
+      (row.option_sales_valid_until as string | null | undefined) ?? null,
+    option_sales_validity_overridden:
+      (row.option_sales_validity_overridden as boolean | null | undefined) ?? undefined,
     provider_id: (row.provider_id as string | null | undefined) ?? null,
     provider_name: (row.provider_name as string | null | undefined) ?? null,
     sales_accounting_concept_id:
@@ -244,8 +250,6 @@ export async function createQuotation(payload: NewQuotation): Promise<string> {
     p_pickup_address: payload.pickup_address ?? null,
     p_delivery_address: payload.delivery_address ?? null,
     p_required_quote_date: payload.required_quote_date ?? null,
-    p_purchase_valid_until: payload.purchase_valid_until ?? null,
-    p_sales_valid_until: payload.sales_valid_until ?? null,
   } as never)
 
   if (error || !data) {
@@ -262,8 +266,6 @@ export async function updateQuotation(id: string, payload: UpdateQuotation): Pro
       pickup_address: payload.pickup_address ?? null,
       delivery_address: payload.delivery_address ?? null,
       required_quote_date: payload.required_quote_date ?? null,
-      purchase_valid_until: payload.purchase_valid_until ?? null,
-      sales_valid_until: payload.sales_valid_until ?? null,
       target_rate: payload.target_rate ?? null,
       rejection_reason_id: payload.rejection_reason_id ?? null,
       rejection_notes: payload.rejection_notes ?? null,
@@ -331,6 +333,7 @@ export async function createQuotationChargeLine(
     p_sales_accounting_concept_id: payload.sales_accounting_concept_id ?? null,
     p_purchase_amount: payload.purchase_amount ?? null,
     p_purchase_currency: payload.purchase_currency ?? "USD",
+    p_purchase_valid_until: payload.option_purchase_valid_until ?? null,
     p_sale_amount: payload.sale_amount ?? null,
     p_sale_currency: payload.sale_currency ?? payload.purchase_currency ?? "USD",
     p_vat_rate: payload.vat_rate ?? null,
@@ -356,6 +359,7 @@ export async function updateQuotationChargeLine(
     p_sales_accounting_concept_id: payload.sales_accounting_concept_id ?? null,
     p_purchase_amount: payload.purchase_amount ?? null,
     p_purchase_currency: payload.purchase_currency ?? null,
+    p_purchase_valid_until: payload.option_purchase_valid_until ?? null,
     p_sale_amount: payload.sale_amount ?? null,
     p_sale_currency: payload.sale_currency ?? null,
     p_vat_rate: payload.vat_rate ?? null,
@@ -396,6 +400,26 @@ export async function setQuotationOptionCustomerVisibility(
   const { error } = await supabase.rpc("set_quotation_option_customer_visibility", {
     p_quotation_option_id: quotationOptionId,
     p_include_in_customer_quote: includeInCustomerQuote,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function updateQuotationOptionValidity(
+  quotationOptionId: string,
+  payload: {
+    purchase_valid_until?: string | null
+    sales_valid_until?: string | null
+    override_sales_valid_until?: boolean
+  }
+): Promise<void> {
+  const { error } = await supabase.rpc("update_quotation_option_validity", {
+    p_quotation_option_id: quotationOptionId,
+    p_purchase_valid_until: payload.purchase_valid_until ?? null,
+    p_sales_valid_until: payload.sales_valid_until ?? null,
+    p_override_sales_valid_until: payload.override_sales_valid_until ?? false,
   } as never)
 
   if (error) {

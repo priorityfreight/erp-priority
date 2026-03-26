@@ -36,6 +36,7 @@ const emptyChargeForm: QuotationChargeLineFormValues = {
   salesAccountingConceptId: "",
   purchaseAmount: "",
   purchaseCurrency: "MXN",
+  purchaseValidUntil: "",
   saleAmount: "",
   saleCurrency: "MXN",
   vatRate: "",
@@ -109,9 +110,6 @@ function buildCargoSummary(quotation: QuotationSummary) {
     quotation.pickup_address ? `Recoleccion: ${quotation.pickup_address}` : null,
     quotation.delivery_address ? `Entrega: ${quotation.delivery_address}` : null,
     quotation.required_quote_date ? `Fecha requerida: ${quotation.required_quote_date}` : null,
-    quotation.purchase_valid_until
-      ? `Vigencia deseada de compra: ${quotation.purchase_valid_until}`
-      : null,
   ].filter(Boolean)
 
   return parts.length > 0 ? parts.join("\n") : "Sin detalle complementario de ruta."
@@ -360,6 +358,11 @@ export default function PricingQuotationsPage() {
       return
     }
 
+    if (!chargeFormValues.purchaseValidUntil) {
+      alert("Captura la validez de tarifa compra para esta opcion")
+      return
+    }
+
     try {
       setSavingCharge(true)
 
@@ -373,6 +376,7 @@ export default function PricingQuotationsPage() {
             ? Number(chargeFormValues.purchaseAmount)
             : null,
           purchase_currency: chargeFormValues.purchaseCurrency || "USD",
+          option_purchase_valid_until: chargeFormValues.purchaseValidUntil || null,
           sale_amount: null,
           sale_currency: chargeFormValues.saleCurrency || "USD",
           vat_rate: chargeFormValues.vatRate ? Number(chargeFormValues.vatRate) : undefined,
@@ -389,6 +393,7 @@ export default function PricingQuotationsPage() {
             ? Number(chargeFormValues.purchaseAmount)
             : null,
           purchase_currency: chargeFormValues.purchaseCurrency || "USD",
+          option_purchase_valid_until: chargeFormValues.purchaseValidUntil || null,
           sale_amount: null,
           sale_currency: chargeFormValues.saleCurrency || "USD",
           vat_rate: chargeFormValues.vatRate ? Number(chargeFormValues.vatRate) : undefined,
@@ -519,6 +524,8 @@ export default function PricingQuotationsPage() {
         optionLabel: string
         optionSortOrder: number
         includeInCustomerQuote: boolean
+        purchaseValidUntil: string | null
+        salesValidUntil: string | null
         totalPurchase: number
         totalPurchaseMxn: number
         totalWithVatMxn: number
@@ -535,6 +542,9 @@ export default function PricingQuotationsPage() {
         optionLabel,
         optionSortOrder: line.option_sort_order ?? 1,
         includeInCustomerQuote: line.include_in_customer_quote ?? true,
+        purchaseValidUntil: line.option_purchase_valid_until ?? null,
+        salesValidUntil:
+          line.option_sales_valid_until ?? line.option_purchase_valid_until ?? null,
         totalPurchase: 0,
         totalPurchaseMxn: 0,
         totalWithVatMxn: 0,
@@ -804,7 +814,7 @@ export default function PricingQuotationsPage() {
                 {selectedQuotation.origin || "Origen"} → {selectedQuotation.destination || "Destino"}
               </div>
               <div className="mt-1">
-                Vigencia de compra solicitada: {formatDate(selectedQuotation.purchase_valid_until)}
+                Fecha requerida para cotizar: {formatDate(selectedQuotation.required_quote_date)}
               </div>
               <div className="mt-4">
                 <Link
@@ -939,10 +949,10 @@ export default function PricingQuotationsPage() {
               </div>
               <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Vigencia compra
+                  Fecha requerida
                 </div>
                 <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {formatDate(selectedQuotation.purchase_valid_until)}
+                  {formatDate(selectedQuotation.required_quote_date)}
                 </div>
               </div>
               <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
@@ -1006,6 +1016,12 @@ export default function PricingQuotationsPage() {
                             {summary.lineCount} cargo(s)
                           </div>
                           <div className="mt-1 text-sm text-[#6B7280]">
+                            Vigencia compra: {formatDate(summary.purchaseValidUntil)}
+                          </div>
+                          <div className="mt-1 text-sm text-[#6B7280]">
+                            Vigencia venta: {formatDate(summary.salesValidUntil)}
+                          </div>
+                          <div className="mt-1 text-sm text-[#6B7280]">
                             {summary.providers.size > 0
                               ? Array.from(summary.providers).join(", ")
                               : "Sin proveedor"}
@@ -1034,6 +1050,7 @@ export default function PricingQuotationsPage() {
                             <th className="px-4 py-3">Concepto</th>
                             <th className="px-4 py-3">Compra</th>
                             <th className="px-4 py-3">Compra MXN</th>
+                            <th className="px-4 py-3">Vigencia compra</th>
                             <th className="px-4 py-3">IVA</th>
                             <th className="px-4 py-3 text-right">Acciones</th>
                           </tr>
@@ -1060,6 +1077,9 @@ export default function PricingQuotationsPage() {
                                   ? formatCurrency(line.purchase_amount_mxn)
                                   : "Sin permiso"}
                               </td>
+                              <td className="px-4 py-3 text-[#475569]">
+                                {formatDate(line.option_purchase_valid_until)}
+                              </td>
                               <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
                               <td className="px-4 py-3">
                                 <div className="flex justify-end gap-2">
@@ -1079,6 +1099,8 @@ export default function PricingQuotationsPage() {
                                             ? String(line.purchase_amount)
                                             : "",
                                         purchaseCurrency: line.purchase_currency || "USD",
+                                        purchaseValidUntil:
+                                          line.option_purchase_valid_until || "",
                                         saleAmount:
                                           line.sale_amount != null ? String(line.sale_amount) : "",
                                         saleCurrency: line.sale_currency || "USD",
@@ -1143,7 +1165,7 @@ export default function PricingQuotationsPage() {
 
                 <QuotationChargeLineForm
                   title={editingChargeId ? "Editar compra de proveedor" : "Agregar compra de proveedor"}
-                  description="Captura proveedor, concepto contable y compra. Si necesitas varios cargos en una misma opcion, selecciona la opcion existente y agrega otro cargo."
+                  description="Captura proveedor, concepto contable, compra y la vigencia de esa opcion. Si necesitas varios cargos en una misma opcion, selecciona la opcion existente y agrega otro cargo."
                   values={chargeFormValues}
                   providers={providersForChargeForm}
                   concepts={concepts}
