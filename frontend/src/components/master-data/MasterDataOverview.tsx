@@ -38,6 +38,13 @@ const submodules = [
     notes: "Permite clasificar de forma consistente por que el cliente o pricing rechaza una cotizacion.",
   },
   {
+    title: "Contabilidad / Tipo de cambio",
+    href: "/master-data/accounting/exchange-rates",
+    status: "Live",
+    coverage: "MXN, USD y EUR con control manual canonico",
+    notes: "Mantiene tipo de cambio base MXN para profit contable y conversion de compras/ventas.",
+  },
+  {
     title: "UN/LOCODE",
     href: "/master-data/unlocode",
     status: "Live",
@@ -70,7 +77,7 @@ export function MasterDataOverview() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
               Active Submodules
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">6</div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">7</div>
           </div>
           <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
@@ -85,7 +92,7 @@ export function MasterDataOverview() {
               Initial Scope
             </div>
             <div className="mt-2 text-sm font-medium text-[#111827]">
-              UN/LOCODE, usuarios y catalogos comerciales
+              UN/LOCODE, usuarios, catalogos comerciales y tipo de cambio
             </div>
           </div>
         </section>

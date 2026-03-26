@@ -150,6 +150,7 @@ Current route files:
 - frontend/app/master-data/sales/service-types/page.tsx
 - frontend/app/master-data/sales/accounting-concepts/page.tsx
 - frontend/app/master-data/sales/quotation-rejection-reasons/page.tsx
+- frontend/app/master-data/accounting/exchange-rates/page.tsx
 - frontend/app/master-data/unlocode/page.tsx
 
 Current shared layout files:
@@ -170,6 +171,7 @@ Current shared CRM/UI components:
 - frontend/src/components/master-data/ServiceTransportTypeManager.tsx
 - frontend/src/components/master-data/UsersManager.tsx
 - frontend/src/components/master-data/RolesPermissionsManager.tsx
+- frontend/src/components/master-data/ExchangeRateManager.tsx
 - UsersManager now includes admin-only table actions for edit, activate/inactivate, and delete
 
 Current query layer:
@@ -184,8 +186,9 @@ Current query layer:
 - frontend/src/lib/db/index.ts
 - frontend/src/lib/auth.ts
 - frontend/src/lib/supabase/server.ts
-- frontend/src/lib/db/users.ts
 - frontend/src/lib/db/permissions.ts
+- frontend/src/lib/db/users.ts
+- frontend brand assets now render from frontend/public/assets/ and must originate from the repository-level ASSETS/ folder
 
 Current server-side master data utilities:
 
@@ -212,6 +215,7 @@ Current implemented frontend modules:
 - sales service types catalog
 - sales accounting concepts catalog
 - quotation rejection reasons catalog
+- accounting exchange-rate catalog
 - UN/LOCODE lookup
 
 Pricing module status:

@@ -260,6 +260,32 @@ create index idx_sales_accounting_concepts_operation_type
 create index idx_sales_accounting_concepts_sat_code
   on sales_accounting_concepts(sat_code);
 
+create table exchange_rates (
+  id uuid primary key default gen_random_uuid(),
+  rate_date date not null,
+  base_currency text not null,
+  quote_currency text not null default 'MXN',
+  rate_value numeric(18,6) not null,
+  source text not null default 'BANXICO',
+  source_series_code text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint exchange_rates_allowed_base_currency
+    check (base_currency in ('USD', 'EUR')),
+  constraint exchange_rates_allowed_quote_currency
+    check (quote_currency = 'MXN'),
+  constraint exchange_rates_allowed_source
+    check (source in ('BANXICO', 'MANUAL')),
+  constraint exchange_rates_positive_rate
+    check (rate_value > 0),
+  constraint exchange_rates_unique unique (rate_date, base_currency, quote_currency, source)
+);
+
+create index idx_exchange_rates_rate_date
+  on exchange_rates(rate_date desc);
+create index idx_exchange_rates_base_quote_date
+  on exchange_rates(base_currency, quote_currency, rate_date desc);
+
 
 -- =========================================================
 -- CRM LAYER
@@ -521,11 +547,6 @@ create table quotations (
   destination_unlocode_id uuid references unlocodes(id),
   pickup_address text,
   delivery_address text,
-  commodities text,
-  cargo_type text,
-  quantity integer,
-  weight numeric,
-  volume numeric,
   incoterm_id uuid references incoterms(id),
   required_quote_date date,
   purchase_valid_until date,
@@ -573,18 +594,28 @@ create index idx_quotations_search_text_trgm on quotations using gin(search_text
 create table quotation_costs (
   id uuid primary key default gen_random_uuid(),
   quotation_id uuid not null references quotations(id) on delete cascade,
-  option_label text not null default 'Opcion 1',
+  option_label text not null default 'Proveedor',
   provider_id uuid references providers(id),
   sales_accounting_concept_id uuid references sales_accounting_concepts(id),
   service_name text not null,
   cost numeric not null,
   purchase_amount numeric,
+  purchase_currency text not null default 'USD',
+  purchase_exchange_rate_to_mxn numeric(18,6),
+  purchase_amount_mxn numeric,
   sale_amount numeric,
+  sale_currency text not null default 'USD',
+  sale_exchange_rate_to_mxn numeric(18,6),
+  sale_amount_mxn numeric,
   profit_amount numeric,
+  profit_amount_mxn numeric,
   vat_rate numeric not null default 0,
-  currency text not null default 'USD',
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint quotation_costs_allowed_purchase_currency
+    check (purchase_currency in ('MXN', 'USD', 'EUR')),
+  constraint quotation_costs_allowed_sale_currency
+    check (sale_currency in ('MXN', 'USD', 'EUR'))
 );
 
 create index idx_quotation_costs_quotation_id on quotation_costs(quotation_id);

@@ -297,11 +297,13 @@ alter table external_data_sources enable row level security;
 alter table unlocodes enable row level security;
 alter table service_transport_types enable row level security;
 alter table sales_accounting_concepts enable row level security;
+alter table exchange_rates enable row level security;
 alter table incoterms enable row level security;
 alter table external_data_sources force row level security;
 alter table unlocodes force row level security;
 alter table service_transport_types force row level security;
 alter table sales_accounting_concepts force row level security;
+alter table exchange_rates force row level security;
 alter table incoterms force row level security;
 
 create policy "active_select_external_data_sources"
@@ -387,6 +389,27 @@ create policy "admin_delete_sales_accounting_concepts"
 on sales_accounting_concepts
 for delete
 using (public.erp_is_admin());
+
+create policy "active_select_exchange_rates"
+on exchange_rates
+for select
+using (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'view'));
+
+create policy "active_insert_exchange_rates"
+on exchange_rates
+for insert
+with check (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'create'));
+
+create policy "active_update_exchange_rates"
+on exchange_rates
+for update
+using (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'edit'))
+with check (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'edit'));
+
+create policy "active_delete_exchange_rates"
+on exchange_rates
+for delete
+using (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'delete'));
 
 create policy "active_select_incoterms"
 on incoterms

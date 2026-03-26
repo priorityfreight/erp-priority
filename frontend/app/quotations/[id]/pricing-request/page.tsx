@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import {
@@ -97,8 +98,16 @@ export default function QuotationPricingRequestPage() {
         </div>
 
         <header className="border-b border-[#E5E7EB] pb-6">
+          <Image
+            src="/assets/logo-horizontal-dark-transparent.png"
+            alt="Priority Freight Intelligence"
+            width={520}
+            height={120}
+            className="h-auto w-full max-w-[18rem] object-contain"
+            priority
+          />
           <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#64748B]">
-            Priority Logistics ERP
+            Priority Freight Intelligence
           </div>
           <h1 className="mt-3 text-3xl font-semibold text-[#111827]">
             Solicitud de cotizacion a proveedor
@@ -223,7 +232,7 @@ export default function QuotationPricingRequestPage() {
                         {line.weight != null ? `${line.weight} kg` : "No disponible"}
                       </td>
                       <td className="px-4 py-3 text-[#475569]">
-                        {line.commodities || quotation.commodities || "No disponible"}
+                        {line.commodities || "No disponible"}
                       </td>
                       <td className="px-4 py-3 text-[#475569]">
                         {line.cbm != null ? line.cbm.toFixed(3) : "No disponible"}

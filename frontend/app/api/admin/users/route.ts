@@ -220,6 +220,22 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const { data: userRow, error: userLookupError } = await adminClient
+      .from("users")
+      .select("id, auth_user_id")
+      .eq("id", payload.userId)
+      .maybeSingle()
+
+    if (userLookupError) {
+      return NextResponse.json({ error: userLookupError.message }, { status: 400 })
+    }
+
+    if (!userRow) {
+      return NextResponse.json({ error: "Usuario no encontrado." }, { status: 404 })
+    }
+
+    const resolvedAuthUserId = payload.authUserId ?? userRow.auth_user_id ?? null
+
     const [
       clientsOwned,
       opportunitiesOwned,
@@ -255,10 +271,13 @@ export async function DELETE(request: Request) {
 
     await adminClient.from("audit_logs").update({ user_id: null }).eq("user_id", payload.userId)
 
-    if (payload.authUserId) {
-      const deleteAuthResult = await adminClient.auth.admin.deleteUser(payload.authUserId)
+    if (resolvedAuthUserId) {
+      const deleteAuthResult = await adminClient.auth.admin.deleteUser(resolvedAuthUserId)
 
-      if (deleteAuthResult.error) {
+      if (
+        deleteAuthResult.error &&
+        !/user.*not found/i.test(deleteAuthResult.error.message)
+      ) {
         return NextResponse.json({ error: deleteAuthResult.error.message }, { status: 400 })
       }
     }

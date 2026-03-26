@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabaseClient"
 import { getMasterDataBackendMode, type MasterDataBackendMode } from "./backendMode"
 import type {
+  ExchangeRate,
+  NewExchangeRate,
   Incoterm,
   NewQuotationRejectionReason,
   NewSalesAccountingConcept,
@@ -11,6 +13,7 @@ import type {
   UpdateQuotationRejectionReason,
   UpdateSalesAccountingConcept,
   UpdateServiceTransportType,
+  UpdateExchangeRate,
   UnlocodeCountrySummary,
   UnlocodeRecord,
   UnlocodeSearchParams,
@@ -76,6 +79,20 @@ function mapQuotationRejectionReason(row: Record<string, unknown>): QuotationRej
   return {
     id: String(row.id ?? ""),
     reason: String(row.reason ?? ""),
+    created_at: String(row.created_at ?? new Date(0).toISOString()),
+    updated_at: (row.updated_at as string | null | undefined) ?? null,
+  }
+}
+
+function mapExchangeRate(row: Record<string, unknown>): ExchangeRate {
+  return {
+    id: String(row.id ?? ""),
+    rate_date: String(row.rate_date ?? ""),
+    base_currency: String(row.base_currency ?? "USD"),
+    quote_currency: String(row.quote_currency ?? "MXN"),
+    rate_value: Number(row.rate_value ?? 0),
+    source: String(row.source ?? "BANXICO"),
+    source_series_code: (row.source_series_code as string | null | undefined) ?? null,
     created_at: String(row.created_at ?? new Date(0).toISOString()),
     updated_at: (row.updated_at as string | null | undefined) ?? null,
   }
@@ -427,6 +444,80 @@ export async function updateServiceTransportType(
 
 export async function deleteServiceTransportType(id: string): Promise<void> {
   const { error } = await supabase.rpc("delete_service_transport_type", {
+    p_id: id,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function getExchangeRates(params?: {
+  query?: string
+  baseCurrency?: string
+}): Promise<ExchangeRate[]> {
+  let request = supabase
+    .from("exchange_rates")
+    .select("*")
+    .order("rate_date", { ascending: false })
+    .order("base_currency", { ascending: true })
+
+  const normalizedQuery = params?.query?.trim()
+  if (normalizedQuery) {
+    request = request.or(
+      `base_currency.ilike.%${normalizedQuery}%,quote_currency.ilike.%${normalizedQuery}%,source.ilike.%${normalizedQuery}%,source_series_code.ilike.%${normalizedQuery}%`
+    )
+  }
+
+  const normalizedBaseCurrency = params?.baseCurrency?.trim()
+  if (normalizedBaseCurrency && normalizedBaseCurrency !== "all") {
+    request = request.eq("base_currency", normalizedBaseCurrency.toUpperCase())
+  }
+
+  const { data, error } = await request
+
+  if (error) {
+    throw error
+  }
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => mapExchangeRate(row))
+}
+
+export async function createExchangeRate(payload: NewExchangeRate): Promise<string> {
+  const { data, error } = await supabase.rpc("create_exchange_rate", {
+    p_rate_date: payload.rate_date,
+    p_base_currency: payload.base_currency,
+    p_quote_currency: payload.quote_currency,
+    p_rate_value: payload.rate_value,
+    p_source: payload.source,
+    p_source_series_code: payload.source_series_code,
+  } as never)
+
+  if (error || !data) {
+    throw error ?? new Error("Failed to create exchange rate")
+  }
+
+  return String(data)
+}
+
+export async function updateExchangeRate(id: string, payload: UpdateExchangeRate): Promise<void> {
+  const { error } = await supabase.rpc("update_exchange_rate", {
+    p_id: id,
+    p_rate_date: payload.rate_date,
+    p_base_currency: payload.base_currency,
+    p_quote_currency: payload.quote_currency,
+    p_rate_value: payload.rate_value,
+    p_source: payload.source,
+    p_source_series_code: payload.source_series_code,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function deleteExchangeRate(id: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_exchange_rate", {
     p_id: id,
   } as never)
 

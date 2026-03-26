@@ -193,10 +193,6 @@ select
   q.destination_unlocode,
   q.pickup_address,
   q.delivery_address,
-  q.commodities,
-  q.quantity,
-  q.weight,
-  q.volume,
   q.required_quote_date,
   q.purchase_valid_until,
   q.sales_valid_until,
@@ -281,10 +277,14 @@ select
   qc.service_name,
   case when pf.can_view_cost then qc.cost else null end as cost,
   case when pf.can_view_cost then qc.purchase_amount else null end as purchase_amount,
+  qc.purchase_currency,
+  case when pf.can_view_cost then qc.purchase_amount_mxn else null end as purchase_amount_mxn,
   case when pf.can_view_sale_price then qc.sale_amount else null end as sale_amount,
+  qc.sale_currency,
+  case when pf.can_view_sale_price then qc.sale_amount_mxn else null end as sale_amount_mxn,
   case when pf.can_view_expected_profit then qc.profit_amount else null end as profit_amount,
+  case when pf.can_view_expected_profit then qc.profit_amount_mxn else null end as profit_amount_mxn,
   qc.vat_rate,
-  qc.currency,
   qc.notes,
   qc.created_at,
   pf.can_view_cost,
@@ -639,6 +639,25 @@ select
   sac.updated_at
 from sales_accounting_concepts sac
 order by sac.service_type asc, sac.operation_type asc, sac.concept asc;
+
+
+-- =========================================
+-- EXCHANGE RATE LOOKUP
+-- =========================================
+
+create or replace view exchange_rate_lookup_view as
+select
+  er.id,
+  er.rate_date,
+  er.base_currency,
+  er.quote_currency,
+  er.rate_value,
+  er.source,
+  er.source_series_code,
+  er.created_at,
+  er.updated_at
+from exchange_rates er
+order by er.rate_date desc, er.base_currency asc, er.quote_currency asc;
 
 
 -- =========================================

@@ -92,6 +92,11 @@ before update on sales_accounting_concepts
 for each row
 execute function set_updated_at();
 
+create trigger set_exchange_rates_updated_at
+before update on exchange_rates
+for each row
+execute function set_updated_at();
+
 create trigger set_quotation_reference_counters_updated_at
 before update on quotation_reference_counters
 for each row
@@ -630,8 +635,7 @@ begin
         coalesce(new.destination, ''),
         coalesce(new.destination_unlocode, ''),
         coalesce(new.pickup_address, ''),
-        coalesce(new.delivery_address, ''),
-        coalesce(new.commodities, '')
+        coalesce(new.delivery_address, '')
       ),
       '\s+',
       ' ',

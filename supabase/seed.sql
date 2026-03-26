@@ -67,6 +67,7 @@ join (
     ('master_data', 'master_data.sales.accounting_concepts', 'Ventas / Conceptos contables', '/master-data/sales/accounting-concepts', array['/master-data/sales/accounting-concepts']::text[], 50, true),
     ('master_data', 'master_data.sales.rejection_reasons', 'Ventas / Motivos rechazo', '/master-data/sales/quotation-rejection-reasons', array['/master-data/sales/quotation-rejection-reasons']::text[], 60, true),
     ('master_data', 'master_data.unlocode', 'UN/LOCODE', '/master-data/unlocode', array['/master-data/unlocode']::text[], 70, true),
+    ('master_data', 'master_data.accounting.exchange_rates', 'Contabilidad / Tipo de cambio', '/master-data/accounting/exchange-rates', array['/master-data/accounting/exchange-rates']::text[], 80, true),
     ('finance', 'finance.client_invoices', 'Client Invoices', '/finance/client-invoices', array['/finance/client-invoices']::text[], 10, false),
     ('finance', 'finance.provider_invoices', 'Provider Invoices', '/finance/provider-invoices', array['/finance/provider-invoices']::text[], 20, false),
     ('finance', 'finance.commissions', 'Commissions', '/finance/commissions', array['/finance/commissions']::text[], 30, false)
@@ -191,7 +192,8 @@ join (
     ('master_data', 'master_data.unlocode', 'master_data.unlocode', 'UN/LOCODE', 'submodule', 'Navigation', 'unlocodes', 'unlocode_lookup_view', 'search_unlocodes', null, null, 350, true),
     ('master_data', 'master_data.sales.service_types', 'master_data.sales.service_types', 'Service Types Catalog', 'submodule', 'Navigation', 'service_transport_types', 'service_transport_type_lookup_view', null, null, null, 360, true),
     ('master_data', 'master_data.sales.accounting_concepts', 'master_data.sales.accounting_concepts', 'Accounting Concepts Catalog', 'submodule', 'Navigation', 'sales_accounting_concepts', 'sales_accounting_concept_lookup_view', null, null, null, 370, true),
-    ('master_data', 'master_data.sales.rejection_reasons', 'master_data.sales.rejection_reasons', 'Quotation Rejection Reasons', 'submodule', 'Navigation', 'quotation_rejection_reasons', null, null, null, null, 380, true)
+    ('master_data', 'master_data.sales.rejection_reasons', 'master_data.sales.rejection_reasons', 'Quotation Rejection Reasons', 'submodule', 'Navigation', 'quotation_rejection_reasons', null, null, null, null, 380, true),
+    ('master_data', 'master_data.accounting.exchange_rates', 'master_data.accounting.exchange_rates', 'Exchange Rates Catalog', 'submodule', 'Navigation', 'exchange_rates', 'exchange_rate_lookup_view', null, null, null, 390, true)
 ) as data(module_code, submodule_code, resource_key, name, resource_type, resource_group, table_name, view_name, rpc_name, entity_owner_field, entity_branch_field, sort_order, active)
   on data.module_code = pm.code
 left join permission_submodules ps

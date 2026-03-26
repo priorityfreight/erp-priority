@@ -72,11 +72,19 @@ type StatusFormValues = {
 type SalesOptionSummary = {
   optionLabel: string
   totalPurchase: number
+  totalPurchaseMxn: number
   totalSale: number
+  totalSaleMxn: number
   totalProfit: number
+  totalProfitMxn: number
   providers: Set<string>
   lines: QuotationChargeLine[]
   hasCompleteSale: boolean
+}
+
+type SalesDraftValue = {
+  sale_amount: string
+  sale_currency: string
 }
 
 const emptyCargoForm: QuotationCargoLineFormValues = {
@@ -125,25 +133,23 @@ function InfoField({
   )
 }
 
-function formatCurrency(value: number | null | undefined) {
+function formatCurrency(value: number | null | undefined, currency = "MXN") {
   if (value == null) {
     return "No disponible"
   }
 
-  return `$${value.toLocaleString(undefined, {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`
+  }).format(value)
 }
 
 function buildQuotationFormValues(quotation: QuotationSummary): QuotationFormValues {
   return {
     pickupAddress: quotation.pickup_address || "",
     deliveryAddress: quotation.delivery_address || "",
-    commodities: quotation.commodities || "",
-    quantity: quotation.quantity != null ? String(quotation.quantity) : "",
-    weight: quotation.weight != null ? String(quotation.weight) : "",
-    volume: quotation.volume != null ? String(quotation.volume) : "",
     requiredQuoteDate: quotation.required_quote_date || "",
     purchaseValidUntil: quotation.purchase_valid_until || "",
     salesValidUntil: quotation.sales_valid_until || "",
@@ -158,10 +164,6 @@ function buildStatusFormValues(quotation: QuotationSummary): StatusFormValues {
     cancellationNotes: quotation.cancellation_notes || "",
     targetRate: quotation.target_rate != null ? String(quotation.target_rate) : "",
   }
-}
-
-function shouldUseCargoLines(serviceType: string | null) {
-  return ["LTL", "LCL", "AIR", "COURIER"].includes((serviceType || "").toUpperCase())
 }
 
 function canShowCommercialPricing(status: QuotationStatus) {
@@ -260,15 +262,11 @@ export default function QuotationDetailPage() {
   const [showSalesModal, setShowSalesModal] = useState(false)
   const [savingSales, setSavingSales] = useState(false)
   const [selectedSalesOption, setSelectedSalesOption] = useState<string | null>(null)
-  const [salesDraft, setSalesDraft] = useState<Record<string, string>>({})
+  const [salesDraft, setSalesDraft] = useState<Record<string, SalesDraftValue>>({})
   const [createdShipment, setCreatedShipment] = useState<Shipment | null>(null)
   const [quoteFormValues, setQuoteFormValues] = useState<QuotationFormValues>({
     pickupAddress: "",
     deliveryAddress: "",
-    commodities: "",
-    quantity: "",
-    weight: "",
-    volume: "",
     requiredQuoteDate: "",
     purchaseValidUntil: "",
     salesValidUntil: "",
@@ -289,8 +287,11 @@ export default function QuotationDetailPage() {
       {
         optionLabel: string
         totalPurchase: number
+        totalPurchaseMxn: number
         totalSale: number
+        totalSaleMxn: number
         totalProfit: number
+        totalProfitMxn: number
         providers: Set<string>
         lines: QuotationChargeLine[]
         hasCompleteSale: boolean
@@ -298,20 +299,26 @@ export default function QuotationDetailPage() {
     >()
 
     for (const line of detailChargeLines ?? []) {
-      const optionLabel = line.option_label || "Opcion 1"
+      const optionLabel = line.option_label || line.provider_name || "Proveedor"
       const current = grouped.get(optionLabel) ?? {
         optionLabel,
         totalPurchase: 0,
+        totalPurchaseMxn: 0,
         totalSale: 0,
+        totalSaleMxn: 0,
         totalProfit: 0,
+        totalProfitMxn: 0,
         providers: new Set<string>(),
         lines: [],
         hasCompleteSale: true,
       }
 
       current.totalPurchase += line.purchase_amount ?? 0
+      current.totalPurchaseMxn += line.purchase_amount_mxn ?? 0
       current.totalSale += line.sale_amount ?? 0
+      current.totalSaleMxn += line.sale_amount_mxn ?? 0
       current.totalProfit += line.profit_amount ?? 0
+      current.totalProfitMxn += line.profit_amount_mxn ?? 0
       if (line.provider_name) {
         current.providers.add(line.provider_name)
       }
@@ -435,7 +442,13 @@ export default function QuotationDetailPage() {
     setSelectedSalesOption(summary.optionLabel)
     setSalesDraft(
       Object.fromEntries(
-        summary.lines.map((line) => [line.id, line.sale_amount != null ? String(line.sale_amount) : ""])
+        summary.lines.map((line) => [
+          line.id,
+          {
+            sale_amount: line.sale_amount != null ? String(line.sale_amount) : "",
+            sale_currency: line.sale_currency || line.purchase_currency || "USD",
+          },
+        ])
       )
     )
     setShowSalesModal(true)
@@ -468,10 +481,6 @@ export default function QuotationDetailPage() {
       await updateQuotation(details.quotation.id, {
         pickup_address: quoteFormValues.pickupAddress.trim() || null,
         delivery_address: quoteFormValues.deliveryAddress.trim() || null,
-        commodities: quoteFormValues.commodities.trim() || null,
-        quantity: quoteFormValues.quantity ? Number(quoteFormValues.quantity) : null,
-        weight: quoteFormValues.weight ? Number(quoteFormValues.weight) : null,
-        volume: quoteFormValues.volume ? Number(quoteFormValues.volume) : null,
         required_quote_date: quoteFormValues.requiredQuoteDate || null,
         purchase_valid_until: quoteFormValues.purchaseValidUntil || null,
         sales_valid_until: quoteFormValues.salesValidUntil || null,
@@ -740,7 +749,6 @@ export default function QuotationDetailPage() {
   const canViewSalePrice = quotation.can_view_sale_price ?? false
   const canEditSalePrice = quotation.can_edit_sale_price ?? false
   const canViewExpectedProfit = quotation.can_view_expected_profit ?? false
-  const usesCargoLines = shouldUseCargoLines(quotation.service_type)
   const canSeePricingOutcome = canShowCommercialPricing(quotation.status)
   const canSeeCommercialActions = canShowCommercialActions(quotation.status)
   const canPrepareCommercial = canPrepareCommercialProposal(quotation.status)
@@ -750,14 +758,13 @@ export default function QuotationDetailPage() {
     (accumulator, line) => {
       const purchase = line.purchase_amount ?? 0
       const sale = line.sale_amount ?? 0
-      const profit = line.profit_amount ?? sale - purchase
-      const vat = sale * ((line.vat_rate ?? 0) / 100)
+      const profit = line.profit_amount_mxn ?? line.profit_amount ?? sale - purchase
 
       return {
-        purchase: accumulator.purchase + purchase,
-        sale: accumulator.sale + sale,
+        purchase: accumulator.purchase + (line.purchase_amount_mxn ?? purchase),
+        sale: accumulator.sale + (line.sale_amount_mxn ?? sale),
         profit: accumulator.profit + profit,
-        vat: accumulator.vat + vat,
+        vat: accumulator.vat + ((line.sale_amount_mxn ?? sale) * ((line.vat_rate ?? 0) / 100)),
       }
     },
     { purchase: 0, sale: 0, profit: 0, vat: 0 }
@@ -838,18 +845,16 @@ export default function QuotationDetailPage() {
               Actualizar estatus
             </button>
           ) : null}
-          {usesCargoLines ? (
-            <button
-              type="button"
-              onClick={() => {
-                resetCargoForm()
-                setShowCargoModal(true)
-              }}
-              className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
-            >
-              Anadir detalle de carga
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              resetCargoForm()
+              setShowCargoModal(true)
+            }}
+            className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
+          >
+            Anadir detalle de carga
+          </button>
           <Link
             href={documentHref}
             target="_blank"
@@ -1086,7 +1091,7 @@ export default function QuotationDetailPage() {
                 {canViewCost ? (
                   <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      Compra total
+                      Compra total MXN
                     </div>
                     <div className="mt-1 text-base font-semibold text-[#111827]">
                       {formatCurrency(pricingSummary.purchase)}
@@ -1096,7 +1101,7 @@ export default function QuotationDetailPage() {
                 {canViewSalePrice ? (
                   <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      Venta total
+                      Venta total MXN
                     </div>
                     <div className="mt-1 text-base font-semibold text-[#111827]">
                       {formatCurrency(pricingSummary.sale)}
@@ -1106,7 +1111,7 @@ export default function QuotationDetailPage() {
                 {canViewExpectedProfit ? (
                   <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      Profit
+                      Profit MXN
                     </div>
                     <div className="mt-1 text-base font-semibold text-[#111827]">
                       {formatCurrency(pricingSummary.profit)}
@@ -1115,7 +1120,7 @@ export default function QuotationDetailPage() {
                 ) : null}
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    IVA estimado
+                    IVA estimado MXN
                   </div>
                   <div className="mt-1 text-base font-semibold text-[#111827]">
                     {formatCurrency(pricingSummary.vat)}
@@ -1180,8 +1185,7 @@ export default function QuotationDetailPage() {
           ) : null}
         </section>
 
-        {usesCargoLines ? (
-          <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-[#111827]">Informacion de carga</h2>
@@ -1203,7 +1207,7 @@ export default function QuotationDetailPage() {
 
             {cargoLines.length === 0 ? (
               <p className="text-sm text-[#6B7280]">
-                Todavia no hay detalles de carga registrados para este tipo de servicio.
+                Todavia no hay detalles de carga registrados para esta cotizacion.
               </p>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
@@ -1235,7 +1239,7 @@ export default function QuotationDetailPage() {
                           {line.weight != null ? `${line.weight} kg` : "No disponible"}
                         </td>
                         <td className="px-4 py-3 text-[#475569]">
-                          {line.commodities || quotation.commodities || "No disponible"}
+                          {line.commodities || "No disponible"}
                         </td>
                         <td className="px-4 py-3 text-[#475569]">
                           {line.cbm != null ? line.cbm.toFixed(3) : "No disponible"}
@@ -1289,137 +1293,140 @@ export default function QuotationDetailPage() {
               </div>
             )}
           </section>
-        ) : null}
 
         {canSeePricingOutcome ? (
           <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Opciones de pricing</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
-                Pricing captura una o varias opciones de compra. CRM las consulta para preparar la salida comercial.
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[#111827]">Opciones de pricing</h2>
+                <p className="mt-1 text-sm text-[#6B7280]">
+                  Pricing captura una o varias opciones de compra. CRM las consulta para preparar la salida comercial.
+                </p>
+              </div>
+            </div>
+
+            {chargeOptionSummaries.length > 0 ? (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {chargeOptionSummaries.map((summary) => (
+                  <div
+                    key={summary.optionLabel}
+                    className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
+                  >
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      {summary.optionLabel}
+                    </div>
+                    {canViewCost ? (
+                      <div className="mt-2 text-lg font-semibold text-[#111827]">
+                        {formatCurrency(summary.totalPurchaseMxn)}
+                      </div>
+                    ) : null}
+                    <div className="mt-1 text-sm text-[#6B7280]">
+                      Proveedores:{" "}
+                      {summary.providers.size > 0
+                        ? Array.from(summary.providers).join(", ")
+                        : "Sin proveedor"}
+                    </div>
+                    {canViewSalePrice ? (
+                      <div className="mt-1 text-sm text-[#6B7280]">
+                        Venta MXN: {formatCurrency(summary.totalSaleMxn)}
+                      </div>
+                    ) : null}
+                    {canViewExpectedProfit ? (
+                      <div className="mt-1 text-sm text-[#6B7280]">
+                        Profit MXN: {formatCurrency(summary.totalProfitMxn)}
+                      </div>
+                    ) : null}
+                    {canEditCommercialSale ? (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => openSalesOption(summary)}
+                          className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
+                        >
+                          {summary.hasCompleteSale ? "Editar venta" : "Anadir venta"}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {chargeLines.length === 0 ? (
+              <p className="text-sm text-[#6B7280]">
+                Todavia no hay cargos registrados para esta cotizacion.
               </p>
-            </div>
-          </div>
-
-          {chargeOptionSummaries.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {chargeOptionSummaries.map((summary) => (
-                <div
-                  key={summary.optionLabel}
-                  className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
-                >
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    {summary.optionLabel}
-                  </div>
-                  {canViewCost ? (
-                    <div className="mt-2 text-lg font-semibold text-[#111827]">
-                      {formatCurrency(summary.totalPurchase)}
-                    </div>
-                  ) : null}
-                  <div className="mt-1 text-sm text-[#6B7280]">
-                    Proveedores:{" "}
-                    {summary.providers.size > 0
-                      ? Array.from(summary.providers).join(", ")
-                      : "Sin proveedor"}
-                  </div>
-                  {canViewSalePrice ? (
-                    <div className="mt-1 text-sm text-[#6B7280]">
-                      Venta: {formatCurrency(summary.totalSale)}
-                    </div>
-                  ) : null}
-                  {canViewExpectedProfit ? (
-                    <div className="mt-1 text-sm text-[#6B7280]">
-                      Profit: {formatCurrency(summary.totalProfit)}
-                    </div>
-                  ) : null}
-                  {canEditCommercialSale ? (
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => openSalesOption(summary)}
-                        className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                      >
-                        {summary.hasCompleteSale ? "Editar venta" : "Anadir venta"}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {chargeLines.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">
-              Todavia no hay cargos registrados para esta cotizacion.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Opcion</th>
-                    <th className="px-4 py-3">Proveedor</th>
-                    <th className="px-4 py-3">Concepto</th>
-                    {canViewCost ? <th className="px-4 py-3">Compra</th> : null}
-                    {canViewSalePrice ? <th className="px-4 py-3">Venta</th> : null}
-                    {canViewExpectedProfit ? <th className="px-4 py-3">Profit</th> : null}
-                    <th className="px-4 py-3">IVA</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {chargeLines.map((line) => (
-                    <tr key={line.id}>
-                      <td className="px-4 py-3 text-[#475569]">{line.option_label}</td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {line.provider_name || "No asignado"}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {line.accounting_concept || line.service_name}
-                      </td>
-                      {canViewCost ? (
-                        <td className="px-4 py-3 text-[#475569]">
-                          {formatCurrency(line.purchase_amount)}
-                        </td>
-                      ) : null}
-                      {canViewSalePrice ? (
-                        <td className="px-4 py-3 text-[#475569]">
-                          {formatCurrency(line.sale_amount)}
-                        </td>
-                      ) : null}
-                      {canViewExpectedProfit ? (
-                        <td className="px-4 py-3 text-[#475569]">
-                          {formatCurrency(line.profit_amount)}
-                        </td>
-                      ) : null}
-                      <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
-                      <td className="px-4 py-3 text-right text-[#6B7280]">
-                        {canEditCommercialSale ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const summary = chargeOptionSummaries.find(
-                                (item) => item.optionLabel === line.option_label
-                              )
-                              if (summary) {
-                                openSalesOption(summary)
-                              }
-                            }}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 text-xs font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                          >
-                            Venta
-                          </button>
-                        ) : (
-                          "Solo lectura"
-                        )}
-                      </td>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
+                <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
+                  <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                    <tr>
+                      <th className="px-4 py-3">Proveedor</th>
+                      <th className="px-4 py-3">Concepto</th>
+                      {canViewCost ? <th className="px-4 py-3">Compra</th> : null}
+                      {canViewSalePrice ? <th className="px-4 py-3">Venta</th> : null}
+                      {canViewExpectedProfit ? <th className="px-4 py-3">Profit MXN</th> : null}
+                      <th className="px-4 py-3">IVA</th>
+                      <th className="px-4 py-3 text-right">Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                    {chargeLines.map((line) => (
+                      <tr key={line.id}>
+                        <td className="px-4 py-3 text-[#475569]">
+                          {line.provider_name || "No asignado"}
+                        </td>
+                        <td className="px-4 py-3 text-[#475569]">
+                          {line.accounting_concept || line.service_name}
+                        </td>
+                        {canViewCost ? (
+                          <td className="px-4 py-3 text-[#475569]">
+                            {formatCurrency(line.purchase_amount, line.purchase_currency)}
+                            <div className="text-xs text-[#94A3B8]">
+                              {formatCurrency(line.purchase_amount_mxn)}
+                            </div>
+                          </td>
+                        ) : null}
+                        {canViewSalePrice ? (
+                          <td className="px-4 py-3 text-[#475569]">
+                            {formatCurrency(line.sale_amount, line.sale_currency)}
+                            <div className="text-xs text-[#94A3B8]">
+                              {formatCurrency(line.sale_amount_mxn)}
+                            </div>
+                          </td>
+                        ) : null}
+                        {canViewExpectedProfit ? (
+                          <td className="px-4 py-3 text-[#475569]">
+                            {formatCurrency(line.profit_amount_mxn ?? line.profit_amount)}
+                          </td>
+                        ) : null}
+                        <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
+                        <td className="px-4 py-3 text-right text-[#6B7280]">
+                          {canEditCommercialSale ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const summary = chargeOptionSummaries.find(
+                                  (item) => item.optionLabel === (line.option_label || "Proveedor")
+                                )
+                                if (summary) {
+                                  openSalesOption(summary)
+                                }
+                              }}
+                              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 text-xs font-medium text-[#111827] hover:bg-[#F8FAFC]"
+                            >
+                              Venta
+                            </button>
+                          ) : (
+                            "Solo lectura"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         ) : null}
       </div>
@@ -1438,7 +1445,7 @@ export default function QuotationDetailPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Opcion
+                  Proveedor / opcion
                 </div>
                 <div className="mt-1 text-sm font-medium text-[#111827]">
                   {selectedSalesOptionSummary.optionLabel}
@@ -1447,10 +1454,10 @@ export default function QuotationDetailPage() {
               {canViewCost ? (
                 <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    Compra total
+                    Compra total MXN
                   </div>
                   <div className="mt-1 text-sm font-medium text-[#111827]">
-                    {formatCurrency(selectedSalesOptionSummary.totalPurchase)}
+                    {formatCurrency(selectedSalesOptionSummary.totalPurchaseMxn)}
                   </div>
                 </div>
               ) : null}
@@ -1474,12 +1481,16 @@ export default function QuotationDetailPage() {
                     <th className="px-4 py-3">Concepto</th>
                     {canViewCost ? <th className="px-4 py-3">Compra</th> : null}
                     <th className="px-4 py-3">Venta</th>
-                    {canViewExpectedProfit ? <th className="px-4 py-3">Profit</th> : null}
+                    {canViewExpectedProfit ? <th className="px-4 py-3">Profit estimado</th> : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB] bg-white">
                   {selectedSalesOptionSummary.lines.map((line) => {
-                    const saleValue = salesDraft[line.id] ? Number(salesDraft[line.id]) : null
+                    const saleValue = salesDraft[line.id]?.sale_amount
+                      ? Number(salesDraft[line.id]?.sale_amount)
+                      : null
+                    const saleCurrency =
+                      salesDraft[line.id]?.sale_currency || line.sale_currency || "USD"
                     const profitValue =
                       saleValue != null && line.purchase_amount != null
                         ? saleValue - line.purchase_amount
@@ -1495,26 +1506,56 @@ export default function QuotationDetailPage() {
                         </td>
                         {canViewCost ? (
                           <td className="px-4 py-3 text-[#475569]">
-                            {formatCurrency(line.purchase_amount)}
+                            {formatCurrency(line.purchase_amount, line.purchase_currency)}
+                            <div className="text-xs text-[#94A3B8]">
+                              {formatCurrency(line.purchase_amount_mxn)}
+                            </div>
                           </td>
                         ) : null}
                         <td className="px-4 py-3">
-                          <input
-                            className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                            placeholder="Venta"
-                            inputMode="decimal"
-                            value={salesDraft[line.id] ?? ""}
-                            onChange={(event) =>
-                              setSalesDraft((current) => ({
-                                ...current,
-                                [line.id]: event.target.value,
-                              }))
-                            }
-                          />
+                          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_108px]">
+                            <input
+                              className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                              placeholder="Venta"
+                              inputMode="decimal"
+                              value={salesDraft[line.id]?.sale_amount ?? ""}
+                              onChange={(event) =>
+                                setSalesDraft((current) => ({
+                                  ...current,
+                                  [line.id]: {
+                                    sale_amount: event.target.value,
+                                    sale_currency:
+                                      current[line.id]?.sale_currency ||
+                                      line.sale_currency ||
+                                      "USD",
+                                  },
+                                }))
+                              }
+                            />
+                            <select
+                              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                              value={saleCurrency}
+                              onChange={(event) =>
+                                setSalesDraft((current) => ({
+                                  ...current,
+                                  [line.id]: {
+                                    sale_amount: current[line.id]?.sale_amount ?? "",
+                                    sale_currency: event.target.value,
+                                  },
+                                }))
+                              }
+                            >
+                              <option value="MXN">MXN</option>
+                              <option value="USD">USD</option>
+                              <option value="EUR">EUR</option>
+                            </select>
+                          </div>
                         </td>
                         {canViewExpectedProfit ? (
                           <td className="px-4 py-3 text-[#475569]">
-                            {profitValue != null ? formatCurrency(profitValue) : "No disponible"}
+                            {profitValue != null
+                              ? `${formatCurrency(profitValue, saleCurrency)} · MXN pendiente`
+                              : "No disponible"}
                           </td>
                         ) : null}
                       </tr>

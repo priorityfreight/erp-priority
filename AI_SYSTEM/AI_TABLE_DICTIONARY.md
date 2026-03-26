@@ -1417,22 +1417,6 @@ delivery_address
 Type: text
 Delivery full address captured on the quotation.
 
-commodities
-Type: text
-Commodity notes for the quote.
-
-quantity
-Type: integer
-Approximate quantity for the quotation.
-
-weight
-Type: numeric
-Quoted weight.
-
-volume
-Type: numeric
-Quoted volume.
-
 incoterm_id
 Type: uuid
 Foreign key referencing incoterms.id.
@@ -1467,7 +1451,8 @@ Client target rate used in renegotiation.
 
 currency
 Type: text
-Quotation currency.
+Legacy quotation-level commercial currency marker.
+Line-level purchase and sale currencies now drive accounting normalization.
 
 estimated_cost
 Type: numeric
@@ -1518,7 +1503,8 @@ Foreign key referencing quotations.id.
 
 option_label
 Type: text
-Commercial option bucket used to compare multiple provider proposals inside the same quotation.
+System grouping label used to compare provider proposals inside the same quotation.
+The UI should derive this automatically from provider context instead of asking the user to type an option name.
 
 provider_id
 Type: uuid
@@ -1542,23 +1528,49 @@ Type: numeric
 Commercial purchase amount for the line.
 Visible to Pricing and Ventas only when the corresponding field permission is granted.
 
+purchase_currency
+Type: text
+Original purchase currency captured on the provider-side line.
+Allowed values: MXN, USD, EUR.
+
+purchase_exchange_rate_to_mxn
+Type: numeric
+Exchange rate used to normalize purchase_amount into MXN.
+
+purchase_amount_mxn
+Type: numeric
+Purchase amount normalized into MXN for accounting totals and profit.
+
 sale_amount
 Type: numeric
 Commercial sale amount for the line.
 Must remain hidden from Pricing unless explicitly granted through role_field_permissions.
+
+sale_currency
+Type: text
+Original sale currency captured on the commercial line.
+Allowed values: MXN, USD, EUR.
+
+sale_exchange_rate_to_mxn
+Type: numeric
+Exchange rate used to normalize sale_amount into MXN.
+
+sale_amount_mxn
+Type: numeric
+Sale amount normalized into MXN for accounting totals and profit.
 
 profit_amount
 Type: numeric
 Line profit calculated as sale - purchase.
 Must remain hidden from Pricing unless explicitly granted through role_field_permissions.
 
+profit_amount_mxn
+Type: numeric
+Canonical accounting profit normalized into MXN.
+
 vat_rate
 Type: numeric
 IVA percentage applied from the accounting concept.
-
-currency
-Type: text
-Cost currency.
 
 notes
 Type: text
@@ -1573,6 +1585,56 @@ Security Notes
 created_at
 Type: timestamptz
 Creation timestamp.
+
+
+--------------------------------------------------
+TABLE: exchange_rates
+--------------------------------------------------
+
+Purpose
+
+Stores daily BANXICO or manual exchange-rate rows used to normalize ERP accounting into MXN.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+rate_date
+Type: date
+Effective date of the published or manually registered rate.
+
+base_currency
+Type: text
+Origin currency.
+Allowed values: USD, EUR.
+
+quote_currency
+Type: text
+Target accounting currency.
+Current allowed value: MXN.
+
+rate_value
+Type: numeric
+Conversion rate from base_currency to MXN.
+
+source
+Type: text
+Source of the rate row.
+Allowed values: BANXICO, MANUAL.
+
+source_series_code
+Type: text
+Optional source series identifier for traceability.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
 
 
 --------------------------------------------------

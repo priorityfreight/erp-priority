@@ -43,6 +43,7 @@ provider_contacts_view
 provider_service_offering_view
 unlocode_lookup_view
 service_transport_type_lookup_view
+exchange_rate_lookup_view
 permission_resource_catalog_view
 permission_field_catalog_view
 role_resource_permission_matrix_view
@@ -79,6 +80,9 @@ delete_quotation_cost_line()
 create_quotation_cargo_line()
 update_quotation_cargo_line()
 delete_quotation_cargo_line()
+create_exchange_rate()
+update_exchange_rate()
+delete_exchange_rate()
 create_booking_from_quotation()
 approve_quotation()
 create_shipment()
@@ -175,6 +179,8 @@ Quotation-specific write rules:
 - use create_quotation_cost_line(), update_quotation_cost_line(), and delete_quotation_cost_line() for charge lines
 - use create_quotation_cargo_line(), update_quotation_cargo_line(), and delete_quotation_cargo_line() for service-specific cargo detail lines
 - use update_quotation_option_sales_amounts() when CRM saves sale amounts for an entire option in one action
+- quotation-level commodities, quantity, weight, and volume must not be reintroduced on quotations
+- all service types must rely on quotation_cargo_lines for cargo detail capture and document rendering
 - quotation references must be backend-generated from the service-type counter contract:
   QPRIAIR, QPRIFCL, QPRILCL, QPRIFTL, QPRILTL, QPRICOU
 - accepted quotations are no longer auto-converted into shipments
@@ -194,10 +200,20 @@ Quotation-specific write rules:
 - provider-facing internal pricing request documents must not expose commercial sale amounts
 - pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view
 - pricing screens should surface target_rate and sales feedback when status = renegociar_tarifa
+- quotation purchase and sale lines may use MXN, USD, or EUR
+- accounting totals and profit must be evaluated in MXN using the latest available rate on or before the previous day
 - expiration_date must be backend-calculated from start_date
 - expired opportunities must surface as vencida
 - if salesperson_id is omitted, create_opportunity() must inherit clients.account_owner_id
 - create_client_with_contacts() must inherit p_account_owner_id from the current ERP user when omitted
+
+
+Exchange-rate rules:
+
+- use exchange_rate_lookup_view for list screens
+- use create_exchange_rate(), update_exchange_rate(), and delete_exchange_rate() for writes
+- BANXICO is the canonical operational source when available
+- MANUAL is a controlled fallback for continuity, not the preferred source
 - search_clients() is now owner-aware and must only return rows allowed by crm.clients.list
 - get_client_full() is now owner-aware and must return null instead of leaking records outside crm.clients.record
 - client_overview_view, client_contacts_view, and open_opportunities_view are now scope-aware reads, not broad browse views

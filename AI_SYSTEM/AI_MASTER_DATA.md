@@ -66,6 +66,20 @@ Current live catalog:
 
 - Tipos de servicio
 - Conceptos contables
+- Motivos de rechazo de cotizacion
+
+3. Contabilidad
+
+Current live catalog:
+
+- Tipo de cambio
+
+Current exchange-rate behavior:
+
+- supports USD, EUR, and MXN normalization for quotation economics
+- uses the latest available rate on or before the previous day
+- BANXICO is the canonical operational source; MANUAL is allowed only as controlled continuity support
+- accounting profit must be consolidated in MXN even when purchase or sale is captured in another currency
 
 Current locked service type families:
 
@@ -143,6 +157,23 @@ delete_sales_accounting_concept()
 
 Purpose:
 Provide the canonical application write path for accounting concepts.
+
+exchange_rates
+
+Purpose:
+Stores daily exchange-rate rows used to normalize quotation economics into MXN.
+
+exchange_rate_lookup_view
+
+Purpose:
+Provides a read-friendly ordered projection for the exchange-rate screen.
+
+create_exchange_rate()
+update_exchange_rate()
+delete_exchange_rate()
+
+Purpose:
+Provide the canonical application write path for exchange-rate administration.
 
 
 --------------------------------------------------

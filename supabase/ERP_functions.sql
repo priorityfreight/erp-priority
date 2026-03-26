@@ -1514,9 +1514,9 @@ declare
   total_profit numeric;
 begin
   select
-    coalesce(sum(coalesce(qc.purchase_amount, qc.cost, 0)), 0),
-    coalesce(sum(coalesce(qc.sale_amount, 0)), 0),
-    coalesce(sum(coalesce(qc.profit_amount, coalesce(qc.sale_amount, 0) - coalesce(qc.purchase_amount, qc.cost, 0))), 0)
+    coalesce(sum(coalesce(qc.purchase_amount_mxn, qc.purchase_amount, qc.cost, 0)), 0),
+    coalesce(sum(coalesce(qc.sale_amount_mxn, qc.sale_amount, 0)), 0),
+    coalesce(sum(coalesce(qc.profit_amount_mxn, qc.profit_amount, coalesce(qc.sale_amount_mxn, qc.sale_amount, 0) - coalesce(qc.purchase_amount_mxn, qc.purchase_amount, qc.cost, 0))), 0)
   into total_purchase, total_sale, total_profit
   from quotation_costs qc
   where qc.quotation_id = p_quotation_id;
@@ -1530,17 +1530,70 @@ begin
 end;
 $$;
 
+create or replace function normalize_currency_code(
+  p_currency text
+)
+returns text
+language plpgsql
+immutable
+as $$
+declare
+  normalized text := upper(nullif(btrim(coalesce(p_currency, '')), ''));
+begin
+  if normalized is null then
+    return 'MXN';
+  end if;
+
+  if normalized not in ('MXN', 'USD', 'EUR') then
+    raise exception 'Unsupported currency: %', p_currency;
+  end if;
+
+  return normalized;
+end;
+$$;
+
+create or replace function get_exchange_rate_to_mxn(
+  p_currency text,
+  p_reference_date date default current_date
+)
+returns numeric
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_currency text := public.normalize_currency_code(p_currency);
+  resolved_rate numeric;
+begin
+  if normalized_currency = 'MXN' then
+    return 1;
+  end if;
+
+  select er.rate_value
+  into resolved_rate
+  from exchange_rates er
+  where er.base_currency = normalized_currency
+    and er.quote_currency = 'MXN'
+    and er.rate_date <= coalesce(p_reference_date, current_date) - interval '1 day'
+  order by er.rate_date desc,
+    case when er.source = 'BANXICO' then 0 else 1 end asc
+  limit 1;
+
+  if resolved_rate is null then
+    raise exception 'No exchange rate available for % -> MXN before %', normalized_currency, coalesce(p_reference_date, current_date);
+  end if;
+
+  return resolved_rate;
+end;
+$$;
+
 create or replace function create_quotation_from_opportunity(
   p_opportunity_id uuid,
   p_pickup_address text default null,
   p_delivery_address text default null,
-  p_commodities text default null,
   p_required_quote_date date default null,
   p_purchase_valid_until date default null,
   p_sales_valid_until date default null,
-  p_quantity integer default null,
-  p_weight numeric default null,
-  p_volume numeric default null,
   p_created_by uuid default null
 )
 returns uuid
@@ -1586,10 +1639,6 @@ begin
     destination_unlocode_id,
     pickup_address,
     delivery_address,
-    commodities,
-    quantity,
-    weight,
-    volume,
     incoterm_id,
     required_quote_date,
     purchase_valid_until,
@@ -1611,10 +1660,6 @@ begin
     opportunity_row.destination_unlocode_id,
     nullif(btrim(coalesce(p_pickup_address, '')), ''),
     nullif(btrim(coalesce(p_delivery_address, '')), ''),
-    nullif(btrim(coalesce(p_commodities, '')), ''),
-    p_quantity,
-    p_weight,
-    p_volume,
     opportunity_row.incoterm_id,
     p_required_quote_date,
     p_purchase_valid_until,
@@ -1859,10 +1904,6 @@ returns table (
   destination_unlocode_id uuid,
   pickup_address text,
   delivery_address text,
-  commodities text,
-  quantity integer,
-  weight numeric,
-  volume numeric,
   required_quote_date date,
   purchase_valid_until date,
   sales_valid_until date,
@@ -1930,10 +1971,6 @@ as $$
       q.destination_unlocode_id,
       q.pickup_address,
       q.delivery_address,
-      q.commodities,
-      q.quantity,
-      q.weight,
-      q.volume,
       q.required_quote_date,
       q.purchase_valid_until,
       q.sales_valid_until,
@@ -2044,10 +2081,6 @@ as $$
     filtered.destination_unlocode_id,
     filtered.pickup_address,
     filtered.delivery_address,
-    filtered.commodities,
-    filtered.quantity,
-    filtered.weight,
-    filtered.volume,
     filtered.required_quote_date,
     filtered.purchase_valid_until,
     filtered.sales_valid_until,
@@ -2101,11 +2134,13 @@ $$;
 
 create or replace function create_quotation_cost_line(
   p_quotation_id uuid,
-  p_option_label text default 'Opcion 1',
+  p_option_label text default 'Proveedor',
   p_provider_id uuid default null,
   p_sales_accounting_concept_id uuid default null,
   p_purchase_amount numeric default null,
+  p_purchase_currency text default 'USD',
   p_sale_amount numeric default null,
+  p_sale_currency text default 'USD',
   p_vat_rate numeric default null,
   p_notes text default null
 )
@@ -2117,8 +2152,13 @@ as $$
 declare
   new_line_id uuid;
   concept_row sales_accounting_concepts%rowtype;
+  provider_name_value text;
   quotation_pricing_owner_id uuid;
   quotation_status text;
+  normalized_purchase_currency text;
+  normalized_sale_currency text;
+  purchase_exchange_rate numeric;
+  sale_exchange_rate numeric;
 begin
   select
     q.pricing_owner_id,
@@ -2162,6 +2202,18 @@ begin
     end if;
   end if;
 
+  if p_provider_id is not null then
+    select p.name
+    into provider_name_value
+    from providers p
+    where p.id = p_provider_id;
+  end if;
+
+  normalized_purchase_currency := public.normalize_currency_code(p_purchase_currency);
+  normalized_sale_currency := public.normalize_currency_code(coalesce(p_sale_currency, p_purchase_currency));
+  purchase_exchange_rate := public.get_exchange_rate_to_mxn(normalized_purchase_currency, current_date);
+  sale_exchange_rate := public.get_exchange_rate_to_mxn(normalized_sale_currency, current_date);
+
   insert into quotation_costs (
     quotation_id,
     option_label,
@@ -2170,23 +2222,46 @@ begin
     service_name,
     cost,
     purchase_amount,
+    purchase_currency,
+    purchase_exchange_rate_to_mxn,
+    purchase_amount_mxn,
     sale_amount,
+    sale_currency,
+    sale_exchange_rate_to_mxn,
+    sale_amount_mxn,
     profit_amount,
+    profit_amount_mxn,
     vat_rate,
     notes
   )
   values (
     p_quotation_id,
-    coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), 'Opcion 1'),
+    coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), provider_name_value, 'Proveedor'),
     p_provider_id,
     p_sales_accounting_concept_id,
     coalesce(concept_row.concept, 'Cargo'),
     coalesce(p_purchase_amount, 0),
     p_purchase_amount,
+    normalized_purchase_currency,
+    purchase_exchange_rate,
+    case
+      when p_purchase_amount is null then null
+      else p_purchase_amount * purchase_exchange_rate
+    end,
     p_sale_amount,
+    normalized_sale_currency,
+    sale_exchange_rate,
+    case
+      when p_sale_amount is null then null
+      else p_sale_amount * sale_exchange_rate
+    end,
     case
       when p_sale_amount is null or p_purchase_amount is null then null
       else p_sale_amount - p_purchase_amount
+    end,
+    case
+      when p_sale_amount is null or p_purchase_amount is null then null
+      else (p_sale_amount * sale_exchange_rate) - (p_purchase_amount * purchase_exchange_rate)
     end,
     coalesce(p_vat_rate, concept_row.vat_rate, 0),
     nullif(btrim(coalesce(p_notes, '')), '')
@@ -2201,11 +2276,13 @@ $$;
 
 create or replace function update_quotation_cost_line(
   p_id uuid,
-  p_option_label text default 'Opcion 1',
+  p_option_label text default 'Proveedor',
   p_provider_id uuid default null,
   p_sales_accounting_concept_id uuid default null,
   p_purchase_amount numeric default null,
+  p_purchase_currency text default null,
   p_sale_amount numeric default null,
+  p_sale_currency text default null,
   p_vat_rate numeric default null,
   p_notes text default null
 )
@@ -2220,10 +2297,17 @@ declare
   quotation_pricing_owner_id uuid;
   quotation_client_id uuid;
   concept_row sales_accounting_concepts%rowtype;
+  provider_name_value text;
   current_purchase_amount numeric;
+  current_purchase_currency text;
+  current_purchase_exchange_rate numeric;
   current_sale_amount numeric;
+  current_sale_currency text;
+  current_sale_exchange_rate numeric;
   can_edit_pricing boolean := false;
   can_edit_sales boolean := false;
+  normalized_purchase_currency text;
+  normalized_sale_currency text;
 begin
   select quotation_id
   into quotation_id_value
@@ -2236,8 +2320,12 @@ begin
 
   select
     purchase_amount,
-    sale_amount
-  into current_purchase_amount, current_sale_amount
+    purchase_currency,
+    purchase_exchange_rate_to_mxn,
+    sale_amount,
+    sale_currency,
+    sale_exchange_rate_to_mxn
+  into current_purchase_amount, current_purchase_currency, current_purchase_exchange_rate, current_sale_amount, current_sale_currency, current_sale_exchange_rate
   from quotation_costs
   where id = p_id;
 
@@ -2305,19 +2393,57 @@ begin
     end if;
   end if;
 
+  if p_provider_id is not null then
+    select p.name
+    into provider_name_value
+    from providers p
+    where p.id = p_provider_id;
+  end if;
+
+  normalized_purchase_currency := coalesce(
+    case when p_purchase_currency is null then null else public.normalize_currency_code(p_purchase_currency) end,
+    current_purchase_currency,
+    'MXN'
+  );
+  normalized_sale_currency := coalesce(
+    case when p_sale_currency is null then null else public.normalize_currency_code(p_sale_currency) end,
+    current_sale_currency,
+    normalized_purchase_currency,
+    'MXN'
+  );
+
   update quotation_costs
   set
-    option_label = coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), option_label),
+    option_label = coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), provider_name_value, option_label),
     provider_id = p_provider_id,
     sales_accounting_concept_id = p_sales_accounting_concept_id,
     service_name = coalesce(concept_row.concept, service_name),
     cost = coalesce(p_purchase_amount, cost),
     purchase_amount = coalesce(p_purchase_amount, purchase_amount),
+    purchase_currency = normalized_purchase_currency,
+    purchase_exchange_rate_to_mxn = public.get_exchange_rate_to_mxn(normalized_purchase_currency, current_date),
+    purchase_amount_mxn = case
+      when coalesce(p_purchase_amount, current_purchase_amount) is null then null
+      else coalesce(p_purchase_amount, current_purchase_amount) * public.get_exchange_rate_to_mxn(normalized_purchase_currency, current_date)
+    end,
     sale_amount = coalesce(p_sale_amount, sale_amount),
+    sale_currency = normalized_sale_currency,
+    sale_exchange_rate_to_mxn = public.get_exchange_rate_to_mxn(normalized_sale_currency, current_date),
+    sale_amount_mxn = case
+      when coalesce(p_sale_amount, current_sale_amount) is null then null
+      else coalesce(p_sale_amount, current_sale_amount) * public.get_exchange_rate_to_mxn(normalized_sale_currency, current_date)
+    end,
     profit_amount = case
       when coalesce(p_sale_amount, current_sale_amount) is null
         or coalesce(p_purchase_amount, current_purchase_amount) is null then null
       else coalesce(p_sale_amount, current_sale_amount) - coalesce(p_purchase_amount, current_purchase_amount)
+    end,
+    profit_amount_mxn = case
+      when coalesce(p_sale_amount, current_sale_amount) is null
+        or coalesce(p_purchase_amount, current_purchase_amount) is null then null
+      else
+        (coalesce(p_sale_amount, current_sale_amount) * public.get_exchange_rate_to_mxn(normalized_sale_currency, current_date))
+        - (coalesce(p_purchase_amount, current_purchase_amount) * public.get_exchange_rate_to_mxn(normalized_purchase_currency, current_date))
     end,
     vat_rate = coalesce(p_vat_rate, concept_row.vat_rate, vat_rate),
     notes = nullif(btrim(coalesce(p_notes, '')), '')
@@ -2338,7 +2464,7 @@ security definer
 set search_path = public
 as $$
 declare
-  normalized_option_label text := coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), 'Opcion 1');
+  normalized_option_label text := coalesce(nullif(btrim(coalesce(p_option_label, '')), ''), 'Proveedor');
 begin
   if not exists (
     select 1
@@ -2367,15 +2493,41 @@ begin
   update quotation_costs qc
   set
     sale_amount = updates.sale_amount,
+    sale_currency = updates.sale_currency,
+    sale_exchange_rate_to_mxn = public.get_exchange_rate_to_mxn(updates.sale_currency, current_date),
+    sale_amount_mxn = case
+      when updates.sale_amount is null then null
+      else updates.sale_amount * public.get_exchange_rate_to_mxn(updates.sale_currency, current_date)
+    end,
     profit_amount = case
       when updates.sale_amount is null or qc.purchase_amount is null then null
       else updates.sale_amount - qc.purchase_amount
+    end,
+    profit_amount_mxn = case
+      when updates.sale_amount is null or qc.purchase_amount is null then null
+      else
+        (updates.sale_amount * public.get_exchange_rate_to_mxn(updates.sale_currency, current_date))
+        - coalesce(qc.purchase_amount_mxn, qc.purchase_amount * public.get_exchange_rate_to_mxn(qc.purchase_currency, current_date))
     end
   from (
     select
       key::uuid as line_id,
-      nullif(btrim(value), '')::numeric as sale_amount
-    from jsonb_each_text(p_sales_amounts)
+      case
+        when jsonb_typeof(value) = 'object' then nullif(btrim(value ->> 'sale_amount'), '')::numeric
+        else nullif(btrim(trim(both '"' from value::text)), '')::numeric
+      end as sale_amount,
+      coalesce(
+        case
+          when jsonb_typeof(value) = 'object' then public.normalize_currency_code(value ->> 'sale_currency')
+          else null
+        end,
+        qc_existing.sale_currency,
+        qc_existing.purchase_currency,
+        'MXN'
+      ) as sale_currency
+    from jsonb_each(p_sales_amounts)
+    join quotation_costs qc_existing
+      on qc_existing.id = key::uuid
   ) as updates
   where qc.id = updates.line_id
     and qc.quotation_id = p_quotation_id
@@ -3189,6 +3341,97 @@ security definer
 as $$
 begin
   delete from sales_accounting_concepts
+  where id = p_id;
+end;
+$$;
+
+
+-- =========================================
+-- 19.5 CREATE EXCHANGE RATE
+-- =========================================
+
+create or replace function create_exchange_rate(
+  p_rate_date date,
+  p_base_currency text,
+  p_rate_value numeric,
+  p_quote_currency text default 'MXN',
+  p_source text default 'BANXICO',
+  p_source_series_code text default null
+)
+returns uuid
+language plpgsql
+security definer
+as $$
+declare
+  new_record_id uuid;
+begin
+  insert into exchange_rates (
+    rate_date,
+    base_currency,
+    quote_currency,
+    rate_value,
+    source,
+    source_series_code
+  )
+  values (
+    p_rate_date,
+    public.normalize_currency_code(p_base_currency),
+    public.normalize_currency_code(coalesce(p_quote_currency, 'MXN')),
+    p_rate_value,
+    upper(nullif(btrim(coalesce(p_source, 'BANXICO')), '')),
+    nullif(upper(btrim(coalesce(p_source_series_code, ''))), '')
+  )
+  returning id into new_record_id;
+
+  return new_record_id;
+end;
+$$;
+
+
+-- =========================================
+-- 19.6 UPDATE EXCHANGE RATE
+-- =========================================
+
+create or replace function update_exchange_rate(
+  p_id uuid,
+  p_rate_date date,
+  p_base_currency text,
+  p_quote_currency text,
+  p_rate_value numeric,
+  p_source text,
+  p_source_series_code text default null
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update exchange_rates
+  set
+    rate_date = p_rate_date,
+    base_currency = public.normalize_currency_code(p_base_currency),
+    quote_currency = public.normalize_currency_code(coalesce(p_quote_currency, 'MXN')),
+    rate_value = p_rate_value,
+    source = upper(nullif(btrim(coalesce(p_source, 'BANXICO')), '')),
+    source_series_code = nullif(upper(btrim(coalesce(p_source_series_code, ''))), '')
+  where id = p_id;
+end;
+$$;
+
+
+-- =========================================
+-- 19.7 DELETE EXCHANGE RATE
+-- =========================================
+
+create or replace function delete_exchange_rate(
+  p_id uuid
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  delete from exchange_rates
   where id = p_id;
 end;
 $$;

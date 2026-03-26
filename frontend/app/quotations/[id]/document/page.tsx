@@ -1,13 +1,16 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import {
   getContactsByClientId,
+  getQuotationCargoLines,
   getQuotationById,
   getQuotationChargeLines,
   type Contact,
+  type QuotationCargoLine,
   type QuotationChargeLine,
   type QuotationSummary,
 } from "@/lib/db"
@@ -15,6 +18,7 @@ import {
 type DocumentState = {
   quotation: QuotationSummary
   chargeLines: QuotationChargeLine[]
+  cargoLines: QuotationCargoLine[]
   clientContacts: Contact[]
 }
 
@@ -60,8 +64,9 @@ export default function QuotationDocumentPage() {
           return
         }
 
-        const [chargeLines, clientContacts] = await Promise.all([
+        const [chargeLines, cargoLines, clientContacts] = await Promise.all([
           getQuotationChargeLines(id),
+          getQuotationCargoLines(id),
           getContactsByClientId(quotation.client_id),
         ])
 
@@ -72,6 +77,7 @@ export default function QuotationDocumentPage() {
         setDetails({
           quotation,
           chargeLines,
+          cargoLines,
           clientContacts,
         })
       } catch (error) {
@@ -125,7 +131,7 @@ export default function QuotationDocumentPage() {
     return <div className="p-8 text-sm text-[#6B7280]">No se encontro la cotizacion.</div>
   }
 
-  const { quotation, chargeLines, clientContacts } = details
+  const { quotation, chargeLines, cargoLines, clientContacts } = details
   const primaryContact = getPrimaryContact(clientContacts)
 
   return (
@@ -149,8 +155,16 @@ export default function QuotationDocumentPage() {
 
         <header className="flex flex-col gap-4 border-b border-[#E5E7EB] pb-6 md:flex-row md:items-start md:justify-between">
           <div>
+            <Image
+              src="/assets/logo-horizontal-dark-transparent.png"
+              alt="Priority Freight Intelligence"
+              width={520}
+              height={120}
+              className="h-auto w-full max-w-[18rem] object-contain"
+              priority
+            />
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#64748B]">
-              Priority Logistics ERP
+              Priority Freight Intelligence
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-[#111827]">Cotizacion comercial</h1>
             <div className="mt-2 text-sm text-[#475569]">
@@ -236,45 +250,80 @@ export default function QuotationDocumentPage() {
           </section>
 
           <section className="space-y-4 rounded-2xl border border-[#E5E7EB] p-5">
-            <h2 className="text-lg font-semibold text-[#111827]">Carga</h2>
+            <h2 className="text-lg font-semibold text-[#111827]">Vigencias comerciales</h2>
             <div className="grid gap-4">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Commodities
+                  Validez de compra
                 </div>
                 <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.commodities || "No disponible"}
+                  {quotation.purchase_valid_until || "No disponible"}
                 </div>
               </div>
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Cantidad
+                  Validez de venta
                 </div>
                 <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.quantity != null ? quotation.quantity : "No disponible"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Peso
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.weight != null ? `${quotation.weight} kg` : "No disponible"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Validez de tarifa
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  Compra: {quotation.purchase_valid_until || "No disponible"}
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  Venta: {quotation.sales_valid_until || "No disponible"}
+                  {quotation.sales_valid_until || "No disponible"}
                 </div>
               </div>
             </div>
           </section>
+        </section>
+
+        <section className="rounded-2xl border border-[#E5E7EB] p-5">
+          <h2 className="text-lg font-semibold text-[#111827]">Informacion de carga</h2>
+          <div className="mt-5 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+            <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
+              <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                <tr>
+                  <th className="px-4 py-3">Tipo</th>
+                  <th className="px-4 py-3">Cantidad</th>
+                  <th className="px-4 py-3">Dimensiones</th>
+                  <th className="px-4 py-3">Peso</th>
+                  <th className="px-4 py-3">Commodities</th>
+                  <th className="px-4 py-3">CBM</th>
+                  <th className="px-4 py-3">KG / VOL</th>
+                  <th className="px-4 py-3">Clase</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                {cargoLines.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-6 text-center text-[#6B7280]">
+                      No hay detalles de carga capturados todavia.
+                    </td>
+                  </tr>
+                ) : (
+                  cargoLines.map((line) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-3 text-[#475569]">{line.load_type}</td>
+                      <td className="px-4 py-3 text-[#475569]">{line.piece_count ?? "—"}</td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {[line.width, line.length, line.height].every((value) => value != null)
+                          ? `${line.width} x ${line.length} x ${line.height} cm`
+                          : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.weight != null ? `${line.weight} kg` : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">{line.commodities || "No disponible"}</td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.cbm != null ? line.cbm.toFixed(3) : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.volumetric_weight_kg != null
+                          ? line.volumetric_weight_kg.toFixed(2)
+                          : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">{line.freight_class || "No disponible"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-[#E5E7EB] p-5">

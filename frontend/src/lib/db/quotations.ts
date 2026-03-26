@@ -43,10 +43,6 @@ function mapQuotation(row: Record<string, unknown>): Quotation {
     destination_unlocode_id: (row.destination_unlocode_id as string | null | undefined) ?? null,
     pickup_address: (row.pickup_address as string | null | undefined) ?? null,
     delivery_address: (row.delivery_address as string | null | undefined) ?? null,
-    commodities: (row.commodities as string | null | undefined) ?? null,
-    quantity: (row.quantity as number | null | undefined) ?? null,
-    weight: (row.weight as number | null | undefined) ?? null,
-    volume: (row.volume as number | null | undefined) ?? null,
     required_quote_date: (row.required_quote_date as string | null | undefined) ?? null,
     purchase_valid_until: (row.purchase_valid_until as string | null | undefined) ?? null,
     sales_valid_until: (row.sales_valid_until as string | null | undefined) ?? null,
@@ -86,7 +82,7 @@ function mapQuotationChargeLine(row: Record<string, unknown>): QuotationChargeLi
   return {
     id: String(row.id),
     quotation_id: String(row.quotation_id),
-    option_label: String(row.option_label ?? "Opcion 1"),
+    option_label: String(row.option_label ?? row.provider_name ?? "Proveedor"),
     provider_id: (row.provider_id as string | null | undefined) ?? null,
     provider_name: (row.provider_name as string | null | undefined) ?? null,
     sales_accounting_concept_id:
@@ -95,15 +91,19 @@ function mapQuotationChargeLine(row: Record<string, unknown>): QuotationChargeLi
     service_name: String(row.service_name ?? ""),
     cost: (row.cost as number | null | undefined) ?? null,
     purchase_amount: (row.purchase_amount as number | null | undefined) ?? null,
+    purchase_currency: String(row.purchase_currency ?? "USD"),
+    purchase_amount_mxn: (row.purchase_amount_mxn as number | null | undefined) ?? null,
     sale_amount: (row.sale_amount as number | null | undefined) ?? null,
+    sale_currency: String(row.sale_currency ?? "USD"),
+    sale_amount_mxn: (row.sale_amount_mxn as number | null | undefined) ?? null,
     profit_amount: (row.profit_amount as number | null | undefined) ?? null,
+    profit_amount_mxn: (row.profit_amount_mxn as number | null | undefined) ?? null,
     can_view_cost: Boolean(row.can_view_cost),
     can_edit_purchase_amount: Boolean(row.can_edit_purchase_amount),
     can_view_sale_price: Boolean(row.can_view_sale_price),
     can_edit_sale_price: Boolean(row.can_edit_sale_price),
     can_view_expected_profit: Boolean(row.can_view_expected_profit),
     vat_rate: Number(row.vat_rate ?? 0),
-    currency: String(row.currency ?? "USD"),
     notes: (row.notes as string | null | undefined) ?? null,
     created_at: String(row.created_at ?? new Date(0).toISOString()),
   }
@@ -228,13 +228,9 @@ export async function createQuotation(payload: NewQuotation): Promise<string> {
     p_opportunity_id: payload.opportunity_id,
     p_pickup_address: payload.pickup_address ?? null,
     p_delivery_address: payload.delivery_address ?? null,
-    p_commodities: payload.commodities ?? null,
     p_required_quote_date: payload.required_quote_date ?? null,
     p_purchase_valid_until: payload.purchase_valid_until ?? null,
     p_sales_valid_until: payload.sales_valid_until ?? null,
-    p_quantity: payload.quantity ?? null,
-    p_weight: payload.weight ?? null,
-    p_volume: payload.volume ?? null,
   } as never)
 
   if (error || !data) {
@@ -250,10 +246,6 @@ export async function updateQuotation(id: string, payload: UpdateQuotation): Pro
     .update({
       pickup_address: payload.pickup_address ?? null,
       delivery_address: payload.delivery_address ?? null,
-      commodities: payload.commodities ?? null,
-      quantity: payload.quantity ?? null,
-      weight: payload.weight ?? null,
-      volume: payload.volume ?? null,
       required_quote_date: payload.required_quote_date ?? null,
       purchase_valid_until: payload.purchase_valid_until ?? null,
       sales_valid_until: payload.sales_valid_until ?? null,
@@ -318,11 +310,13 @@ export async function createQuotationChargeLine(
 ): Promise<string> {
   const { data, error } = await supabase.rpc("create_quotation_cost_line", {
     p_quotation_id: payload.quotation_id,
-    p_option_label: payload.option_label ?? "Opcion 1",
+    p_option_label: payload.option_label ?? "Proveedor",
     p_provider_id: payload.provider_id ?? null,
     p_sales_accounting_concept_id: payload.sales_accounting_concept_id ?? null,
     p_purchase_amount: payload.purchase_amount ?? null,
+    p_purchase_currency: payload.purchase_currency ?? "USD",
     p_sale_amount: payload.sale_amount ?? null,
+    p_sale_currency: payload.sale_currency ?? payload.purchase_currency ?? "USD",
     p_vat_rate: payload.vat_rate ?? null,
     p_notes: payload.notes ?? null,
   } as never)
@@ -340,11 +334,13 @@ export async function updateQuotationChargeLine(
 ): Promise<void> {
   const { error } = await supabase.rpc("update_quotation_cost_line", {
     p_id: id,
-    p_option_label: payload.option_label ?? "Opcion 1",
+    p_option_label: payload.option_label ?? "Proveedor",
     p_provider_id: payload.provider_id ?? null,
     p_sales_accounting_concept_id: payload.sales_accounting_concept_id ?? null,
     p_purchase_amount: payload.purchase_amount ?? null,
+    p_purchase_currency: payload.purchase_currency ?? null,
     p_sale_amount: payload.sale_amount ?? null,
+    p_sale_currency: payload.sale_currency ?? null,
     p_vat_rate: payload.vat_rate ?? null,
     p_notes: payload.notes ?? null,
   } as never)
@@ -357,16 +353,18 @@ export async function updateQuotationChargeLine(
 export async function updateQuotationOptionSalesAmounts(
   quotationId: string,
   optionLabel: string,
-  salesAmounts: Record<string, string | null | undefined>
+  salesAmounts: Record<
+    string,
+    {
+      sale_amount?: string | null
+      sale_currency?: string | null
+    }
+  >
 ): Promise<void> {
-  const payload = Object.fromEntries(
-    Object.entries(salesAmounts).map(([lineId, value]) => [lineId, value ?? ""])
-  )
-
   const { error } = await supabase.rpc("update_quotation_option_sales_amounts", {
     p_quotation_id: quotationId,
     p_option_label: optionLabel,
-    p_sales_amounts: payload,
+    p_sales_amounts: salesAmounts,
   } as never)
 
   if (error) {

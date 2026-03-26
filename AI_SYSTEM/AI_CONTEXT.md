@@ -52,6 +52,7 @@ Implemented in the live frontend:
 - master data
 - UN/LOCODE lookup
 - master data / sales / quotation rejection reasons
+- master data / accounting / exchange rates
 
 Planned in the canonical database but not implemented as frontend modules yet:
 
@@ -129,6 +130,7 @@ Current live route files:
 - frontend/app/master-data/sales/service-types/page.tsx
 - frontend/app/master-data/sales/accounting-concepts/page.tsx
 - frontend/app/master-data/sales/quotation-rejection-reasons/page.tsx
+- frontend/app/master-data/accounting/exchange-rates/page.tsx
 - frontend/app/master-data/unlocode/page.tsx
 
 Current shared layout components:
@@ -142,8 +144,8 @@ Current shared layout components:
 
 Current brand assets:
 
-- frontend/public/brand/priority-mark.svg
-- frontend/public/brand/priority-wordmark.svg
+- root source of truth: ASSETS/
+- runtime asset copies: frontend/public/assets/
 
 Current database modules:
 
@@ -154,6 +156,16 @@ Current database modules:
 - frontend/src/lib/db/masterData.ts
 - frontend/src/lib/db/users.ts
 - frontend/src/lib/db/permissions.ts
+
+
+--------------------------------------------------
+CURRENT QUOTATION NORMALIZATION
+--------------------------------------------------
+
+- quotation header records no longer store redundant load-summary fields such as quotation-level commodities, quantity, weight, or volume
+- all service types must use quotation_cargo_lines as the canonical load-detail structure
+- provider purchase capture and CRM sale capture may use MXN, USD, or EUR
+- accounting totals and profit must be normalized to MXN using the latest available exchange rate dated on or before the previous day
 
 
 --------------------------------------------------

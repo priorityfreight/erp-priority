@@ -13,11 +13,11 @@ export function Brand({ compact = false }: BrandProps) {
     return (
       <div className="flex items-center justify-center">
         <Image
-          src="/brand/priority-mark.svg"
+          src="/assets/logo-app-transparent.png"
           alt="Priority Freight Intelligence"
-          width={48}
-          height={48}
-          className="h-12 w-12"
+          width={56}
+          height={56}
+          className="h-12 w-12 object-contain"
           priority
         />
       </div>
@@ -27,11 +27,11 @@ export function Brand({ compact = false }: BrandProps) {
   return (
     <div className="flex items-center">
       <Image
-        src="/brand/priority-wordmark.svg"
+        src="/assets/logo-horizontal-transparent.png"
         alt="Priority Freight Intelligence"
-        width={420}
-        height={110}
-        className="h-auto w-full max-w-[15.5rem]"
+        width={700}
+        height={180}
+        className="h-auto w-full max-w-[15.75rem] object-contain"
         priority
       />
     </div>

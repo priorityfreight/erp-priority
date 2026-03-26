@@ -5,10 +5,6 @@ import type { ReactNode } from "react"
 export type QuotationFormValues = {
   pickupAddress: string
   deliveryAddress: string
-  commodities: string
-  quantity: string
-  weight: string
-  volume: string
   requiredQuoteDate: string
   purchaseValidUntil: string
   salesValidUntil: string
@@ -103,10 +99,7 @@ export function QuotationForm({
         </div>
       </FormSection>
 
-      <FormSection
-        title="Detalles de carga"
-        description="Completa pickup, entrega y las referencias base de la carga."
-      >
+      <FormSection title="Ruta" description="Captura unicamente las direcciones operativas de recoleccion y entrega.">
         <div className="grid gap-3 md:grid-cols-2">
           <textarea
             className="min-h-[120px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
@@ -120,37 +113,6 @@ export function QuotationForm({
             value={values.deliveryAddress}
             onChange={(event) => onChange("deliveryAddress", event.target.value)}
             placeholder="Direccion completa de entrega"
-            disabled={disabled}
-          />
-          <textarea
-            className="md:col-span-2 min-h-[100px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.commodities}
-            onChange={(event) => onChange("commodities", event.target.value)}
-            placeholder="Commodities"
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.quantity}
-            onChange={(event) => onChange("quantity", event.target.value)}
-            placeholder="Cantidad"
-            inputMode="numeric"
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.weight}
-            onChange={(event) => onChange("weight", event.target.value)}
-            placeholder="Peso de carga"
-            inputMode="decimal"
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.volume}
-            onChange={(event) => onChange("volume", event.target.value)}
-            placeholder="Volumen"
-            inputMode="decimal"
             disabled={disabled}
           />
         </div>

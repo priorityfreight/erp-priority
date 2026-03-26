@@ -302,10 +302,6 @@ export type Quotation = {
   destination_unlocode_id?: string | null
   pickup_address: string | null
   delivery_address: string | null
-  commodities: string | null
-  quantity: number | null
-  weight: number | null
-  volume: number | null
   required_quote_date: string | null
   purchase_valid_until: string | null
   sales_valid_until: string | null
@@ -348,15 +344,19 @@ export type QuotationChargeLine = {
   service_name: string
   cost: number | null
   purchase_amount: number | null
+  purchase_currency: string
+  purchase_amount_mxn?: number | null
   sale_amount: number | null
+  sale_currency: string
+  sale_amount_mxn?: number | null
   profit_amount: number | null
+  profit_amount_mxn?: number | null
   can_view_cost?: boolean
   can_edit_purchase_amount?: boolean
   can_view_sale_price?: boolean
   can_edit_sale_price?: boolean
   can_view_expected_profit?: boolean
   vat_rate: number
-  currency: string
   notes: string | null
   created_at: string
 }
@@ -535,6 +535,18 @@ export type SalesAccountingConcept = {
   updated_at: string | null
 }
 
+export type ExchangeRate = {
+  id: string
+  rate_date: string
+  base_currency: string
+  quote_currency: string
+  rate_value: number
+  source: string
+  source_series_code: string | null
+  created_at: string
+  updated_at: string | null
+}
+
 export type ClientFullPayload = {
   client: Client
   contacts: Contact[]
@@ -588,10 +600,6 @@ export type NewQuotation = {
   opportunity_id: string
   pickup_address?: string | null
   delivery_address?: string | null
-  commodities?: string | null
-  quantity?: number | null
-  weight?: number | null
-  volume?: number | null
   required_quote_date?: string | null
   purchase_valid_until?: string | null
   sales_valid_until?: string | null
@@ -601,10 +609,6 @@ export type UpdateQuotation = Partial<
     Quotation,
     | "pickup_address"
     | "delivery_address"
-    | "commodities"
-    | "quantity"
-    | "weight"
-    | "volume"
     | "required_quote_date"
     | "purchase_valid_until"
     | "sales_valid_until"
@@ -622,7 +626,9 @@ export type NewQuotationChargeLine = Pick<QuotationChargeLine, "quotation_id"> &
       | "provider_id"
       | "sales_accounting_concept_id"
       | "purchase_amount"
+      | "purchase_currency"
       | "sale_amount"
+      | "sale_currency"
       | "vat_rate"
       | "notes"
     >
@@ -634,7 +640,9 @@ export type UpdateQuotationChargeLine = Partial<
     | "provider_id"
     | "sales_accounting_concept_id"
     | "purchase_amount"
+    | "purchase_currency"
     | "sale_amount"
+    | "sale_currency"
     | "vat_rate"
     | "notes"
   >
@@ -716,3 +724,8 @@ export type NewSalesAccountingConcept = Pick<
 export type UpdateSalesAccountingConcept = NewSalesAccountingConcept
 export type NewQuotationRejectionReason = Pick<QuotationRejectionReason, "reason">
 export type UpdateQuotationRejectionReason = NewQuotationRejectionReason
+export type NewExchangeRate = Pick<
+  ExchangeRate,
+  "rate_date" | "base_currency" | "quote_currency" | "rate_value" | "source" | "source_series_code"
+>
+export type UpdateExchangeRate = Partial<NewExchangeRate>

@@ -176,13 +176,6 @@ export type Database = {
             foreignKeyName: "client_invoices_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "client_invoices_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -191,13 +184,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "client_invoices_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -329,13 +315,6 @@ export type Database = {
             foreignKeyName: "client_logistics_parties_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "client_logistics_parties_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -344,13 +323,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "client_logistics_parties_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -614,13 +586,6 @@ export type Database = {
             foreignKeyName: "contacts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "contacts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -629,13 +594,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "contacts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -677,13 +635,6 @@ export type Database = {
             foreignKeyName: "fk_contacts_client"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "fk_contacts_client"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -698,17 +649,46 @@ export type Database = {
             foreignKeyName: "fk_contacts_client"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "fk_contacts_client"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "quotation_summary_view"
             referencedColumns: ["client_id"]
           },
         ]
+      }
+      exchange_rates: {
+        Row: {
+          base_currency: string
+          created_at: string
+          id: string
+          quote_currency: string
+          rate_date: string
+          rate_value: number
+          source: string
+          source_series_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_currency: string
+          created_at?: string
+          id?: string
+          quote_currency?: string
+          rate_date: string
+          rate_value: number
+          source?: string
+          source_series_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          id?: string
+          quote_currency?: string
+          rate_date?: string
+          rate_value?: number
+          source?: string
+          source_series_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       external_data_sources: {
         Row: {
@@ -894,13 +874,6 @@ export type Database = {
             foreignKeyName: "fk_opportunities_client"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "fk_opportunities_client"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -909,13 +882,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "fk_opportunities_client"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -957,13 +923,6 @@ export type Database = {
             foreignKeyName: "opportunities_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "opportunities_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -972,13 +931,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "opportunities_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -1717,20 +1669,6 @@ export type Database = {
             foreignKeyName: "quotation_cargo_lines_quotation_id_fkey"
             columns: ["quotation_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotation_cargo_lines_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotation_cargo_lines_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
             referencedRelation: "quotation_summary_view"
             referencedColumns: ["id"]
           },
@@ -1747,15 +1685,21 @@ export type Database = {
         Row: {
           cost: number
           created_at: string
-          currency: string
           id: string
           notes: string | null
           option_label: string
           profit_amount: number | null
+          profit_amount_mxn: number | null
           provider_id: string | null
           purchase_amount: number | null
+          purchase_amount_mxn: number | null
+          purchase_currency: string
+          purchase_exchange_rate_to_mxn: number | null
           quotation_id: string
           sale_amount: number | null
+          sale_amount_mxn: number | null
+          sale_currency: string
+          sale_exchange_rate_to_mxn: number | null
           sales_accounting_concept_id: string | null
           service_name: string
           vat_rate: number
@@ -1763,15 +1707,21 @@ export type Database = {
         Insert: {
           cost: number
           created_at?: string
-          currency?: string
           id?: string
           notes?: string | null
           option_label?: string
           profit_amount?: number | null
+          profit_amount_mxn?: number | null
           provider_id?: string | null
           purchase_amount?: number | null
+          purchase_amount_mxn?: number | null
+          purchase_currency?: string
+          purchase_exchange_rate_to_mxn?: number | null
           quotation_id: string
           sale_amount?: number | null
+          sale_amount_mxn?: number | null
+          sale_currency?: string
+          sale_exchange_rate_to_mxn?: number | null
           sales_accounting_concept_id?: string | null
           service_name: string
           vat_rate?: number
@@ -1779,15 +1729,21 @@ export type Database = {
         Update: {
           cost?: number
           created_at?: string
-          currency?: string
           id?: string
           notes?: string | null
           option_label?: string
           profit_amount?: number | null
+          profit_amount_mxn?: number | null
           provider_id?: string | null
           purchase_amount?: number | null
+          purchase_amount_mxn?: number | null
+          purchase_currency?: string
+          purchase_exchange_rate_to_mxn?: number | null
           quotation_id?: string
           sale_amount?: number | null
+          sale_amount_mxn?: number | null
+          sale_currency?: string
+          sale_exchange_rate_to_mxn?: number | null
           sales_accounting_concept_id?: string | null
           service_name?: string
           vat_rate?: number
@@ -1805,20 +1761,6 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotation_costs_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotation_costs_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["id"]
           },
           {
@@ -1899,9 +1841,7 @@ export type Database = {
       quotations: {
         Row: {
           cancellation_notes: string | null
-          cargo_type: string | null
           client_id: string
-          commodities: string | null
           created_at: string | null
           created_by: string | null
           currency: string
@@ -1922,7 +1862,6 @@ export type Database = {
           pickup_address: string | null
           pricing_owner_id: string | null
           purchase_valid_until: string | null
-          quantity: number | null
           reference_number: string | null
           rejection_notes: string | null
           rejection_reason_id: string | null
@@ -1935,14 +1874,10 @@ export type Database = {
           transport_type: string | null
           updated_at: string | null
           valid_until: string | null
-          volume: number | null
-          weight: number | null
         }
         Insert: {
           cancellation_notes?: string | null
-          cargo_type?: string | null
           client_id: string
-          commodities?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string
@@ -1963,7 +1898,6 @@ export type Database = {
           pickup_address?: string | null
           pricing_owner_id?: string | null
           purchase_valid_until?: string | null
-          quantity?: number | null
           reference_number?: string | null
           rejection_notes?: string | null
           rejection_reason_id?: string | null
@@ -1976,14 +1910,10 @@ export type Database = {
           transport_type?: string | null
           updated_at?: string | null
           valid_until?: string | null
-          volume?: number | null
-          weight?: number | null
         }
         Update: {
           cancellation_notes?: string | null
-          cargo_type?: string | null
           client_id?: string
-          commodities?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string
@@ -2004,7 +1934,6 @@ export type Database = {
           pickup_address?: string | null
           pricing_owner_id?: string | null
           purchase_valid_until?: string | null
-          quantity?: number | null
           reference_number?: string | null
           rejection_notes?: string | null
           rejection_reason_id?: string | null
@@ -2017,8 +1946,6 @@ export type Database = {
           transport_type?: string | null
           updated_at?: string | null
           valid_until?: string | null
-          volume?: number | null
-          weight?: number | null
         }
         Relationships: [
           {
@@ -2053,13 +1980,6 @@ export type Database = {
             foreignKeyName: "quotations_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "quotations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -2068,13 +1988,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "quotations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -2116,13 +2029,6 @@ export type Database = {
             foreignKeyName: "quotations_opportunity_id_fkey"
             columns: ["opportunity_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["opportunity_id"]
-          },
-          {
-            foreignKeyName: "quotations_opportunity_id_fkey"
-            columns: ["opportunity_id"]
-            isOneToOne: false
             referencedRelation: "open_opportunities_view"
             referencedColumns: ["id"]
           },
@@ -2132,13 +2038,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "opportunities"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_opportunity_id_fkey"
-            columns: ["opportunity_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
-            referencedColumns: ["opportunity_id"]
           },
           {
             foreignKeyName: "quotations_opportunity_id_fkey"
@@ -2632,13 +2531,6 @@ export type Database = {
             foreignKeyName: "shipments_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "shipments_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -2653,29 +2545,8 @@ export type Database = {
             foreignKeyName: "shipments_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "shipments_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "quotation_summary_view"
             referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "shipments_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shipments_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "shipments_quotation_id_fkey"
@@ -2914,13 +2785,6 @@ export type Database = {
             foreignKeyName: "contacts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "contacts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -2929,13 +2793,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "contacts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -2977,13 +2834,6 @@ export type Database = {
             foreignKeyName: "fk_contacts_client"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "fk_contacts_client"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "delivered_shipments_view"
             referencedColumns: ["client_id"]
           },
@@ -2992,13 +2842,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "open_opportunities_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "fk_contacts_client"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["client_id"]
           },
           {
@@ -3048,102 +2891,6 @@ export type Database = {
         }
         Relationships: []
       }
-      crm_quotations_view: {
-        Row: {
-          can_edit_purchase_amount: boolean | null
-          can_edit_sale_price: boolean | null
-          can_view_cost: boolean | null
-          can_view_expected_profit: boolean | null
-          can_view_sale_price: boolean | null
-          cancellation_notes: string | null
-          client_id: string | null
-          client_name: string | null
-          commodities: string | null
-          created_at: string | null
-          created_by: string | null
-          created_by_name: string | null
-          currency: string | null
-          delivery_address: string | null
-          destination: string | null
-          destination_unlocode: string | null
-          estimated_cost: number | null
-          estimated_price: number | null
-          expected_profit: number | null
-          id: string | null
-          incoterm_code: string | null
-          incoterm_id: string | null
-          operation_type: string | null
-          opportunity_id: string | null
-          opportunity_title: string | null
-          origin: string | null
-          origin_unlocode: string | null
-          pickup_address: string | null
-          pricing_owner_id: string | null
-          pricing_owner_name: string | null
-          purchase_valid_until: string | null
-          quantity: number | null
-          reference_number: string | null
-          rejection_notes: string | null
-          rejection_reason: string | null
-          rejection_reason_id: string | null
-          required_quote_date: string | null
-          sales_valid_until: string | null
-          salesperson_id: string | null
-          salesperson_name: string | null
-          service_type: string | null
-          status: string | null
-          target_rate: number | null
-          total_charge_lines: number | null
-          transport_type: string | null
-          updated_at: string | null
-          volume: number | null
-          weight: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "opportunities_salesperson_id_fkey"
-            columns: ["salesperson_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_incoterm_id_fkey"
-            columns: ["incoterm_id"]
-            isOneToOne: false
-            referencedRelation: "incoterms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_pricing_owner_id_fkey"
-            columns: ["pricing_owner_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_rejection_reason_id_fkey"
-            columns: ["rejection_reason_id"]
-            isOneToOne: false
-            referencedRelation: "quotation_rejection_reason_lookup_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_rejection_reason_id_fkey"
-            columns: ["rejection_reason_id"]
-            isOneToOne: false
-            referencedRelation: "quotation_rejection_reasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       delivered_shipments_view: {
         Row: {
           arrival_date: string | null
@@ -3158,6 +2905,42 @@ export type Database = {
           quotation_reference: string | null
           shipment_reference: string | null
           status: string | null
+        }
+        Relationships: []
+      }
+      exchange_rate_lookup_view: {
+        Row: {
+          base_currency: string | null
+          created_at: string | null
+          id: string | null
+          quote_currency: string | null
+          rate_date: string | null
+          rate_value: number | null
+          source: string | null
+          source_series_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_currency?: string | null
+          created_at?: string | null
+          id?: string | null
+          quote_currency?: string | null
+          rate_date?: string | null
+          rate_value?: number | null
+          source?: string | null
+          source_series_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_currency?: string | null
+          created_at?: string | null
+          id?: string | null
+          quote_currency?: string | null
+          rate_date?: string | null
+          rate_value?: number | null
+          source?: string | null
+          source_series_code?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3313,102 +3096,6 @@ export type Database = {
         }
         Relationships: []
       }
-      pricing_quotations_view: {
-        Row: {
-          can_edit_purchase_amount: boolean | null
-          can_edit_sale_price: boolean | null
-          can_view_cost: boolean | null
-          can_view_expected_profit: boolean | null
-          can_view_sale_price: boolean | null
-          cancellation_notes: string | null
-          client_id: string | null
-          client_name: string | null
-          commodities: string | null
-          created_at: string | null
-          created_by: string | null
-          created_by_name: string | null
-          currency: string | null
-          delivery_address: string | null
-          destination: string | null
-          destination_unlocode: string | null
-          estimated_cost: number | null
-          estimated_price: number | null
-          expected_profit: number | null
-          id: string | null
-          incoterm_code: string | null
-          incoterm_id: string | null
-          operation_type: string | null
-          opportunity_id: string | null
-          opportunity_title: string | null
-          origin: string | null
-          origin_unlocode: string | null
-          pickup_address: string | null
-          pricing_owner_id: string | null
-          pricing_owner_name: string | null
-          purchase_valid_until: string | null
-          quantity: number | null
-          reference_number: string | null
-          rejection_notes: string | null
-          rejection_reason: string | null
-          rejection_reason_id: string | null
-          required_quote_date: string | null
-          sales_valid_until: string | null
-          salesperson_id: string | null
-          salesperson_name: string | null
-          service_type: string | null
-          status: string | null
-          target_rate: number | null
-          total_charge_lines: number | null
-          transport_type: string | null
-          updated_at: string | null
-          volume: number | null
-          weight: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "opportunities_salesperson_id_fkey"
-            columns: ["salesperson_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_incoterm_id_fkey"
-            columns: ["incoterm_id"]
-            isOneToOne: false
-            referencedRelation: "incoterms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_pricing_owner_id_fkey"
-            columns: ["pricing_owner_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_rejection_reason_id_fkey"
-            columns: ["rejection_reason_id"]
-            isOneToOne: false
-            referencedRelation: "quotation_rejection_reason_lookup_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotations_rejection_reason_id_fkey"
-            columns: ["rejection_reason_id"]
-            isOneToOne: false
-            referencedRelation: "quotation_rejection_reasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       provider_contacts_view: {
         Row: {
           created_at: string | null
@@ -3509,16 +3196,20 @@ export type Database = {
           can_view_sale_price: boolean | null
           cost: number | null
           created_at: string | null
-          currency: string | null
           id: string | null
           notes: string | null
           option_label: string | null
           profit_amount: number | null
+          profit_amount_mxn: number | null
           provider_id: string | null
           provider_name: string | null
           purchase_amount: number | null
+          purchase_amount_mxn: number | null
+          purchase_currency: string | null
           quotation_id: string | null
           sale_amount: number | null
+          sale_amount_mxn: number | null
+          sale_currency: string | null
           sales_accounting_concept_id: string | null
           service_name: string | null
           vat_rate: number | null
@@ -3536,20 +3227,6 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotation_costs_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "crm_quotations_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotation_costs_quotation_id_fkey"
-            columns: ["quotation_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_quotations_view"
             referencedColumns: ["id"]
           },
           {
@@ -3613,7 +3290,6 @@ export type Database = {
           cancellation_notes: string | null
           client_id: string | null
           client_name: string | null
-          commodities: string | null
           created_at: string | null
           created_by: string | null
           created_by_name: string | null
@@ -3636,7 +3312,6 @@ export type Database = {
           pricing_owner_id: string | null
           pricing_owner_name: string | null
           purchase_valid_until: string | null
-          quantity: number | null
           reference_number: string | null
           rejection_notes: string | null
           rejection_reason: string | null
@@ -3651,8 +3326,6 @@ export type Database = {
           total_charge_lines: number | null
           transport_type: string | null
           updated_at: string | null
-          volume: number | null
-          weight: number | null
         }
         Relationships: [
           {
@@ -4015,6 +3688,17 @@ export type Database = {
         }
         Returns: string
       }
+      create_exchange_rate: {
+        Args: {
+          p_base_currency: string
+          p_quote_currency?: string
+          p_rate_date: string
+          p_rate_value: number
+          p_source?: string
+          p_source_series_code?: string
+        }
+        Returns: string
+      }
       create_opportunity:
         | {
             Args: {
@@ -4128,6 +3812,21 @@ export type Database = {
         | {
             Args: {
               p_notes?: string
+              p_option_label?: string
+              p_provider_id?: string
+              p_purchase_amount?: number
+              p_purchase_currency?: string
+              p_quotation_id: string
+              p_sale_amount?: number
+              p_sale_currency?: string
+              p_sales_accounting_concept_id?: string
+              p_vat_rate?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_notes?: string
               p_provider_id?: string
               p_purchase_amount?: number
               p_quotation_id: string
@@ -4137,22 +3836,35 @@ export type Database = {
             }
             Returns: string
           }
-      create_quotation_from_opportunity: {
-        Args: {
-          p_commodities?: string
-          p_created_by?: string
-          p_delivery_address?: string
-          p_opportunity_id: string
-          p_pickup_address?: string
-          p_purchase_valid_until?: string
-          p_quantity?: number
-          p_required_quote_date?: string
-          p_sales_valid_until?: string
-          p_volume?: number
-          p_weight?: number
-        }
-        Returns: string
-      }
+      create_quotation_from_opportunity:
+        | {
+            Args: {
+              p_commodities?: string
+              p_created_by?: string
+              p_delivery_address?: string
+              p_opportunity_id: string
+              p_pickup_address?: string
+              p_purchase_valid_until?: string
+              p_quantity?: number
+              p_required_quote_date?: string
+              p_sales_valid_until?: string
+              p_volume?: number
+              p_weight?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_created_by?: string
+              p_delivery_address?: string
+              p_opportunity_id: string
+              p_pickup_address?: string
+              p_purchase_valid_until?: string
+              p_required_quote_date?: string
+              p_sales_valid_until?: string
+            }
+            Returns: string
+          }
       create_quotation_rejection_reason: {
         Args: { p_reason: string }
         Returns: string
@@ -4176,6 +3888,7 @@ export type Database = {
         Args: { p_party_id: string }
         Returns: undefined
       }
+      delete_exchange_rate: { Args: { p_id: string }; Returns: undefined }
       delete_quotation_cargo_line: {
         Args: { p_id: string }
         Returns: undefined
@@ -4317,6 +4030,10 @@ export type Database = {
           submodule_sort_order: number
         }[]
       }
+      get_exchange_rate_to_mxn: {
+        Args: { p_currency: string; p_reference_date?: string }
+        Returns: number
+      }
       get_provider_full: { Args: { p_provider_id: string }; Returns: Json }
       link_current_auth_user: { Args: never; Returns: string }
       mark_shipment_delivered: {
@@ -4327,6 +4044,7 @@ export type Database = {
         Args: { p_service_type: string }
         Returns: string
       }
+      normalize_currency_code: { Args: { p_currency: string }; Returns: string }
       recalculate_quotation_totals: {
         Args: { p_quotation_id: string }
         Returns: undefined
@@ -4427,7 +4145,6 @@ export type Database = {
           cancellation_notes: string
           client_id: string
           client_name: string
-          commodities: string
           created_at: string
           created_by: string
           created_by_name: string
@@ -4452,7 +4169,6 @@ export type Database = {
           pricing_owner_id: string
           pricing_owner_name: string
           purchase_valid_until: string
-          quantity: number
           reference_number: string
           rejection_notes: string
           rejection_reason: string
@@ -4468,8 +4184,6 @@ export type Database = {
           total_count: number
           transport_type: string
           updated_at: string
-          volume: number
-          weight: number
         }[]
       }
       search_unlocodes: {
@@ -4524,6 +4238,18 @@ export type Database = {
         }
         Returns: string
       }
+      update_exchange_rate: {
+        Args: {
+          p_base_currency: string
+          p_id: string
+          p_quote_currency: string
+          p_rate_date: string
+          p_rate_value: number
+          p_source: string
+          p_source_series_code?: string
+        }
+        Returns: undefined
+      }
       update_opportunity_status: {
         Args: { p_opportunity_id: string; p_status: string }
         Returns: undefined
@@ -4571,6 +4297,21 @@ export type Database = {
               p_provider_id?: string
               p_purchase_amount?: number
               p_sale_amount?: number
+              p_sales_accounting_concept_id?: string
+              p_vat_rate?: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_id: string
+              p_notes?: string
+              p_option_label?: string
+              p_provider_id?: string
+              p_purchase_amount?: number
+              p_purchase_currency?: string
+              p_sale_amount?: number
+              p_sale_currency?: string
               p_sales_accounting_concept_id?: string
               p_vat_rate?: number
             }

@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "Priority Freight Intelligence ERP",
   description: "Corporate ERP for freight intelligence, CRM, pricing, quotations and operations.",
   icons: {
-    icon: "/brand/priority-mark.svg",
-    shortcut: "/brand/priority-mark.svg",
-    apple: "/brand/priority-mark.svg",
+    icon: "/assets/favicon-transparent.png",
+    shortcut: "/assets/favicon-transparent.png",
+    apple: "/assets/favicon-transparent.png",
   },
 }
 

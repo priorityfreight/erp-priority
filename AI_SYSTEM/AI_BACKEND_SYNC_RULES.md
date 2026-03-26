@@ -58,6 +58,12 @@ When applying a backend change:
 6. update AI_SYSTEM files in the same turn
 7. run validation before treating the change as stable
 
+When a change affects branding or shared visual identity:
+
+1. keep the repository-level ASSETS/ folder as the design source of truth
+2. copy only the runtime-ready assets required by Next.js into frontend/public/assets/
+3. update all frontend logo consumers to read from frontend/public/assets/
+
 
 --------------------------------------------------
 SYNC PROCESS FOR FRONTEND QUERY CHANGES
