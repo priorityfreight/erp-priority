@@ -76,6 +76,7 @@ update_quotation_status()
 create_quotation_cost_line()
 update_quotation_cost_line()
 update_quotation_option_sales_amounts()
+set_quotation_option_customer_visibility()
 delete_quotation_cost_line()
 create_quotation_cargo_line()
 update_quotation_cargo_line()
@@ -179,6 +180,7 @@ Quotation-specific write rules:
 - use create_quotation_cost_line(), update_quotation_cost_line(), and delete_quotation_cost_line() for charge lines
 - use create_quotation_cargo_line(), update_quotation_cargo_line(), and delete_quotation_cargo_line() for service-specific cargo detail lines
 - use update_quotation_option_sales_amounts() when CRM saves sale amounts for an entire option in one action
+- use set_quotation_option_customer_visibility() when CRM decides which options are shown to the customer
 - quotation-level commodities, quantity, weight, and volume must not be reintroduced on quotations
 - all service types must rely on quotation_cargo_lines for cargo detail capture and document rendering
 - quotation references must be backend-generated from the service-type counter contract:
@@ -190,18 +192,22 @@ Quotation-specific write rules:
 - detail screens should read quotation_summary_view for masked economic summary fields
 - charge-line detail screens should read quotation_cost_line_secure_view instead of direct quotation_costs reads when rendering sensitive economics
 - detail screens may read quotation_summary_view plus quotation_cost_line_secure_view and quotation_cargo_lines rows
-- pricing purchase options should be grouped by option_label
+- pricing purchase options should be grouped by quotation_options
+- one quotation option may contain multiple charge lines and multiple providers
 - pricing screens should treat purchase capture and sale capture as separate responsibilities
 - CRM screens may update sale_amount through update_quotation_cost_line() while preserving purchase-side fields
 - CRM should not change purchase_amount values captured by pricing
 - Pricing must not receive sale_amount or expected_profit visibility through the default quotation workflow
 - registered field permissions now use deny-by-default behavior until an explicit role_field_permissions rule exists
 - client-facing commercial documents must hide provider and purchase fields
+- provider-facing pricing requests must not expose the client name
 - provider-facing internal pricing request documents must not expose commercial sale amounts
 - pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view
 - pricing screens should surface target_rate and sales feedback when status = renegociar_tarifa
 - quotation purchase and sale lines may use MXN, USD, or EUR
 - accounting totals and profit must be evaluated in MXN using the latest available rate on or before the previous day
+- accepted quotations must lock the USD and EUR rates used for MXN accounting on the quotation record
+- non-accepted quotations may refresh MXN totals from the latest available exchange rate
 - expiration_date must be backend-calculated from start_date
 - expired opportunities must surface as vencida
 - if salesperson_id is omitted, create_opportunity() must inherit clients.account_owner_id
@@ -214,6 +220,8 @@ Exchange-rate rules:
 - use create_exchange_rate(), update_exchange_rate(), and delete_exchange_rate() for writes
 - BANXICO is the canonical operational source when available
 - MANUAL is a controlled fallback for continuity, not the preferred source
+- use the protected admin sync route or the scheduled cron route to ingest BANXICO rows
+- the scheduled FX sync should run daily at 6:00 a.m. and store the previous available working-day rate set
 - search_clients() is now owner-aware and must only return rows allowed by crm.clients.list
 - get_client_full() is now owner-aware and must return null instead of leaking records outside crm.clients.record
 - client_overview_view, client_contacts_view, and open_opportunities_view are now scope-aware reads, not broad browse views

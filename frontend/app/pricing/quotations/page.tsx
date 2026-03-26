@@ -42,6 +42,8 @@ const emptyChargeForm: QuotationChargeLineFormValues = {
   notes: "",
 }
 
+const NEW_OPTION_VALUE = "__new__"
+
 function formatCurrency(value: number | null | undefined, currency = "MXN") {
   if (value == null) {
     return "No disponible"
@@ -130,12 +132,11 @@ function buildProviderEmailLink(candidate: ProviderPricingCandidate, quotation: 
     [
       `Hola ${primaryContact?.name || candidate.provider.name},`,
       "",
-      "Esperamos se encuentre muy bien.",
+      "Buen dia.",
       "",
-      "Agradeceremos su apoyo con una tarifa para la siguiente solicitud:",
+      "Agradeceremos su apoyo con su mejor tarifa y condiciones para la siguiente solicitud de pricing:",
       "",
-      `Referencia: ${quotation.reference_number || "Pendiente"}`,
-      `Cliente: ${quotation.client_name || "No disponible"}`,
+      `Referencia interna: ${quotation.reference_number || "Pendiente"}`,
       `Servicio: ${quotation.service_type || ""}${quotation.transport_type ? ` / ${quotation.transport_type}` : ""}`,
       `Operacion: ${quotation.operation_type || "No disponible"}`,
       `Incoterm: ${quotation.incoterm_code || "No disponible"}`,
@@ -143,9 +144,9 @@ function buildProviderEmailLink(candidate: ProviderPricingCandidate, quotation: 
       "",
       buildCargoSummary(quotation),
       "",
-      "En caso de contar con observaciones, restricciones o condiciones especiales, por favor compartalas junto con su tarifa.",
+      "Favor de compartir tarifa, vigencia, tiempos libres y cualquier observacion o condicion especial aplicable.",
       "",
-      "Quedamos atentos.",
+      "Quedamos atentos a su pronta respuesta.",
       "Equipo de Pricing",
       "Priority Freight Intelligence",
     ].join("\n")
@@ -170,14 +171,14 @@ function buildProviderWhatsAppLink(
   const text = encodeURIComponent(
     [
       `Hola ${primaryContact?.name || candidate.provider.name},`,
-      "Solicitamos apoyo con tarifa para la siguiente cotizacion:",
-      `Referencia: ${quotation.reference_number || "Pendiente"}`,
-      `Cliente: ${quotation.client_name || "No disponible"}`,
+      "Solicitamos apoyo con tarifa para la siguiente solicitud de pricing:",
+      `Referencia interna: ${quotation.reference_number || "Pendiente"}`,
       `Servicio: ${quotation.service_type || ""}${quotation.transport_type ? ` / ${quotation.transport_type}` : ""}`,
       `Operacion: ${quotation.operation_type || "No disponible"}`,
       `Incoterm: ${quotation.incoterm_code || "No disponible"}`,
       `Lane: ${quotation.origin || "Origen"} -> ${quotation.destination || "Destino"}`,
       buildCargoSummary(quotation),
+      "Favor de compartir mejor tarifa, vigencia y condiciones.",
       "Quedamos atentos. Gracias.",
       "Priority Freight Intelligence",
     ].join("\n")
@@ -210,6 +211,7 @@ export default function PricingQuotationsPage() {
   const [deletingChargeId, setDeletingChargeId] = useState<string | null>(null)
   const [editingChargeId, setEditingChargeId] = useState<string | null>(null)
   const [movingToReadyId, setMovingToReadyId] = useState<string | null>(null)
+  const [selectedChargeOptionId, setSelectedChargeOptionId] = useState<string>(NEW_OPTION_VALUE)
   const [chargeFormValues, setChargeFormValues] =
     useState<QuotationChargeLineFormValues>(emptyChargeForm)
 
@@ -242,6 +244,7 @@ export default function PricingQuotationsPage() {
 
   function resetChargeForm() {
     setEditingChargeId(null)
+    setSelectedChargeOptionId(NEW_OPTION_VALUE)
     setChargeFormValues(emptyChargeForm)
   }
 
@@ -362,6 +365,8 @@ export default function PricingQuotationsPage() {
 
       if (editingChargeId) {
         await updateQuotationChargeLine(editingChargeId, {
+          quotation_option_id:
+            selectedChargeOptionId !== NEW_OPTION_VALUE ? selectedChargeOptionId : null,
           provider_id: chargeFormValues.providerId || null,
           sales_accounting_concept_id: chargeFormValues.salesAccountingConceptId,
           purchase_amount: chargeFormValues.purchaseAmount
@@ -376,6 +381,8 @@ export default function PricingQuotationsPage() {
       } else {
         await createQuotationChargeLine({
           quotation_id: selectedQuotation.id,
+          quotation_option_id:
+            selectedChargeOptionId !== NEW_OPTION_VALUE ? selectedChargeOptionId : null,
           provider_id: chargeFormValues.providerId || null,
           sales_accounting_concept_id: chargeFormValues.salesAccountingConceptId,
           purchase_amount: chargeFormValues.purchaseAmount
@@ -508,36 +515,45 @@ export default function PricingQuotationsPage() {
     const grouped = new Map<
       string,
       {
+        optionId: string
         optionLabel: string
+        optionSortOrder: number
+        includeInCustomerQuote: boolean
         totalPurchase: number
         totalPurchaseMxn: number
+        totalWithVatMxn: number
         providers: Set<string>
         lineCount: number
       }
     >()
 
     for (const line of chargeLines) {
-      const optionLabel = line.option_label || line.provider_name || "Proveedor"
-      const current = grouped.get(optionLabel) ?? {
+      const optionId = line.quotation_option_id || line.id
+      const optionLabel = line.option_label || `Opcion ${line.option_sort_order ?? 1}`
+      const current = grouped.get(optionId) ?? {
+        optionId,
         optionLabel,
+        optionSortOrder: line.option_sort_order ?? 1,
+        includeInCustomerQuote: line.include_in_customer_quote ?? true,
         totalPurchase: 0,
         totalPurchaseMxn: 0,
+        totalWithVatMxn: 0,
         providers: new Set<string>(),
         lineCount: 0,
       }
 
       current.totalPurchase += line.purchase_amount ?? 0
       current.totalPurchaseMxn += line.purchase_amount_mxn ?? 0
+      current.totalWithVatMxn +=
+        (line.purchase_amount_mxn ?? 0) * (1 + (line.vat_rate ?? 0) / 100)
       if (line.provider_name) {
         current.providers.add(line.provider_name)
       }
       current.lineCount += 1
-      grouped.set(optionLabel, current)
+      grouped.set(optionId, current)
     }
 
-    return Array.from(grouped.values()).sort((left, right) =>
-      left.optionLabel.localeCompare(right.optionLabel)
-    )
+    return Array.from(grouped.values()).sort((left, right) => left.optionSortOrder - right.optionSortOrder)
   }, [chargeLines])
 
   return (
@@ -778,9 +794,7 @@ export default function PricingQuotationsPage() {
             ) : null}
 
             <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4 text-sm text-[#475569]">
-              <div className="font-semibold text-[#111827]">
-                {selectedQuotation.client_name || "Cliente"}
-              </div>
+              <div className="font-semibold text-[#111827]">Solicitud interna de pricing</div>
               <div className="mt-1">
                 {[selectedQuotation.service_type, selectedQuotation.transport_type]
                   .filter(Boolean)
@@ -974,7 +988,7 @@ export default function PricingQuotationsPage() {
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {chargeOptionSummaries.map((summary) => (
                         <div
-                          key={summary.optionLabel}
+                          key={summary.optionId}
                           className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
                         >
                           <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
@@ -986,12 +1000,20 @@ export default function PricingQuotationsPage() {
                               : "Sin permiso"}
                           </div>
                           <div className="mt-1 text-sm text-[#6B7280]">
+                            Total c/IVA MXN: {formatCurrency(summary.totalWithVatMxn)}
+                          </div>
+                          <div className="mt-1 text-sm text-[#6B7280]">
                             {summary.lineCount} cargo(s)
                           </div>
                           <div className="mt-1 text-sm text-[#6B7280]">
                             {summary.providers.size > 0
                               ? Array.from(summary.providers).join(", ")
                               : "Sin proveedor"}
+                          </div>
+                          <div className="mt-1 text-xs text-[#94A3B8]">
+                            {summary.includeInCustomerQuote
+                              ? "Visible para propuesta comercial"
+                              : "Oculta para propuesta comercial"}
                           </div>
                         </div>
                       ))}
@@ -1007,6 +1029,7 @@ export default function PricingQuotationsPage() {
                       <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
                         <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                           <tr>
+                            <th className="px-4 py-3">Opcion</th>
                             <th className="px-4 py-3">Proveedor</th>
                             <th className="px-4 py-3">Concepto</th>
                             <th className="px-4 py-3">Compra</th>
@@ -1018,6 +1041,9 @@ export default function PricingQuotationsPage() {
                         <tbody className="divide-y divide-[#E5E7EB] bg-white">
                           {chargeLines.map((line) => (
                             <tr key={line.id}>
+                              <td className="px-4 py-3 text-[#475569]">
+                                {line.option_label || `Opcion ${line.option_sort_order ?? 1}`}
+                              </td>
                               <td className="px-4 py-3 text-[#475569]">
                                 {line.provider_name || "No asignado"}
                               </td>
@@ -1041,6 +1067,9 @@ export default function PricingQuotationsPage() {
                                     type="button"
                                     onClick={() => {
                                       setEditingChargeId(line.id)
+                                      setSelectedChargeOptionId(
+                                        line.quotation_option_id || NEW_OPTION_VALUE
+                                      )
                                       setChargeFormValues({
                                         providerId: line.provider_id || "",
                                         salesAccountingConceptId:
@@ -1083,9 +1112,38 @@ export default function PricingQuotationsPage() {
                   )}
                 </section>
 
+                <section className="space-y-3 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[#64748B]">
+                      Destino del cargo
+                    </h3>
+                    <p className="mt-1 text-sm text-[#6B7280]">
+                      Selecciona si este cargo crea una opcion nueva o si se suma a una opcion existente.
+                    </p>
+                  </div>
+                  <select
+                    className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                    value={selectedChargeOptionId}
+                    disabled={Boolean(editingChargeId) || !canCaptureCharges}
+                    onChange={(event) => setSelectedChargeOptionId(event.target.value)}
+                  >
+                    <option value={NEW_OPTION_VALUE}>Crear nueva opcion</option>
+                    {chargeOptionSummaries.map((summary) => (
+                      <option key={summary.optionId} value={summary.optionId}>
+                        {summary.optionLabel}
+                      </option>
+                    ))}
+                  </select>
+                  {editingChargeId ? (
+                    <div className="text-xs text-[#64748B]">
+                      El cargo editado conserva su opcion actual. Para moverlo, primero eliminelo y vuelvalo a crear en otra opcion.
+                    </div>
+                  ) : null}
+                </section>
+
                 <QuotationChargeLineForm
                   title={editingChargeId ? "Editar compra de proveedor" : "Agregar compra de proveedor"}
-                  description="Captura solo proveedor, concepto contable y compra. La venta se definira despues desde CRM."
+                  description="Captura proveedor, concepto contable y compra. Si necesitas varios cargos en una misma opcion, selecciona la opcion existente y agrega otro cargo."
                   values={chargeFormValues}
                   providers={providersForChargeForm}
                   concepts={concepts}

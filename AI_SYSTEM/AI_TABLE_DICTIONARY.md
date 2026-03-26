@@ -1474,6 +1474,26 @@ valid_until
 Type: date
 Quotation validity date.
 
+accepted_usd_rate_date
+Type: date
+Rate date locked when the quotation is accepted for USD to MXN accounting.
+
+accepted_usd_to_mxn_rate
+Type: numeric
+USD to MXN rate locked when the quotation is accepted.
+
+accepted_eur_rate_date
+Type: date
+Rate date locked when the quotation is accepted for EUR to MXN accounting.
+
+accepted_eur_to_mxn_rate
+Type: numeric
+EUR to MXN rate locked when the quotation is accepted.
+
+exchange_rates_locked_at
+Type: timestamptz
+Timestamp marking when accepted quotation FX values were frozen.
+
 created_at
 Type: timestamptz
 Creation timestamp.
@@ -1501,10 +1521,15 @@ quotation_id
 Type: uuid
 Foreign key referencing quotations.id.
 
+quotation_option_id
+Type: uuid
+Foreign key referencing quotation_options.id.
+Groups a charge line under a customer-facing quotation option.
+
 option_label
 Type: text
-System grouping label used to compare provider proposals inside the same quotation.
-The UI should derive this automatically from provider context instead of asking the user to type an option name.
+Legacy grouping label kept for compatibility with older rows and migration backfill.
+New UI flows must group charges through quotation_options instead of manual option labels.
 
 provider_id
 Type: uuid
@@ -1588,6 +1613,45 @@ Creation timestamp.
 
 
 --------------------------------------------------
+TABLE: quotation_options
+--------------------------------------------------
+
+Purpose
+
+Stores the commercial option groups that CRM may choose to expose or hide in the customer-facing quotation.
+
+Columns
+
+id
+Type: uuid
+Primary key.
+
+quotation_id
+Type: uuid
+Foreign key referencing quotations.id.
+
+option_label
+Type: text
+System-generated label such as Opcion 1 or Opcion 2.
+
+sort_order
+Type: integer
+Controls display order inside the quotation.
+
+include_in_customer_quote
+Type: boolean
+Whether the option is included in the customer-facing proposal and PDF.
+
+created_at
+Type: timestamptz
+Creation timestamp.
+
+updated_at
+Type: timestamptz
+Last update timestamp.
+
+
+--------------------------------------------------
 TABLE: exchange_rates
 --------------------------------------------------
 
@@ -1627,6 +1691,12 @@ Allowed values: BANXICO, MANUAL.
 source_series_code
 Type: text
 Optional source series identifier for traceability.
+
+Operational Notes
+
+- BANXICO rows are the canonical source when available
+- the system may ingest rows automatically every day at 6:00 a.m.
+- quotation MXN totals use the latest available rate on or before the previous day unless the quotation has already been accepted and locked
 
 created_at
 Type: timestamptz

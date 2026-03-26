@@ -64,6 +64,14 @@ When a change affects branding or shared visual identity:
 2. copy only the runtime-ready assets required by Next.js into frontend/public/assets/
 3. update all frontend logo consumers to read from frontend/public/assets/
 
+When a change affects scheduled accounting data:
+
+1. keep exchange_rates as the canonical persisted dataset
+2. prefer BANXICO ingestion over manual entry when the source is available
+3. validate both manual admin sync and scheduled cron sync paths
+4. refresh open quotation MXN totals after new rates are persisted
+5. never mutate accepted quotation FX snapshots after they are locked
+
 
 --------------------------------------------------
 SYNC PROCESS FOR FRONTEND QUERY CHANGES

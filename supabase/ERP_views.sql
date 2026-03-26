@@ -228,7 +228,12 @@ select
   pf.can_edit_purchase_amount,
   pf.can_view_sale_price,
   pf.can_edit_sale_price,
-  pf.can_view_expected_profit
+  pf.can_view_expected_profit,
+  q.accepted_usd_rate_date,
+  q.accepted_usd_to_mxn_rate,
+  q.accepted_eur_rate_date,
+  q.accepted_eur_to_mxn_rate,
+  q.exchange_rates_locked_at
 from quotations q
 join clients c on c.id = q.client_id
 join opportunities o on o.id = q.opportunity_id
@@ -291,9 +296,13 @@ select
   pf.can_edit_purchase_amount,
   pf.can_view_sale_price,
   pf.can_edit_sale_price,
-  pf.can_view_expected_profit
+  pf.can_view_expected_profit,
+  qc.quotation_option_id,
+  qo.sort_order as option_sort_order,
+  qo.include_in_customer_quote
 from quotation_costs qc
 join quotations q on q.id = qc.quotation_id
+left join quotation_options qo on qo.id = qc.quotation_option_id
 left join providers p on p.id = qc.provider_id
 left join sales_accounting_concepts sac on sac.id = qc.sales_accounting_concept_id
 cross join permission_flags pf

@@ -624,6 +624,7 @@ alter table provider_contacts enable row level security;
 alter table provider_service_offerings enable row level security;
 alter table opportunities enable row level security;
 alter table quotations enable row level security;
+alter table quotation_options enable row level security;
 alter table quotation_costs enable row level security;
 alter table quotation_cargo_lines enable row level security;
 alter table quotation_rejection_reasons enable row level security;
@@ -632,6 +633,7 @@ alter table provider_contacts force row level security;
 alter table provider_service_offerings force row level security;
 alter table opportunities force row level security;
 alter table quotations force row level security;
+alter table quotation_options force row level security;
 alter table quotation_costs force row level security;
 alter table quotation_cargo_lines force row level security;
 alter table quotation_rejection_reasons force row level security;
@@ -840,6 +842,61 @@ using (
     'delete',
     created_by,
     client_id
+  )
+);
+
+create policy "active_select_quotation_options"
+on quotation_options
+for select
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_options.quotation_id
+      and (
+        public.erp_has_resource_access(
+          'pricing.quotations.cost_section',
+          'view',
+          q.pricing_owner_id,
+          null
+        )
+        or public.erp_can_access_crm_quotation_resource(
+          'crm.quotations.pricing_options',
+          'view',
+          q.created_by,
+          q.client_id
+        )
+      )
+  )
+);
+
+create policy "active_update_quotation_options"
+on quotation_options
+for update
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_options.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.customer_actions',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_options.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.customer_actions',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
   )
 );
 

@@ -113,19 +113,11 @@ export default function QuotationPricingRequestPage() {
             Solicitud de cotizacion a proveedor
           </h1>
           <div className="mt-2 text-sm text-[#475569]">
-            Referencia interna: {quotation.reference_number || "Pendiente"}
+            Referencia interna: {quotation.reference_number || "Pendiente"} · Uso exclusivo de pricing
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Cliente
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {quotation.client_name || "No disponible"}
-            </div>
-          </div>
+        <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-3">
           <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               Servicio

@@ -559,6 +559,11 @@ create table quotations (
   estimated_cost numeric,
   estimated_price numeric,
   expected_profit numeric,
+  accepted_usd_rate_date date,
+  accepted_usd_to_mxn_rate numeric(18,6),
+  accepted_eur_rate_date date,
+  accepted_eur_to_mxn_rate numeric(18,6),
+  exchange_rates_locked_at timestamptz,
   search_text text not null default '',
   valid_until date,
   created_at timestamptz not null default now(),
@@ -591,9 +596,26 @@ create index idx_quotations_pricing_owner_status_created_at
   on quotations(pricing_owner_id, status, created_at desc);
 create index idx_quotations_search_text_trgm on quotations using gin(search_text gin_trgm_ops);
 
+create table quotation_options (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references quotations(id) on delete cascade,
+  option_label text not null,
+  sort_order integer not null,
+  include_in_customer_quote boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint quotation_options_unique_label unique (quotation_id, option_label),
+  constraint quotation_options_unique_sort_order unique (quotation_id, sort_order)
+);
+
+create index idx_quotation_options_quotation_id on quotation_options(quotation_id);
+create index idx_quotation_options_customer_visibility
+  on quotation_options(quotation_id, include_in_customer_quote, sort_order);
+
 create table quotation_costs (
   id uuid primary key default gen_random_uuid(),
   quotation_id uuid not null references quotations(id) on delete cascade,
+  quotation_option_id uuid references quotation_options(id) on delete cascade,
   option_label text not null default 'Proveedor',
   provider_id uuid references providers(id),
   sales_accounting_concept_id uuid references sales_accounting_concepts(id),
@@ -619,6 +641,7 @@ create table quotation_costs (
 );
 
 create index idx_quotation_costs_quotation_id on quotation_costs(quotation_id);
+create index idx_quotation_costs_option_id on quotation_costs(quotation_option_id);
 create index idx_quotation_costs_quotation_option_label on quotation_costs(quotation_id, option_label);
 create index idx_quotation_costs_provider_id on quotation_costs(provider_id);
 

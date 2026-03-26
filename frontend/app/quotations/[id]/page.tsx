@@ -13,6 +13,7 @@ import {
   getQuotationChargeLines,
   getQuotationRejectionReasons,
   requestQuotationPricing,
+  setQuotationOptionCustomerVisibility,
   updateQuotation,
   updateQuotationOptionSalesAmounts,
   updateQuotationCargoLine,
@@ -70,7 +71,10 @@ type StatusFormValues = {
 }
 
 type SalesOptionSummary = {
+  optionId: string
   optionLabel: string
+  optionSortOrder: number
+  includeInCustomerQuote: boolean
   totalPurchase: number
   totalPurchaseMxn: number
   totalSale: number
@@ -262,6 +266,7 @@ export default function QuotationDetailPage() {
   const [showSalesModal, setShowSalesModal] = useState(false)
   const [savingSales, setSavingSales] = useState(false)
   const [selectedSalesOption, setSelectedSalesOption] = useState<string | null>(null)
+  const [updatingVisibleOptionId, setUpdatingVisibleOptionId] = useState<string | null>(null)
   const [salesDraft, setSalesDraft] = useState<Record<string, SalesDraftValue>>({})
   const [createdShipment, setCreatedShipment] = useState<Shipment | null>(null)
   const [quoteFormValues, setQuoteFormValues] = useState<QuotationFormValues>({
@@ -285,7 +290,10 @@ export default function QuotationDetailPage() {
     const grouped = new Map<
       string,
       {
+        optionId: string
         optionLabel: string
+        optionSortOrder: number
+        includeInCustomerQuote: boolean
         totalPurchase: number
         totalPurchaseMxn: number
         totalSale: number
@@ -299,9 +307,13 @@ export default function QuotationDetailPage() {
     >()
 
     for (const line of detailChargeLines ?? []) {
-      const optionLabel = line.option_label || line.provider_name || "Proveedor"
-      const current = grouped.get(optionLabel) ?? {
+      const optionId = line.quotation_option_id || line.id
+      const optionLabel = line.option_label || `Opcion ${line.option_sort_order ?? 1}`
+      const current = grouped.get(optionId) ?? {
+        optionId,
         optionLabel,
+        optionSortOrder: line.option_sort_order ?? 1,
+        includeInCustomerQuote: line.include_in_customer_quote ?? true,
         totalPurchase: 0,
         totalPurchaseMxn: 0,
         totalSale: 0,
@@ -324,16 +336,13 @@ export default function QuotationDetailPage() {
       }
       current.lines.push(line)
       current.hasCompleteSale = current.hasCompleteSale && line.sale_amount != null
-      grouped.set(optionLabel, current)
+      grouped.set(optionId, current)
     }
 
-    return Array.from(grouped.values()).sort((left, right) =>
-      left.optionLabel.localeCompare(right.optionLabel)
-    )
+    return Array.from(grouped.values()).sort((left, right) => left.optionSortOrder - right.optionSortOrder)
   }, [detailChargeLines])
   const selectedSalesOptionSummary = useMemo(
-    () =>
-      chargeOptionSummaries.find((summary) => summary.optionLabel === selectedSalesOption) ?? null,
+    () => chargeOptionSummaries.find((summary) => summary.optionId === selectedSalesOption) ?? null,
     [chargeOptionSummaries, selectedSalesOption]
   )
 
@@ -439,7 +448,7 @@ export default function QuotationDetailPage() {
   }
 
   function openSalesOption(summary: SalesOptionSummary) {
-    setSelectedSalesOption(summary.optionLabel)
+    setSelectedSalesOption(summary.optionId)
     setSalesDraft(
       Object.fromEntries(
         summary.lines.map((line) => [
@@ -630,7 +639,7 @@ export default function QuotationDetailPage() {
       setSavingSales(true)
       await updateQuotationOptionSalesAmounts(
         details.quotation.id,
-        selectedSalesOptionSummary.optionLabel,
+        selectedSalesOptionSummary.optionId,
         salesDraft
       )
 
@@ -659,9 +668,11 @@ export default function QuotationDetailPage() {
       return
     }
 
-    const hasSendableOption = chargeOptionSummaries.some((summary) => summary.hasCompleteSale)
+    const hasSendableOption = chargeOptionSummaries.some(
+      (summary) => summary.includeInCustomerQuote && summary.hasCompleteSale
+    )
     if (!hasSendableOption) {
-      alert("Primero agrega la venta completa a por lo menos una opcion")
+      alert("Primero selecciona al menos una opcion visible al cliente con venta completa")
       return
     }
 
@@ -694,6 +705,26 @@ export default function QuotationDetailPage() {
       alert("No se pudo marcar la cotizacion como aceptada")
     } finally {
       setMarkingAccepted(false)
+    }
+  }
+
+  async function handleToggleCustomerOption(summary: SalesOptionSummary) {
+    if (!details) {
+      return
+    }
+
+    try {
+      setUpdatingVisibleOptionId(summary.optionId)
+      await setQuotationOptionCustomerVisibility(summary.optionId, !summary.includeInCustomerQuote)
+      await Promise.all([
+        refreshQuotation(details.quotation.id),
+        refreshChargeLines(details.quotation.id),
+      ])
+    } catch (error) {
+      console.error(error)
+      alert("No se pudo actualizar la visibilidad comercial de la opcion")
+    } finally {
+      setUpdatingVisibleOptionId(null)
     }
   }
 
@@ -753,7 +784,9 @@ export default function QuotationDetailPage() {
   const canSeeCommercialActions = canShowCommercialActions(quotation.status)
   const canPrepareCommercial = canPrepareCommercialProposal(quotation.status)
   const canEditCommercialSale = canEditSalesOption(quotation.status) && canEditSalePrice
-  const hasSendableOption = chargeOptionSummaries.some((summary) => summary.hasCompleteSale)
+  const hasSendableOption = chargeOptionSummaries.some(
+    (summary) => summary.includeInCustomerQuote && summary.hasCompleteSale
+  )
   const pricingSummary = chargeLines.reduce(
     (accumulator, line) => {
       const purchase = line.purchase_amount ?? 0
@@ -1126,6 +1159,23 @@ export default function QuotationDetailPage() {
                     {formatCurrency(pricingSummary.vat)}
                   </div>
                 </div>
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 text-sm text-[#475569]">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                    Tipo de cambio contable
+                  </div>
+                  <div className="mt-1">
+                    USD → MXN:{" "}
+                    {quotation.accepted_usd_to_mxn_rate != null
+                      ? `${quotation.accepted_usd_to_mxn_rate.toFixed(4)} (${quotation.accepted_usd_rate_date || "sin fecha"})`
+                      : "Ultima tasa disponible"}
+                  </div>
+                  <div className="mt-1">
+                    EUR → MXN:{" "}
+                    {quotation.accepted_eur_to_mxn_rate != null
+                      ? `${quotation.accepted_eur_to_mxn_rate.toFixed(4)} (${quotation.accepted_eur_rate_date || "sin fecha"})`
+                      : "Ultima tasa disponible"}
+                  </div>
+                </div>
               </div>
               {createdShipment ? (
                 <div className="mt-4 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3 text-sm text-[#065F46]">
@@ -1309,11 +1359,33 @@ export default function QuotationDetailPage() {
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {chargeOptionSummaries.map((summary) => (
                   <div
-                    key={summary.optionLabel}
+                    key={summary.optionId}
                     className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
                   >
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      {summary.optionLabel}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                          {summary.optionLabel}
+                        </div>
+                        <div className="mt-1 text-xs text-[#64748B]">
+                          {summary.lines.length} cargo(s)
+                        </div>
+                      </div>
+                      {canEditCommercialSale ? (
+                        <label className="flex items-center gap-2 text-xs font-medium text-[#475569]">
+                          <input
+                            type="checkbox"
+                            checked={summary.includeInCustomerQuote}
+                            disabled={updatingVisibleOptionId === summary.optionId}
+                            onChange={() => void handleToggleCustomerOption(summary)}
+                          />
+                          Mostrar al cliente
+                        </label>
+                      ) : (
+                        <div className="text-xs text-[#64748B]">
+                          {summary.includeInCustomerQuote ? "Visible al cliente" : "Oculta al cliente"}
+                        </div>
+                      )}
                     </div>
                     {canViewCost ? (
                       <div className="mt-2 text-lg font-semibold text-[#111827]">
@@ -1328,12 +1400,26 @@ export default function QuotationDetailPage() {
                     </div>
                     {canViewSalePrice ? (
                       <div className="mt-1 text-sm text-[#6B7280]">
-                        Venta MXN: {formatCurrency(summary.totalSaleMxn)}
+                        Subtotal venta MXN: {formatCurrency(summary.totalSaleMxn)}
                       </div>
                     ) : null}
                     {canViewExpectedProfit ? (
                       <div className="mt-1 text-sm text-[#6B7280]">
                         Profit MXN: {formatCurrency(summary.totalProfitMxn)}
+                      </div>
+                    ) : null}
+                    {canViewSalePrice ? (
+                      <div className="mt-1 text-sm text-[#6B7280]">
+                        Total con IVA MXN:{" "}
+                        {formatCurrency(
+                          summary.lines.reduce(
+                            (sum, line) =>
+                              sum +
+                              ((line.sale_amount_mxn ?? line.sale_amount ?? 0) *
+                                (1 + (line.vat_rate ?? 0) / 100)),
+                            0
+                          )
+                        )}
                       </div>
                     ) : null}
                     {canEditCommercialSale ? (
@@ -1375,6 +1461,9 @@ export default function QuotationDetailPage() {
                       <tr key={line.id}>
                         <td className="px-4 py-3 text-[#475569]">
                           {line.provider_name || "No asignado"}
+                          <div className="text-xs text-[#94A3B8]">
+                            {line.option_label || `Opcion ${line.option_sort_order ?? 1}`}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-[#475569]">
                           {line.accounting_concept || line.service_name}
@@ -1407,7 +1496,7 @@ export default function QuotationDetailPage() {
                               type="button"
                               onClick={() => {
                                 const summary = chargeOptionSummaries.find(
-                                  (item) => item.optionLabel === (line.option_label || "Proveedor")
+                                  (item) => item.optionId === line.quotation_option_id
                                 )
                                 if (summary) {
                                   openSalesOption(summary)
@@ -1449,6 +1538,11 @@ export default function QuotationDetailPage() {
                 </div>
                 <div className="mt-1 text-sm font-medium text-[#111827]">
                   {selectedSalesOptionSummary.optionLabel}
+                </div>
+                <div className="mt-1 text-xs text-[#64748B]">
+                  {selectedSalesOptionSummary.includeInCustomerQuote
+                    ? "Visible al cliente"
+                    : "Oculta al cliente"}
                 </div>
               </div>
               {canViewCost ? (

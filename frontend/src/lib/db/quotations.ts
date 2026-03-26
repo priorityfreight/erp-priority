@@ -55,6 +55,16 @@ function mapQuotation(row: Record<string, unknown>): Quotation {
     estimated_cost: (row.estimated_cost as number | null | undefined) ?? null,
     estimated_price: (row.estimated_price as number | null | undefined) ?? null,
     expected_profit: (row.expected_profit as number | null | undefined) ?? null,
+    accepted_usd_rate_date:
+      (row.accepted_usd_rate_date as string | null | undefined) ?? null,
+    accepted_usd_to_mxn_rate:
+      (row.accepted_usd_to_mxn_rate as number | null | undefined) ?? null,
+    accepted_eur_rate_date:
+      (row.accepted_eur_rate_date as string | null | undefined) ?? null,
+    accepted_eur_to_mxn_rate:
+      (row.accepted_eur_to_mxn_rate as number | null | undefined) ?? null,
+    exchange_rates_locked_at:
+      (row.exchange_rates_locked_at as string | null | undefined) ?? null,
     can_view_cost: Boolean(row.can_view_cost),
     can_edit_purchase_amount: Boolean(row.can_edit_purchase_amount),
     can_view_sale_price: Boolean(row.can_view_sale_price),
@@ -82,7 +92,11 @@ function mapQuotationChargeLine(row: Record<string, unknown>): QuotationChargeLi
   return {
     id: String(row.id),
     quotation_id: String(row.quotation_id),
+    quotation_option_id: (row.quotation_option_id as string | null | undefined) ?? null,
     option_label: String(row.option_label ?? row.provider_name ?? "Proveedor"),
+    option_sort_order: (row.option_sort_order as number | null | undefined) ?? null,
+    include_in_customer_quote:
+      (row.include_in_customer_quote as boolean | null | undefined) ?? undefined,
     provider_id: (row.provider_id as string | null | undefined) ?? null,
     provider_name: (row.provider_name as string | null | undefined) ?? null,
     sales_accounting_concept_id:
@@ -200,6 +214,7 @@ export async function getQuotationChargeLines(quotationId: string): Promise<Quot
     .from("quotation_cost_line_secure_view")
     .select("*")
     .eq("quotation_id", quotationId)
+    .order("option_sort_order", { ascending: true })
     .order("created_at", { ascending: true })
 
   if (error) {
@@ -310,7 +325,8 @@ export async function createQuotationChargeLine(
 ): Promise<string> {
   const { data, error } = await supabase.rpc("create_quotation_cost_line", {
     p_quotation_id: payload.quotation_id,
-    p_option_label: payload.option_label ?? "Proveedor",
+    p_quotation_option_id: payload.quotation_option_id ?? null,
+    p_option_label: payload.option_label ?? null,
     p_provider_id: payload.provider_id ?? null,
     p_sales_accounting_concept_id: payload.sales_accounting_concept_id ?? null,
     p_purchase_amount: payload.purchase_amount ?? null,
@@ -334,7 +350,8 @@ export async function updateQuotationChargeLine(
 ): Promise<void> {
   const { error } = await supabase.rpc("update_quotation_cost_line", {
     p_id: id,
-    p_option_label: payload.option_label ?? "Proveedor",
+    p_quotation_option_id: payload.quotation_option_id ?? null,
+    p_option_label: payload.option_label ?? null,
     p_provider_id: payload.provider_id ?? null,
     p_sales_accounting_concept_id: payload.sales_accounting_concept_id ?? null,
     p_purchase_amount: payload.purchase_amount ?? null,
@@ -352,7 +369,7 @@ export async function updateQuotationChargeLine(
 
 export async function updateQuotationOptionSalesAmounts(
   quotationId: string,
-  optionLabel: string,
+  quotationOptionId: string,
   salesAmounts: Record<
     string,
     {
@@ -363,8 +380,22 @@ export async function updateQuotationOptionSalesAmounts(
 ): Promise<void> {
   const { error } = await supabase.rpc("update_quotation_option_sales_amounts", {
     p_quotation_id: quotationId,
-    p_option_label: optionLabel,
+    p_quotation_option_id: quotationOptionId,
     p_sales_amounts: salesAmounts,
+  } as never)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function setQuotationOptionCustomerVisibility(
+  quotationOptionId: string,
+  includeInCustomerQuote: boolean
+): Promise<void> {
+  const { error } = await supabase.rpc("set_quotation_option_customer_visibility", {
+    p_quotation_option_id: quotationOptionId,
+    p_include_in_customer_quote: includeInCustomerQuote,
   } as never)
 
   if (error) {

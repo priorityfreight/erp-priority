@@ -27,10 +27,25 @@ function formatCurrency(value: number | null | undefined) {
     return "No disponible"
   }
 
-  return `$${value.toLocaleString(undefined, {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`
+  }).format(value)
+}
+
+function formatOptionCurrency(value: number | null | undefined, currency = "MXN") {
+  if (value == null) {
+    return "No disponible"
+  }
+
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
 function getPrimaryContact(contacts: Contact[]) {
@@ -104,7 +119,9 @@ export default function QuotationDocumentPage() {
       return { sale: 0, vat: 0, grandTotal: 0 }
     }
 
-    return details.chargeLines.reduce(
+    return details.chargeLines
+      .filter((line) => line.include_in_customer_quote !== false)
+      .reduce(
       (accumulator, line) => {
         const sale = line.sale_amount ?? 0
         const vat = sale * ((line.vat_rate ?? 0) / 100)
@@ -119,6 +136,46 @@ export default function QuotationDocumentPage() {
     )
   }, [details])
 
+  const visibleOptionSummaries = useMemo(() => {
+    if (!details) {
+      return []
+    }
+
+    const grouped = new Map<
+      string,
+      {
+        optionId: string
+        optionLabel: string
+        sortOrder: number
+        lines: QuotationChargeLine[]
+        subtotalMxn: number
+        totalMxn: number
+      }
+    >()
+
+    for (const line of details.chargeLines.filter((entry) => entry.include_in_customer_quote !== false)) {
+      const optionId = line.quotation_option_id || line.id
+      const current = grouped.get(optionId) ?? {
+        optionId,
+        optionLabel: line.option_label || `Opcion ${line.option_sort_order ?? 1}`,
+        sortOrder: line.option_sort_order ?? 1,
+        lines: [],
+        subtotalMxn: 0,
+        totalMxn: 0,
+      }
+
+      const saleMxn = line.sale_amount_mxn ?? line.sale_amount ?? 0
+      const totalMxn = saleMxn * (1 + (line.vat_rate ?? 0) / 100)
+
+      current.lines.push(line)
+      current.subtotalMxn += saleMxn
+      current.totalMxn += totalMxn
+      grouped.set(optionId, current)
+    }
+
+    return Array.from(grouped.values()).sort((left, right) => left.sortOrder - right.sortOrder)
+  }, [details])
+
   if (!quotationId) {
     return <div className="p-8 text-sm text-[#6B7280]">Quotation id no valido.</div>
   }
@@ -131,7 +188,7 @@ export default function QuotationDocumentPage() {
     return <div className="p-8 text-sm text-[#6B7280]">No se encontro la cotizacion.</div>
   }
 
-  const { quotation, chargeLines, cargoLines, clientContacts } = details
+  const { quotation, cargoLines, clientContacts } = details
   const primaryContact = getPrimaryContact(clientContacts)
 
   return (
@@ -327,51 +384,71 @@ export default function QuotationDocumentPage() {
         </section>
 
         <section className="rounded-2xl border border-[#E5E7EB] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Cargos de la cotizacion</h2>
+          <h2 className="text-lg font-semibold text-[#111827]">Opciones de la cotizacion</h2>
           <p className="mt-1 text-sm text-[#6B7280]">
             Vista comercial para cliente. No incluye proveedor ni costo de compra.
           </p>
 
-          <div className="mt-5 overflow-x-auto rounded-xl border border-[#E5E7EB]">
-            <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-              <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                <tr>
-                  <th className="px-4 py-3">Concepto</th>
-                  <th className="px-4 py-3">Venta</th>
-                  <th className="px-4 py-3">IVA</th>
-                  <th className="px-4 py-3">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                {chargeLines.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-[#6B7280]">
-                      Todavia no hay cargos listos para compartir.
-                    </td>
-                  </tr>
-                ) : (
-                  chargeLines.map((line) => {
-                    const sale = line.sale_amount ?? 0
-                    const vat = sale * ((line.vat_rate ?? 0) / 100)
-                    const total = sale + vat
+          {visibleOptionSummaries.length === 0 ? (
+            <div className="mt-5 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-6 text-center text-sm text-[#6B7280]">
+              Todavia no hay opciones comerciales listas para compartir.
+            </div>
+          ) : (
+            <div className="mt-5 space-y-4">
+              {visibleOptionSummaries.map((option) => (
+                <section key={option.optionId} className="rounded-xl border border-[#E5E7EB]">
+                  <div className="flex flex-col gap-3 border-b border-[#E5E7EB] bg-[#F8FAFC] px-4 py-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                        {option.optionLabel}
+                      </div>
+                      <div className="mt-1 text-sm text-[#64748B]">
+                        {option.lines.length} cargo(s) comerciales
+                      </div>
+                    </div>
+                    <div className="grid gap-1 text-sm text-[#111827] md:text-right">
+                      <div>Subtotal MXN: {formatOptionCurrency(option.subtotalMxn)}</div>
+                      <div className="font-semibold">Total MXN: {formatOptionCurrency(option.totalMxn)}</div>
+                    </div>
+                  </div>
 
-                    return (
-                      <tr key={line.id}>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.accounting_concept || line.service_name}
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">{formatCurrency(sale)}</td>
-                        <td className="px-4 py-3 text-[#475569]">{formatCurrency(vat)}</td>
-                        <td className="px-4 py-3 font-medium text-[#111827]">
-                          {formatCurrency(total)}
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
+                      <thead className="bg-white text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                        <tr>
+                          <th className="px-4 py-3">Concepto</th>
+                          <th className="px-4 py-3">Venta</th>
+                          <th className="px-4 py-3">IVA</th>
+                          <th className="px-4 py-3">Total MXN</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                        {option.lines.map((line) => {
+                          const saleMxn = line.sale_amount_mxn ?? line.sale_amount ?? 0
+                          const totalMxn = saleMxn * (1 + (line.vat_rate ?? 0) / 100)
+
+                          return (
+                            <tr key={line.id}>
+                              <td className="px-4 py-3 text-[#475569]">
+                                {line.accounting_concept || line.service_name}
+                              </td>
+                              <td className="px-4 py-3 text-[#475569]">
+                                {formatOptionCurrency(line.sale_amount, line.sale_currency)}
+                              </td>
+                              <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
+                              <td className="px-4 py-3 font-medium text-[#111827]">
+                                {formatOptionCurrency(totalMxn)}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
 
           <div className="mt-5 ml-auto grid max-w-sm gap-3">
             <div className="flex items-center justify-between rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">

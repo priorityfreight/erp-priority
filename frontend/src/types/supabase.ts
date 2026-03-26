@@ -1696,6 +1696,7 @@ export type Database = {
           purchase_currency: string
           purchase_exchange_rate_to_mxn: number | null
           quotation_id: string
+          quotation_option_id: string | null
           sale_amount: number | null
           sale_amount_mxn: number | null
           sale_currency: string
@@ -1718,6 +1719,7 @@ export type Database = {
           purchase_currency?: string
           purchase_exchange_rate_to_mxn?: number | null
           quotation_id: string
+          quotation_option_id?: string | null
           sale_amount?: number | null
           sale_amount_mxn?: number | null
           sale_currency?: string
@@ -1740,6 +1742,7 @@ export type Database = {
           purchase_currency?: string
           purchase_exchange_rate_to_mxn?: number | null
           quotation_id?: string
+          quotation_option_id?: string | null
           sale_amount?: number | null
           sale_amount_mxn?: number | null
           sale_currency?: string
@@ -1778,6 +1781,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quotation_costs_quotation_option_id_fkey"
+            columns: ["quotation_option_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_options"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "quotation_costs_sales_accounting_concept_id_fkey"
             columns: ["sales_accounting_concept_id"]
             isOneToOne: false
@@ -1789,6 +1799,51 @@ export type Database = {
             columns: ["sales_accounting_concept_id"]
             isOneToOne: false
             referencedRelation: "sales_accounting_concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_options: {
+        Row: {
+          created_at: string
+          id: string
+          include_in_customer_quote: boolean
+          option_label: string
+          quotation_id: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          include_in_customer_quote?: boolean
+          option_label: string
+          quotation_id: string
+          sort_order: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          include_in_customer_quote?: boolean
+          option_label?: string
+          quotation_id?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_options_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_summary_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_options_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
             referencedColumns: ["id"]
           },
         ]
@@ -1840,6 +1895,10 @@ export type Database = {
       }
       quotations: {
         Row: {
+          accepted_eur_rate_date: string | null
+          accepted_eur_to_mxn_rate: number | null
+          accepted_usd_rate_date: string | null
+          accepted_usd_to_mxn_rate: number | null
           cancellation_notes: string | null
           client_id: string
           created_at: string | null
@@ -1851,6 +1910,7 @@ export type Database = {
           destination_unlocode_id: string | null
           estimated_cost: number | null
           estimated_price: number | null
+          exchange_rates_locked_at: string | null
           expected_profit: number | null
           id: string
           incoterm_id: string | null
@@ -1876,6 +1936,10 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          accepted_eur_rate_date?: string | null
+          accepted_eur_to_mxn_rate?: number | null
+          accepted_usd_rate_date?: string | null
+          accepted_usd_to_mxn_rate?: number | null
           cancellation_notes?: string | null
           client_id: string
           created_at?: string | null
@@ -1887,6 +1951,7 @@ export type Database = {
           destination_unlocode_id?: string | null
           estimated_cost?: number | null
           estimated_price?: number | null
+          exchange_rates_locked_at?: string | null
           expected_profit?: number | null
           id?: string
           incoterm_id?: string | null
@@ -1912,6 +1977,10 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          accepted_eur_rate_date?: string | null
+          accepted_eur_to_mxn_rate?: number | null
+          accepted_usd_rate_date?: string | null
+          accepted_usd_to_mxn_rate?: number | null
           cancellation_notes?: string | null
           client_id?: string
           created_at?: string | null
@@ -1923,6 +1992,7 @@ export type Database = {
           destination_unlocode_id?: string | null
           estimated_cost?: number | null
           estimated_price?: number | null
+          exchange_rates_locked_at?: string | null
           expected_profit?: number | null
           id?: string
           incoterm_id?: string | null
@@ -3197,8 +3267,10 @@ export type Database = {
           cost: number | null
           created_at: string | null
           id: string | null
+          include_in_customer_quote: boolean | null
           notes: string | null
           option_label: string | null
+          option_sort_order: number | null
           profit_amount: number | null
           profit_amount_mxn: number | null
           provider_id: string | null
@@ -3207,6 +3279,7 @@ export type Database = {
           purchase_amount_mxn: number | null
           purchase_currency: string | null
           quotation_id: string | null
+          quotation_option_id: string | null
           sale_amount: number | null
           sale_amount_mxn: number | null
           sale_currency: string | null
@@ -3241,6 +3314,13 @@ export type Database = {
             columns: ["quotation_id"]
             isOneToOne: false
             referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_costs_quotation_option_id_fkey"
+            columns: ["quotation_option_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_options"
             referencedColumns: ["id"]
           },
           {
@@ -3282,6 +3362,10 @@ export type Database = {
       }
       quotation_summary_view: {
         Row: {
+          accepted_eur_rate_date: string | null
+          accepted_eur_to_mxn_rate: number | null
+          accepted_usd_rate_date: string | null
+          accepted_usd_to_mxn_rate: number | null
           can_edit_purchase_amount: boolean | null
           can_edit_sale_price: boolean | null
           can_view_cost: boolean | null
@@ -3299,6 +3383,7 @@ export type Database = {
           destination_unlocode: string | null
           estimated_cost: number | null
           estimated_price: number | null
+          exchange_rates_locked_at: string | null
           expected_profit: number | null
           id: string | null
           incoterm_code: string | null
@@ -3812,13 +3897,10 @@ export type Database = {
         | {
             Args: {
               p_notes?: string
-              p_option_label?: string
               p_provider_id?: string
               p_purchase_amount?: number
-              p_purchase_currency?: string
               p_quotation_id: string
               p_sale_amount?: number
-              p_sale_currency?: string
               p_sales_accounting_concept_id?: string
               p_vat_rate?: number
             }
@@ -3827,10 +3909,14 @@ export type Database = {
         | {
             Args: {
               p_notes?: string
+              p_option_label?: string
               p_provider_id?: string
               p_purchase_amount?: number
+              p_purchase_currency?: string
               p_quotation_id: string
+              p_quotation_option_id?: string
               p_sale_amount?: number
+              p_sale_currency?: string
               p_sales_accounting_concept_id?: string
               p_vat_rate?: number
             }
@@ -3905,6 +3991,19 @@ export type Database = {
       delete_service_transport_type: {
         Args: { p_id: string }
         Returns: undefined
+      }
+      ensure_quotation_option: {
+        Args: {
+          p_option_label?: string
+          p_quotation_id: string
+          p_quotation_option_id?: string
+        }
+        Returns: {
+          id: string
+          include_in_customer_quote: boolean
+          option_label: string
+          sort_order: number
+        }[]
       }
       erp_access_scope: {
         Args: { p_action_code: string; p_resource_key: string }
@@ -4030,12 +4129,24 @@ export type Database = {
           submodule_sort_order: number
         }[]
       }
+      get_exchange_rate_snapshot_to_mxn: {
+        Args: { p_currency: string; p_reference_date?: string }
+        Returns: {
+          rate_date: string
+          rate_value: number
+          source: string
+        }[]
+      }
       get_exchange_rate_to_mxn: {
         Args: { p_currency: string; p_reference_date?: string }
         Returns: number
       }
       get_provider_full: { Args: { p_provider_id: string }; Returns: Json }
       link_current_auth_user: { Args: never; Returns: string }
+      lock_quotation_exchange_rates: {
+        Args: { p_quotation_id: string; p_reference_date?: string }
+        Returns: undefined
+      }
       mark_shipment_delivered: {
         Args: { p_shipment_id: string }
         Returns: undefined
@@ -4049,6 +4160,14 @@ export type Database = {
         Args: { p_quotation_id: string }
         Returns: undefined
       }
+      refresh_open_quotation_exchange_rates: {
+        Args: { p_reference_date?: string }
+        Returns: number
+      }
+      refresh_quotation_cost_line_mxn: {
+        Args: { p_quotation_id: string; p_reference_date?: string }
+        Returns: undefined
+      }
       request_quotation_pricing: {
         Args: { p_quotation_id: string }
         Returns: undefined
@@ -4056,6 +4175,14 @@ export type Database = {
       resolve_default_branch_for_backfill: { Args: never; Returns: string }
       resolve_default_crm_owner_for_backfill: { Args: never; Returns: string }
       resolve_login_identity: { Args: { p_login: string }; Returns: string }
+      resolve_quotation_exchange_rate_to_mxn: {
+        Args: {
+          p_currency: string
+          p_quotation_id: string
+          p_reference_date?: string
+        }
+        Returns: number
+      }
       resolve_unlocode_reference: {
         Args: { p_unlocode?: string; p_unlocode_id?: string }
         Returns: {
@@ -4216,6 +4343,13 @@ export type Database = {
           updated_at: string
         }[]
       }
+      set_quotation_option_customer_visibility: {
+        Args: {
+          p_include_in_customer_quote: boolean
+          p_quotation_option_id: string
+        }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       soft_delete_client: { Args: { p_client_id: string }; Returns: undefined }
@@ -4306,12 +4440,9 @@ export type Database = {
             Args: {
               p_id: string
               p_notes?: string
-              p_option_label?: string
               p_provider_id?: string
               p_purchase_amount?: number
-              p_purchase_currency?: string
               p_sale_amount?: number
-              p_sale_currency?: string
               p_sales_accounting_concept_id?: string
               p_vat_rate?: number
             }
@@ -4321,9 +4452,13 @@ export type Database = {
             Args: {
               p_id: string
               p_notes?: string
+              p_option_label?: string
               p_provider_id?: string
               p_purchase_amount?: number
+              p_purchase_currency?: string
+              p_quotation_option_id?: string
               p_sale_amount?: number
+              p_sale_currency?: string
               p_sales_accounting_concept_id?: string
               p_vat_rate?: number
             }
@@ -4331,8 +4466,8 @@ export type Database = {
           }
       update_quotation_option_sales_amounts: {
         Args: {
-          p_option_label: string
           p_quotation_id: string
+          p_quotation_option_id: string
           p_sales_amounts: Json
         }
         Returns: undefined

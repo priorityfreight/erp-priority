@@ -7,6 +7,7 @@ import {
   createExchangeRate,
   deleteExchangeRate,
   getExchangeRates,
+  syncExchangeRatesFromBanxico,
   type ExchangeRate,
   updateExchangeRate,
 } from "@/lib/db"
@@ -41,6 +42,7 @@ export function ExchangeRateManager() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
   const [formValues, setFormValues] = useState<FormValues>(emptyForm)
 
   const loadItems = useCallback(async () => {
@@ -138,21 +140,45 @@ export function ExchangeRateManager() {
     }
   }
 
+  async function handleSyncBanxico() {
+    try {
+      setSyncing(true)
+      await syncExchangeRatesFromBanxico(7)
+      await loadItems()
+      alert("Tipos de cambio sincronizados desde Banxico correctamente.")
+    } catch (error) {
+      console.error(error)
+      alert(error instanceof Error ? error.message : "No se pudo sincronizar Banxico")
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   return (
     <PageContainer
       title="Tipo de cambio"
-      description="Catalogo canonico para convertir compras, ventas y profit contable a MXN usando la tasa del dia anterior."
+      description="Catalogo canonico para convertir compras, ventas y profit contable a MXN usando la tasa Banxico del dia anterior. La sincronizacion automatica queda programada diariamente a las 6:00 a.m."
       actions={
-        <button
-          type="button"
-          onClick={() => {
-            resetForm()
-            setShowModal(true)
-          }}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-        >
-          Anadir tipo de cambio
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSyncBanxico()}
+            disabled={syncing}
+            className="rounded-md border border-[#0F766E] bg-[#ECFDF5] px-4 py-2 text-sm font-medium text-[#166534] shadow-sm hover:bg-[#DCFCE7] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {syncing ? "Sincronizando..." : "Sincronizar Banxico"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              resetForm()
+              setShowModal(true)
+            }}
+            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
+          >
+            Anadir tipo de cambio
+          </button>
+        </div>
       }
     >
       <div className="space-y-8">

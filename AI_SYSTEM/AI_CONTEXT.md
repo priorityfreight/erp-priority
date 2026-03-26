@@ -164,8 +164,26 @@ CURRENT QUOTATION NORMALIZATION
 
 - quotation header records no longer store redundant load-summary fields such as quotation-level commodities, quantity, weight, or volume
 - all service types must use quotation_cargo_lines as the canonical load-detail structure
+- quotation_options is now the canonical grouping layer for customer-facing commercial options inside a quotation
+- one quotation option may contain multiple separate charge lines from different providers and accounting concepts
+- CRM may decide which quotation options are included in the customer-facing proposal through include_in_customer_quote
 - provider purchase capture and CRM sale capture may use MXN, USD, or EUR
 - accounting totals and profit must be normalized to MXN using the latest available exchange rate dated on or before the previous day
+- when a quotation is accepted, the USD and EUR rates used for accounting must be locked on the quotation record
+
+
+--------------------------------------------------
+CURRENT EXCHANGE-RATE MODEL
+--------------------------------------------------
+
+- exchange_rates is the canonical accounting FX catalog
+- BANXICO is the primary operational source for USD and EUR against MXN
+- MANUAL rows are allowed only as controlled continuity fallback
+- the frontend exposes Master Data / Accounting / Exchange Rates for review and controlled edits
+- the system now supports:
+  manual sync through the protected admin endpoint
+  automatic Vercel cron sync every day at 6:00 a.m.
+  refresh of open quotation MXN totals after new rates are loaded
 
 
 --------------------------------------------------

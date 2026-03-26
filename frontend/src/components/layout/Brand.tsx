@@ -8,7 +8,11 @@ type BrandProps = {
   light?: boolean
 }
 
-export function Brand({ compact = false }: BrandProps) {
+export function Brand({ compact = false, light = false }: BrandProps) {
+  const horizontalLogo = light
+    ? "/assets/logo-horizontal-transparent.png"
+    : "/assets/logo-horizontal-dark-transparent.png"
+
   if (compact) {
     return (
       <div className="flex items-center justify-center">
@@ -27,7 +31,7 @@ export function Brand({ compact = false }: BrandProps) {
   return (
     <div className="flex items-center">
       <Image
-        src="/assets/logo-horizontal-transparent.png"
+        src={horizontalLogo}
         alt="Priority Freight Intelligence"
         width={700}
         height={180}

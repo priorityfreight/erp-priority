@@ -314,6 +314,11 @@ export type Quotation = {
   estimated_cost: number | null
   estimated_price: number | null
   expected_profit: number | null
+  accepted_usd_rate_date?: string | null
+  accepted_usd_to_mxn_rate?: number | null
+  accepted_eur_rate_date?: string | null
+  accepted_eur_to_mxn_rate?: number | null
+  exchange_rates_locked_at?: string | null
   can_view_cost?: boolean
   can_edit_purchase_amount?: boolean
   can_view_sale_price?: boolean
@@ -336,7 +341,10 @@ export type QuotationSummary = Quotation & {
 export type QuotationChargeLine = {
   id: string
   quotation_id: string
+  quotation_option_id: string | null
   option_label: string
+  option_sort_order?: number | null
+  include_in_customer_quote?: boolean
   provider_id: string | null
   provider_name?: string | null
   sales_accounting_concept_id: string | null
@@ -622,6 +630,7 @@ export type NewQuotationChargeLine = Pick<QuotationChargeLine, "quotation_id"> &
   Partial<
     Pick<
       QuotationChargeLine,
+      | "quotation_option_id"
       | "option_label"
       | "provider_id"
       | "sales_accounting_concept_id"
@@ -636,6 +645,7 @@ export type NewQuotationChargeLine = Pick<QuotationChargeLine, "quotation_id"> &
 export type UpdateQuotationChargeLine = Partial<
   Pick<
     QuotationChargeLine,
+    | "quotation_option_id"
     | "option_label"
     | "provider_id"
     | "sales_accounting_concept_id"

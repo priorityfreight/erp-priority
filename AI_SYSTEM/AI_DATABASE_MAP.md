@@ -24,6 +24,7 @@ external_data_sources
 unlocodes
 service_transport_types
 sales_accounting_concepts
+exchange_rates
 
 
 Organization / Security
@@ -56,6 +57,7 @@ provider_service_offerings
 incoterms
 opportunities
 quotations
+quotation_options
 quotation_costs
 
 
@@ -169,7 +171,9 @@ quotations.pricing_owner_id → users.id
 quotations.incoterm_id → incoterms.id
 quotations.rejection_reason_id → quotation_rejection_reasons.id
 
+quotation_options.quotation_id → quotations.id
 quotation_costs.quotation_id → quotations.id
+quotation_costs.quotation_option_id → quotation_options.id
 quotation_costs.provider_id → providers.id
 quotation_costs.sales_accounting_concept_id → sales_accounting_concepts.id
 

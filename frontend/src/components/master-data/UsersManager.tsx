@@ -286,13 +286,19 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
       const result = (await response.json()) as { error?: string }
 
       if (!response.ok) {
-        throw new Error(result.error || "No se pudo eliminar el usuario.")
+        const message =
+          result.error ||
+          "No se pudo eliminar el usuario. Si tiene clientes, oportunidades o cotizaciones relacionadas, primero debe reasignarse."
+        throw new Error(message)
       }
 
       setTableFeedback("Usuario eliminado correctamente.")
       await loadUsers()
     } catch (error) {
-      setTableError(error instanceof Error ? error.message : "No se pudo eliminar el usuario.")
+      const message =
+        error instanceof Error ? error.message : "No se pudo eliminar el usuario."
+      setTableError(message)
+      window.alert(message)
     } finally {
       setSubmitting(false)
     }

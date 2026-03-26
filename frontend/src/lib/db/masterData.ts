@@ -525,3 +525,33 @@ export async function deleteExchangeRate(id: string): Promise<void> {
     throw error
   }
 }
+
+export async function syncExchangeRatesFromBanxico(days = 7): Promise<{
+  syncedRows: number
+  refreshedOpenQuotations: number
+  windowStart: string
+  windowEnd: string
+}> {
+  const response = await fetch(`/api/admin/exchange-rates/sync?days=${Math.max(days, 1)}`, {
+    method: "POST",
+  })
+
+  const result = (await response.json()) as {
+    error?: string
+    syncedRows?: number
+    refreshedOpenQuotations?: number
+    windowStart?: string
+    windowEnd?: string
+  }
+
+  if (!response.ok) {
+    throw new Error(result.error || "No se pudo sincronizar Banxico.")
+  }
+
+  return {
+    syncedRows: result.syncedRows ?? 0,
+    refreshedOpenQuotations: result.refreshedOpenQuotations ?? 0,
+    windowStart: result.windowStart ?? "",
+    windowEnd: result.windowEnd ?? "",
+  }
+}

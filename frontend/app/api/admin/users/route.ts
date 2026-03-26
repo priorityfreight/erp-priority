@@ -263,7 +263,8 @@ export async function DELETE(request: Request) {
         {
           error: `No se puede eliminar el usuario porque tiene historial relacionado: ${blockingReferences
             .map((item) => `${item.label} (${item.count})`)
-            .join(", ")}. Usa estatus inactivo en su lugar.`,
+            .join(", ")}. Reasigna o depura ese historial antes de intentar borrarlo, o usa estatus inactivo en su lugar.`,
+          blockingReferences,
         },
         { status: 400 }
       )
