@@ -121,6 +121,23 @@ Tracks the health of the governance layer itself.
 
 
 --------------------------------------------------
+LIVE VS PLANNED RULE
+--------------------------------------------------
+
+AI_SYSTEM must describe two things at the same time without mixing them:
+
+1. the live ERP that already exists today
+2. the planned ERP domains that remain only at database or roadmap level
+
+Rule:
+
+- current-state documents must describe the live system exactly as implemented
+- planned modules must remain documented, but they must not overwrite or distort the current live inventory
+- when a live workflow changes, update the current-state documents first
+- do not rewrite planned-module guidance unless those modules are actually implemented or their database contract changes
+
+
+--------------------------------------------------
 ACTUAL REPOSITORY LAYERS
 --------------------------------------------------
 

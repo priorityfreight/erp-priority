@@ -65,6 +65,8 @@ What is now aligned:
 - frontend clients, contacts, and opportunities query layer
 - current repo path inventory in the top-level context documents
 - live quotation cargo capture behavior and the AI documents that describe it
+- provider-facing pricing-request now has both a web preview and a real internal PDF route
+- "/" now redirects to the canonical "/dashboard" entry point
 
 What still has residual drift:
 
@@ -72,8 +74,6 @@ What still has residual drift:
 - generated Supabase types can drift again if future schema changes do not explicitly clean legacy RPC signatures
 - some planned ERP modules exist only at the database layer
 - the quotation domain has historically changed faster than its migration cleanup discipline
-- the provider-facing pricing-request route now has a real PDF download path and a separate web preview surface
-- route duplication between "/" and "/dashboard" has been reduced by redirecting "/" to the canonical "/dashboard" entry point
 - backendMode.ts remains as rollback safety even though the linked cloud environment is now canonical
 
 

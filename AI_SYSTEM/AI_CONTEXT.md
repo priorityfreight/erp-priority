@@ -193,11 +193,11 @@ CURRENT QUOTATION NORMALIZATION
 - the institutional sentence belongs at the end of the customer quotation, not in the header
 - customer quotation layout should keep quotation summary, route, and load information together on page 1 whenever content volume allows
 - when an option does not fit cleanly, the PDF should move the whole option block to the next page instead of splitting the section mid-page
-- the provider-facing pricing request must be delivered through the server PDF route at frontend/app/quotations/[id]/pricing-request/pdf/route.ts
+- the provider-facing pricing request PDF route remains available at frontend/app/quotations/[id]/pricing-request/pdf/route.ts as a controlled internal document output
 - provider-facing pricing request PDFs are generated on demand in memory and downloaded directly; they must not be stored in Supabase, Vercel, or any other cloud bucket
 - the web preview under frontend/app/quotations/[id]/pricing-request/page.tsx is a reference surface and must stay synchronized with the downloadable provider PDF
 - provider-facing pricing requests may show service, operation type, route, required date, and cargo information, but must never expose the client name or commercial sale amounts
-- the provider-sourcing workflow currently prioritizes polished email and WhatsApp outreach over a formal provider PDF
+- the provider-sourcing workflow currently prioritizes polished email and WhatsApp outreach over the internal provider PDF
 - provider outreach actions must expose separate Spanish and English variants so pricing can select the language per supplier
 - provider outreach content must include:
   incoterm
@@ -417,17 +417,16 @@ Quotations
 - pricing workflow in the live UI is:
   borrador → CRM captures route and load information
   pendiente → quotation requested to pricing and ready to be taken
-  cotizando → source providers, open provider request PDF, and capture provider purchase options
+  cotizando → source providers, launch bilingual outreach, and capture provider purchase options
   lista_para_enviar → pricing proposal complete and ready to return to ventas
   renegociar_tarifa → ventas feedback visible to pricing together with target rate
 - sales workflow in the live UI is:
-  lista_para_enviar → ventas captures sale amounts by option_label and prepares the client-facing proposal
+  lista_para_enviar → ventas captures sale amounts by commercial option and prepares the client-facing proposal
   enviada → the customer-facing quotation document has been sent and commercial follow-up actions become primary
   aceptada → booking creation is enabled
 - charge lines use:
-  option_label, provider_id, sales_accounting_concept_id, purchase_amount, sale_amount, profit_amount, vat_rate
-- cargo/consolidation lines are service-specific related rows used mainly for:
-  LTL, LCL, AIR, COURIER
+  quotation_option_id as the canonical grouping key plus provider_id, sales_accounting_concept_id, purchase_amount, sale_amount, profit_amount, vat_rate
+- cargo/consolidation lines are now the canonical load-detail structure for all service types
 - CRM quotation detail must hide pricing outcomes until pricing returns the quotation as lista_para_enviar or later
 - CRM must treat purchase capture and sale capture as separate responsibilities:
   pricing owns purchase

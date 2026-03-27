@@ -144,6 +144,12 @@ soft white / light steel
 Status accents
 use business meaning colors without overwhelming the corporate palette
 
+Brand asset rule
+
+- repository source of truth: ASSETS/
+- Next.js runtime copies: frontend/public/assets/
+- do not recreate logos with text when official assets exist
+
 
 
 --------------------------------------------------
@@ -305,6 +311,11 @@ Max width
 
 Fields grouped by section.
 
+Operational spreadsheet rule
+
+- quotation cargo capture and pricing purchase capture may use spreadsheet-style row layouts when speed is more important than decorative form chrome
+- these spreadsheet-like capture areas must still preserve strong spacing, clear headers, and low visual clutter
+
 
 
 Example
@@ -413,6 +424,23 @@ mobile
 
 
 Sidebar collapses on mobile.
+
+
+--------------------------------------------------
+DOCUMENT OUTPUT DESIGN
+--------------------------------------------------
+
+Customer quotation output:
+
+- must feel like a formal commercial proposal
+- preview and PDF must share the same hierarchy and branding direction
+- status and internal tracking must stay hidden
+
+Provider pricing request output:
+
+- may use the same branded family, but must read as internal sourcing support
+- email and WhatsApp outreach remain the primary provider-facing channel in the live workflow
+- if a PDF is shown, it must remain secondary support output and never expose client name or commercial sale values
 
 
 

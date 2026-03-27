@@ -227,6 +227,7 @@ Current quotation document outputs:
 - customer PDFs are generated on demand and downloaded directly; they are not persisted in cloud storage
 - frontend/app/quotations/[id]/pricing-request/page.tsx is the internal provider-facing web preview
 - frontend/app/quotations/[id]/pricing-request/pdf/route.ts is the canonical provider-facing PDF download endpoint
+- provider sourcing in the live UI now prioritizes bilingual outreach actions over the internal provider PDF
 
 Pricing module status:
 
@@ -235,6 +236,12 @@ Pricing module status:
 - provider contacts do not have a standalone route yet; they are managed within the provider detail page
 - the pricing module already depends on canonical master data:
   UN/LOCODE and sales service transport types
+- pricing/quotations now supports:
+  grouped purchase options
+  multi-concept cost capture per option
+  inline option editing
+  bilingual provider outreach actions
+  internal provider PDF support
 
 Current data-layer behavior:
 

@@ -198,14 +198,22 @@ Quotation current rules:
 - CRM must hand the quotation to pricing through request_quotation_pricing()
 - charge lines are shown as table-first related data
 - cargo lines are shown as table-first related data when the service uses consolidation lines
-- the client-facing document route lives at frontend/app/quotations/[id]/document/page.tsx
-- the internal pricing-request document route lives at frontend/app/quotations/[id]/pricing-request/page.tsx
+- the client-facing web preview route lives at frontend/app/quotations/[id]/document/page.tsx
+- the real customer-facing PDF download route lives at frontend/app/quotations/[id]/document/pdf/route.ts
+- the internal pricing-request web preview route lives at frontend/app/quotations/[id]/pricing-request/page.tsx
+- the internal pricing-request PDF download route lives at frontend/app/quotations/[id]/pricing-request/pdf/route.ts
 - the document hides provider and purchase values
 - accepted quotations expose a manual Create booking action
 - pricing quotations page opens provider sourcing suggestions from provider_service_offering_view and provider_contacts_view
 - pricing quotations page can capture provider-side purchase lines before moving the quotation to lista_para_enviar
-- provider-side purchase lines may store multiple commercial options through option_label
+- provider-side purchase lines are grouped canonically through quotation_options / quotation_option_id
 - pricing captures purchase only; sales-side sale capture remains a later commercial step
+- provider sourcing now exposes primary bilingual outreach actions:
+  Correo ES
+  Email EN
+  WhatsApp ES
+  WhatsApp EN
+- provider outreach content uses compact load rows plus one consolidated commodities line instead of ASCII tables
 - quotation_summary_view now masks estimated_cost, estimated_price, and expected_profit according to field permissions
 - quotation_cost_line_secure_view is the canonical line-level masked read for quotation economics
 - default role intent is:

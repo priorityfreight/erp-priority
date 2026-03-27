@@ -218,10 +218,10 @@ Quotation-specific write rules:
 - each selected customer option must render separately with its own totals and REMARKS content
 - provider-facing pricing requests must not expose the client name
 - provider-facing internal pricing request documents must not expose commercial sale amounts
-- provider-facing pricing requests should be served through frontend/app/quotations/[id]/pricing-request/pdf/route.ts as real generated PDFs instead of browser print flows
+- provider-facing pricing requests may still use frontend/app/quotations/[id]/pricing-request/pdf/route.ts as a real generated internal PDF instead of browser print flows
 - provider-facing pricing-request PDFs must be generated in memory and downloaded directly; do not persist them in Supabase storage or cloud buckets
 - keep frontend/app/quotations/[id]/pricing-request/page.tsx aligned with the real provider-facing PDF output so preview and download do not drift
-- provider sourcing actions should prioritize direct email and WhatsApp outreach with polished bilingual templates
+- provider sourcing actions should prioritize direct email and WhatsApp outreach with polished bilingual templates; the provider PDF is secondary support output
 - expose separate ES and EN provider outreach actions so pricing may choose the language per supplier
 - provider outreach templates must not expose client name
 - provider outreach templates should include pickup origin, POL, POD, delivery destination, incoterm, cargo ready date, and cargo details rendered as compact load rows plus one consolidated commodities line

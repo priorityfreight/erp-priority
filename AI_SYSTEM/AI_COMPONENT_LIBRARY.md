@@ -357,6 +357,25 @@ Example
 Delete client confirmation.
 
 
+QuotationCargoLineForm
+
+Current live implementation:
+
+- spreadsheet-style multi-row cargo capture modal
+- explicit action to add another load row
+- accumulated calculations visible inside the same modal
+
+
+QuotationChargeLineForm
+
+Current live implementation:
+
+- spreadsheet-style multi-row purchase capture modal
+- grouped by quotation option
+- explicit action to add another purchase concept
+- inline editing of a whole option instead of detached editors
+
+
 
 --------------------------------------------------
 FEEDBACK COMPONENTS
@@ -382,6 +401,39 @@ Persistent warning or info message.
 LoadingSpinner
 
 Displayed during processing.
+
+
+--------------------------------------------------
+DOCUMENT COMPONENTS
+--------------------------------------------------
+
+CustomerQuotationPdf
+
+Current live implementation:
+
+- real generated customer-facing PDF
+- provider and purchase data hidden
+- one commercial option rendered separately
+- REMARKS block per option
+
+
+ProviderPricingRequestPdf
+
+Current live implementation:
+
+- real generated internal provider PDF
+- no client name
+- no commercial sale values
+- operational route and cargo details only
+
+
+Document preview surfaces
+
+Current live implementation:
+
+- customer quotation has a web preview plus a real PDF route
+- provider pricing request has a web preview plus a real PDF route
+- the live provider workflow still prioritizes bilingual outreach actions from the pricing modal
 
 
 

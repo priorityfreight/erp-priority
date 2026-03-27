@@ -63,6 +63,16 @@ When a change affects branding or shared visual identity:
 1. keep the repository-level ASSETS/ folder as the design source of truth
 2. copy only the runtime-ready assets required by Next.js into frontend/public/assets/
 3. update all frontend logo consumers to read from frontend/public/assets/
+4. if quote or provider document branding changes, keep both the web preview and PDF output aligned
+
+When a change affects quotation outreach or document generation:
+
+1. decide whether the primary channel is:
+   customer PDF
+   provider PDF
+   provider email / WhatsApp outreach
+2. keep AI_CONTEXT.md, AI_QUERY_GUIDE.md, and AI_QUERY_LIBRARY.md aligned with that decision
+3. do not let helper text, preview routes, and actual primary workflow diverge
 
 When a change affects scheduled accounting data:
 
