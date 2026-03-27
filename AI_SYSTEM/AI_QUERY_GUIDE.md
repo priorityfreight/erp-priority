@@ -183,6 +183,9 @@ Quotation-specific write rules:
 - use set_quotation_option_customer_visibility() when CRM decides which options are shown to the customer
 - quotation-level commodities, quantity, weight, and volume must not be reintroduced on quotations
 - all service types must rely on quotation_cargo_lines for cargo detail capture and document rendering
+- quotation cargo capture UI is multi-row and spreadsheet-like; multiple draft rows may be saved in one modal action
+- the canonical cargo column order is: cantidad, tipo, largo, ancho, alto, peso, commodities
+- sort_order remains backend/internal behavior and must not be exposed as a user-facing input
 - quotation references must be backend-generated from the service-type counter contract:
   QPRIAIR, QPRIFCL, QPRILCL, QPRIFTL, QPRILTL, QPRICOU
 - accepted quotations are no longer auto-converted into shipments

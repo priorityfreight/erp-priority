@@ -377,7 +377,9 @@ quotations.ts
   sectioned information layout
   route section separated from load information
   related charge lines as table first, popup create/edit second
-  related cargo lines as table first, popup create/edit second when the service requires them
+  related cargo lines as table first, popup create/edit second for all service types
+  cargo popup uses a spreadsheet-style multi-row capture with an "Anadir otro tipo de carga" action
+  cargo popup calculates accumulated CBM, KG / VOL, clase estimada, cantidad total, and peso total across all draft and persisted rows
   client-facing document route under frontend/app/quotations/[id]/document/page.tsx
   provider-facing internal request route under frontend/app/quotations/[id]/pricing-request/page.tsx
   accepted quotations expose a manual Create booking action

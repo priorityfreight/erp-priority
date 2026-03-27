@@ -96,16 +96,96 @@ type SalesDraftValue = {
   sale_currency: string
 }
 
-const emptyCargoForm: QuotationCargoLineFormValues = {
-  loadType: "",
-  commodities: "",
-  pieceCount: "",
-  width: "",
-  length: "",
-  height: "",
-  weight: "",
-  freightClass: "",
-  sortOrder: "1",
+function createCargoDraftId() {
+  if (typeof globalThis !== "undefined" && "crypto" in globalThis && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `cargo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function createEmptyCargoForm(existingCargoId: string | null = null): QuotationCargoLineFormValues {
+  return {
+    draftId: createCargoDraftId(),
+    existingCargoId,
+    loadType: "",
+    commodities: "",
+    pieceCount: "",
+    width: "",
+    length: "",
+    height: "",
+    weight: "",
+  }
+}
+
+function buildCargoFormFromLine(line: QuotationCargoLine): QuotationCargoLineFormValues {
+  return {
+    draftId: createCargoDraftId(),
+    existingCargoId: line.id,
+    loadType: line.load_type,
+    commodities: line.commodities || "",
+    pieceCount: line.piece_count != null ? String(line.piece_count) : "",
+    width: line.width != null ? String(line.width) : "",
+    length: line.length != null ? String(line.length) : "",
+    height: line.height != null ? String(line.height) : "",
+    weight: line.weight != null ? String(line.weight) : "",
+  }
+}
+
+function isCargoDraftEmpty(row: QuotationCargoLineFormValues) {
+  return ![
+    row.loadType,
+    row.commodities,
+    row.pieceCount,
+    row.width,
+    row.length,
+    row.height,
+    row.weight,
+  ].some((value) => value.trim())
+}
+
+function buildCargoPayload(row: QuotationCargoLineFormValues) {
+  const pieceCount = toNumberOrNull(row.pieceCount)
+  const width = toNumberOrNull(row.width)
+  const length = toNumberOrNull(row.length)
+  const height = toNumberOrNull(row.height)
+  const weight = toNumberOrNull(row.weight)
+  const cbm = calculateCbm({
+    pieceCount,
+    widthCm: width,
+    lengthCm: length,
+    heightCm: height,
+  })
+  const volumetricWeightKg = calculateVolumetricWeightKg({
+    pieceCount,
+    widthCm: width,
+    lengthCm: length,
+    heightCm: height,
+  })
+  const estimatedClass = estimateFreightClass({
+    pieceCount,
+    widthCm: width,
+    lengthCm: length,
+    heightCm: height,
+    weightKg: weight,
+  })
+
+  return {
+    load_type: row.loadType.trim(),
+    commodities: row.commodities.trim() || null,
+    piece_count: pieceCount,
+    width,
+    length,
+    height,
+    weight,
+    freight_class: estimatedClass || null,
+    cbm,
+    volumetric_weight_kg: volumetricWeightKg,
+  }
+}
+
+function nextCargoSortOrder(cargoLines: QuotationCargoLine[]) {
+  return cargoLines.reduce((maxValue, line) => Math.max(maxValue, line.sort_order || 0), 0) + 1
 }
 
 function InfoCard({
@@ -280,8 +360,9 @@ export default function QuotationDetailPage() {
     deliveryAddress: "",
     requiredQuoteDate: "",
   })
-  const [cargoFormValues, setCargoFormValues] =
-    useState<QuotationCargoLineFormValues>(emptyCargoForm)
+  const [cargoFormRows, setCargoFormRows] = useState<QuotationCargoLineFormValues[]>([
+    createEmptyCargoForm(),
+  ])
   const [statusFormValues, setStatusFormValues] = useState<StatusFormValues>({
     status: "pendiente",
     rejectionReasonId: "",
@@ -500,7 +581,7 @@ export default function QuotationDetailPage() {
 
   function resetCargoForm() {
     setEditingCargoId(null)
-    setCargoFormValues(emptyCargoForm)
+    setCargoFormRows([createEmptyCargoForm()])
   }
 
   function openSalesOption(summary: SalesOptionSummary) {
@@ -563,68 +644,39 @@ export default function QuotationDetailPage() {
       return
     }
 
-    if (!cargoFormValues.loadType.trim()) {
-      alert("Selecciona el tipo de carga")
+    const rowsToSave = cargoFormRows.filter((row) => !isCargoDraftEmpty(row))
+
+    if (rowsToSave.length === 0) {
+      alert("Agrega al menos un tipo de carga")
       return
     }
 
-    const pieceCount = toNumberOrNull(cargoFormValues.pieceCount)
-    const width = toNumberOrNull(cargoFormValues.width)
-    const length = toNumberOrNull(cargoFormValues.length)
-    const height = toNumberOrNull(cargoFormValues.height)
-    const weight = toNumberOrNull(cargoFormValues.weight)
-    const cbm = calculateCbm({
-      pieceCount,
-      widthCm: width,
-      lengthCm: length,
-      heightCm: height,
-    })
-    const volumetricWeightKg = calculateVolumetricWeightKg({
-      pieceCount,
-      widthCm: width,
-      lengthCm: length,
-      heightCm: height,
-    })
-    const estimatedClass = estimateFreightClass({
-      pieceCount,
-      widthCm: width,
-      lengthCm: length,
-      heightCm: height,
-      weightKg: weight,
-    })
-
     try {
       setSavingCargo(true)
+      let sortOrderCursor = nextCargoSortOrder(cargoLines)
 
-      if (editingCargoId) {
-        await updateQuotationCargoLine(editingCargoId, {
-          load_type: cargoFormValues.loadType.trim(),
-          commodities: cargoFormValues.commodities.trim() || null,
-          piece_count: pieceCount,
-          width,
-          length,
-          height,
-          weight,
-          freight_class: cargoFormValues.freightClass.trim() || estimatedClass || null,
-          cbm,
-          volumetric_weight_kg: volumetricWeightKg,
-          sort_order: Number(cargoFormValues.sortOrder || "1"),
-        })
-      } else {
+      for (const row of rowsToSave) {
+        if (!row.loadType.trim()) {
+          throw new Error("Cada renglon debe incluir un tipo de carga")
+        }
+
+        const payload = buildCargoPayload(row)
+
+        if (row.existingCargoId) {
+          const existingCargoLine = cargoLines.find((line) => line.id === row.existingCargoId)
+          await updateQuotationCargoLine(row.existingCargoId, {
+            ...payload,
+            sort_order: existingCargoLine?.sort_order ?? 1,
+          })
+          continue
+        }
+
         await createQuotationCargoLine({
           quotation_id: details.quotation.id,
-          load_type: cargoFormValues.loadType.trim(),
-          commodities: cargoFormValues.commodities.trim() || null,
-          piece_count: pieceCount,
-          width,
-          length,
-          height,
-          weight,
-          freight_class: cargoFormValues.freightClass.trim() || estimatedClass || null,
-          cbm,
-          volumetric_weight_kg: volumetricWeightKg,
-          sort_order: Number(cargoFormValues.sortOrder || "1"),
+          ...payload,
+          sort_order: sortOrderCursor,
         })
+        sortOrderCursor += 1
       }
 
       setShowCargoModal(false)
@@ -1047,6 +1099,104 @@ export default function QuotationDetailPage() {
           <InfoField label="Direccion de entrega" value={quotation.delivery_address} wide />
         </InfoCard>
 
+        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[#111827]">Informacion de carga</h2>
+              <p className="mt-1 text-sm text-[#6B7280]">
+                Captura piezas y dimensiones por renglon para copiar o registrar la informacion de carga.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                resetCargoForm()
+                setShowCargoModal(true)
+              }}
+              className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
+            >
+              Anadir detalle
+            </button>
+          </div>
+
+          {cargoLines.length === 0 ? (
+            <p className="text-sm text-[#6B7280]">
+              Todavia no hay detalles de carga registrados para esta cotizacion.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
+              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
+                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                  <tr>
+                    <th className="px-4 py-3">Tipo</th>
+                    <th className="px-4 py-3">Cantidad</th>
+                    <th className="px-4 py-3">Dimensiones</th>
+                    <th className="px-4 py-3">Peso</th>
+                    <th className="px-4 py-3">Commodities</th>
+                    <th className="px-4 py-3">CBM</th>
+                    <th className="px-4 py-3">KG / VOL</th>
+                    <th className="px-4 py-3">Clase</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                  {cargoLines.map((line) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-3 text-[#475569]">{line.load_type}</td>
+                      <td className="px-4 py-3 text-[#475569]">{line.piece_count ?? "—"}</td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {[line.width, line.length, line.height].every((value) => value != null)
+                          ? `${line.width} x ${line.length} x ${line.height} cm`
+                          : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.weight != null ? `${line.weight} kg` : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.commodities || "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.cbm != null ? line.cbm.toFixed(3) : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.volumetric_weight_kg != null
+                          ? line.volumetric_weight_kg.toFixed(2)
+                          : "No disponible"}
+                      </td>
+                      <td className="px-4 py-3 text-[#475569]">
+                        {line.freight_class || "No disponible"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCargoId(line.id)
+                              setCargoFormRows([buildCargoFormFromLine(line)])
+                              setShowCargoModal(true)
+                            }}
+                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteCargoLine(line.id)}
+                            disabled={deletingCargoId === line.id}
+                            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingCargoId === line.id ? "Eliminando..." : "Eliminar"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         <InfoCard title="Detalles de cotizacion">
           <InfoField label="Fecha creada" value={quotation.created_at} />
           <InfoField label="Requieren cotizacion" value={quotation.required_quote_date} />
@@ -1056,17 +1206,232 @@ export default function QuotationDetailPage() {
           <InfoField label="Notas cancelacion" value={quotation.cancellation_notes} wide />
         </InfoCard>
 
-        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+          <div>
+            <h2 className="text-lg font-semibold text-[#111827]">Costos</h2>
+            <p className="mt-1 text-sm text-[#6B7280]">
+              Resumen economico y opciones de costo preparadas para esta cotizacion.
+            </p>
+          </div>
+
+          {canSeePricingOutcome ? (
+            <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+              {(canViewCost || canViewSalePrice || canViewExpectedProfit) ? (
+                <section className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
+                  <h3 className="text-base font-semibold text-[#111827]">Resumen economico</h3>
+                  <p className="mt-1 text-sm text-[#6B7280]">
+                    Consolidado de venta, compra, profit e IVA segun las opciones capturadas.
+                  </p>
+                  <div className="mt-5 grid gap-3">
+                    {canViewCost ? (
+                      <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                          Compra total MXN
+                        </div>
+                        <div className="mt-1 text-base font-semibold text-[#111827]">
+                          {formatCurrency(pricingSummary.purchase)}
+                        </div>
+                      </div>
+                    ) : null}
+                    {canViewSalePrice ? (
+                      <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                          Venta total MXN
+                        </div>
+                        <div className="mt-1 text-base font-semibold text-[#111827]">
+                          {formatCurrency(pricingSummary.sale)}
+                        </div>
+                      </div>
+                    ) : null}
+                    {canViewExpectedProfit ? (
+                      <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                          Profit MXN
+                        </div>
+                        <div className="mt-1 text-base font-semibold text-[#111827]">
+                          {formatCurrency(pricingSummary.profit)}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                        IVA estimado MXN
+                      </div>
+                      <div className="mt-1 text-base font-semibold text-[#111827]">
+                        {formatCurrency(pricingSummary.vat)}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#475569]">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                        Tipo de cambio contable
+                      </div>
+                      <div className="mt-1">
+                        USD → MXN:{" "}
+                        {quotation.accepted_usd_to_mxn_rate != null
+                          ? `${quotation.accepted_usd_to_mxn_rate.toFixed(4)} (${quotation.accepted_usd_rate_date || "sin fecha"})`
+                          : "Ultima tasa disponible"}
+                      </div>
+                      <div className="mt-1">
+                        EUR → MXN:{" "}
+                        {quotation.accepted_eur_to_mxn_rate != null
+                          ? `${quotation.accepted_eur_to_mxn_rate.toFixed(4)} (${quotation.accepted_eur_rate_date || "sin fecha"})`
+                          : "Ultima tasa disponible"}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
+              <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
+                <div>
+                  <h3 className="text-base font-semibold text-[#111827]">Opciones de costo</h3>
+                  <p className="mt-1 text-sm text-[#6B7280]">
+                    Pricing captura una o varias opciones de compra y CRM decide cuales se presentan al cliente.
+                  </p>
+                </div>
+
+                {chargeOptionSummaries.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {chargeOptionSummaries.map((summary) => (
+                      <div
+                        key={summary.optionId}
+                        className="rounded-xl border border-[#E5E7EB] bg-white p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                              {summary.optionLabel}
+                            </div>
+                            <div className="mt-1 text-xs text-[#64748B]">
+                              {summary.lines.length} cargo(s)
+                            </div>
+                          </div>
+                          {canEditCommercialSale ? (
+                            <label className="flex items-center gap-2 text-xs font-medium text-[#475569]">
+                              <input
+                                type="checkbox"
+                                checked={summary.includeInCustomerQuote}
+                                disabled={updatingVisibleOptionId === summary.optionId}
+                                onChange={() => void handleToggleCustomerOption(summary)}
+                              />
+                              Mostrar al cliente
+                            </label>
+                          ) : (
+                            <div className="text-xs text-[#64748B]">
+                              {summary.includeInCustomerQuote ? "Visible al cliente" : "Oculta al cliente"}
+                            </div>
+                          )}
+                        </div>
+                        {canViewCost ? (
+                          <div className="mt-2 text-lg font-semibold text-[#111827]">
+                            {formatCurrency(summary.totalPurchaseMxn)}
+                          </div>
+                        ) : null}
+                        <div className="mt-1 text-sm text-[#6B7280]">
+                          Vigencia compra: {summary.purchaseValidUntil || "No disponible"}
+                        </div>
+                        <div className="mt-1 text-sm text-[#6B7280]">
+                          Vigencia venta: {summary.salesValidUntil || "No disponible"}
+                        </div>
+                        {summary.salesValidityOverridden ? (
+                          <div className="mt-1 text-xs font-medium text-[#7C2D12]">
+                            Vigencia de venta ajustada manualmente por Admin
+                          </div>
+                        ) : null}
+                        <div className="mt-1 text-sm text-[#6B7280]">
+                          Proveedores:{" "}
+                          {summary.providers.size > 0
+                            ? Array.from(summary.providers).join(", ")
+                            : "Sin proveedor"}
+                        </div>
+                        {canViewSalePrice ? (
+                          <div className="mt-1 text-sm text-[#6B7280]">
+                            Subtotal venta MXN: {formatCurrency(summary.totalSaleMxn)}
+                          </div>
+                        ) : null}
+                        {canViewExpectedProfit ? (
+                          <div className="mt-1 text-sm text-[#6B7280]">
+                            Profit MXN: {formatCurrency(summary.totalProfitMxn)}
+                          </div>
+                        ) : null}
+                        {canViewSalePrice ? (
+                          <div className="mt-1 text-sm text-[#6B7280]">
+                            Total con IVA MXN:{" "}
+                            {formatCurrency(
+                              summary.lines.reduce(
+                                (sum, line) =>
+                                  sum +
+                                  ((line.sale_amount_mxn ?? line.sale_amount ?? 0) *
+                                    (1 + (line.vat_rate ?? 0) / 100)),
+                                0
+                              )
+                            )}
+                          </div>
+                        ) : null}
+                        {currentUserRoleName === "Admin" ? (
+                          <div className="mt-4 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                              Override de vigencia de venta
+                            </div>
+                            <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                              <input
+                                type="date"
+                                className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                                value={salesValidityDrafts[summary.optionId] ?? ""}
+                                onChange={(event) =>
+                                  setSalesValidityDrafts((current) => ({
+                                    ...current,
+                                    [summary.optionId]: event.target.value,
+                                  }))
+                                }
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveSalesValidity(summary)}
+                                disabled={savingOptionValidityId === summary.optionId}
+                                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {savingOptionValidityId === summary.optionId ? "Guardando..." : "Guardar vigencia"}
+                              </button>
+                            </div>
+                            <div className="mt-2 text-xs text-[#64748B]">
+                              Si no se ajusta manualmente, la vigencia de venta replica la vigencia de compra.
+                            </div>
+                          </div>
+                        ) : null}
+                        {canEditCommercialSale ? (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => openSalesOption(summary)}
+                              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
+                            >
+                              {summary.hasCompleteSale ? "Editar venta" : "Anadir venta"}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#6B7280]">
+                    Pricing todavia no ha cargado opciones de costo para esta cotizacion.
+                  </p>
+                )}
+              </section>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-4 text-sm text-[#475569]">
+              Los costos apareceran aqui cuando Pricing tome la cotizacion y capture sus opciones.
+            </div>
+          )}
+        </section>
+
+        <section>
           <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-[#111827]">
-                  {canSeeCommercialActions
-                    ? "Acciones comerciales"
-                    : canPrepareCommercial
-                      ? "Preparacion comercial"
-                      : "Seguimiento comercial"}
-                </h2>
+                <h2 className="text-lg font-semibold text-[#111827]">Seguimiento comercial</h2>
                 <p className="mt-1 text-sm text-[#6B7280]">
                   {canSeeCommercialActions
                     ? "Genera el documento comercial y compártelo con el contacto principal del cliente."
@@ -1189,454 +1554,65 @@ export default function QuotationDetailPage() {
                 aqui podras revisar las opciones preparadas por pricing y continuar con la salida comercial.
               </div>
             )}
-          </section>
 
-          {canSeePricingOutcome && (canViewCost || canViewSalePrice || canViewExpectedProfit) ? (
-            <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-[#111827]">Resumen economico</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
-                Consolidado de venta, compra, profit e IVA segun las opciones capturadas.
-              </p>
-              <div className="mt-5 grid gap-3">
-                {canViewCost ? (
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      Compra total MXN
-                    </div>
-                    <div className="mt-1 text-base font-semibold text-[#111827]">
-                      {formatCurrency(pricingSummary.purchase)}
-                    </div>
-                  </div>
-                ) : null}
-                {canViewSalePrice ? (
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      Venta total MXN
-                    </div>
-                    <div className="mt-1 text-base font-semibold text-[#111827]">
-                      {formatCurrency(pricingSummary.sale)}
-                    </div>
-                  </div>
-                ) : null}
-                {canViewExpectedProfit ? (
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      Profit MXN
-                    </div>
-                    <div className="mt-1 text-base font-semibold text-[#111827]">
-                      {formatCurrency(pricingSummary.profit)}
-                    </div>
-                  </div>
-                ) : null}
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    IVA estimado MXN
-                  </div>
-                  <div className="mt-1 text-base font-semibold text-[#111827]">
-                    {formatCurrency(pricingSummary.vat)}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 text-sm text-[#475569]">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    Tipo de cambio contable
-                  </div>
-                  <div className="mt-1">
-                    USD → MXN:{" "}
-                    {quotation.accepted_usd_to_mxn_rate != null
-                      ? `${quotation.accepted_usd_to_mxn_rate.toFixed(4)} (${quotation.accepted_usd_rate_date || "sin fecha"})`
-                      : "Ultima tasa disponible"}
-                  </div>
-                  <div className="mt-1">
-                    EUR → MXN:{" "}
-                    {quotation.accepted_eur_to_mxn_rate != null
-                      ? `${quotation.accepted_eur_to_mxn_rate.toFixed(4)} (${quotation.accepted_eur_rate_date || "sin fecha"})`
-                      : "Ultima tasa disponible"}
-                  </div>
-                </div>
-              </div>
-              {createdShipment ? (
-                <div className="mt-4 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3 text-sm text-[#065F46]">
-                  Booking generado correctamente: {createdShipment.shipment_reference || createdShipment.id}
-                </div>
-              ) : null}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {quotation.status === "enviada" ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleMarkAccepted()}
-                    disabled={markingAccepted}
-                    className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {markingAccepted ? "Actualizando..." : "Marcar aceptada"}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void handleCreateBooking()}
-                  disabled={creatingBooking || quotation.status !== "aceptada"}
-                  className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {creatingBooking ? "Creando booking..." : "Convertir a booking"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFormValues({
-                      ...buildStatusFormValues(quotation),
-                      status: "renegociar_tarifa",
-                      rejectionReasonId: "",
-                      cancellationNotes: "",
-                    })
-                    setShowStatusModal(true)
-                  }}
-                  className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                >
-                  Renegociar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFormValues({
-                      ...buildStatusFormValues(quotation),
-                      status: "rechazada",
-                      cancellationNotes: "",
-                    })
-                    setShowStatusModal(true)
-                  }}
-                  className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-2 text-sm font-medium text-[#B91C1C] hover:bg-[#FEE2E2]"
-                >
-                  Rechazada
-                </button>
-              </div>
-            </section>
-          ) : null}
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-[#111827]">Informacion de carga</h2>
-                <p className="mt-1 text-sm text-[#6B7280]">
-                  Captura piezas y dimensiones por renglon para copiar o registrar la informacion de carga.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  resetCargoForm()
-                  setShowCargoModal(true)
-                }}
-                className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-              >
-                Anadir detalle
-              </button>
-            </div>
-
-            {cargoLines.length === 0 ? (
-              <p className="text-sm text-[#6B7280]">
-                Todavia no hay detalles de carga registrados para esta cotizacion.
-              </p>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-                <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                  <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                    <tr>
-                      <th className="px-4 py-3">Tipo</th>
-                      <th className="px-4 py-3">Cantidad</th>
-                      <th className="px-4 py-3">Dimensiones</th>
-                      <th className="px-4 py-3">Peso</th>
-                      <th className="px-4 py-3">Commodities</th>
-                      <th className="px-4 py-3">CBM</th>
-                      <th className="px-4 py-3">KG / VOL</th>
-                      <th className="px-4 py-3">Clase</th>
-                      <th className="px-4 py-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                    {cargoLines.map((line) => (
-                      <tr key={line.id}>
-                        <td className="px-4 py-3 text-[#475569]">{line.load_type}</td>
-                        <td className="px-4 py-3 text-[#475569]">{line.piece_count ?? "—"}</td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {[line.width, line.length, line.height].every((value) => value != null)
-                            ? `${line.width} x ${line.length} x ${line.height} cm`
-                            : "No disponible"}
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.weight != null ? `${line.weight} kg` : "No disponible"}
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.commodities || "No disponible"}
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.cbm != null ? line.cbm.toFixed(3) : "No disponible"}
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.volumetric_weight_kg != null
-                            ? line.volumetric_weight_kg.toFixed(2)
-                            : "No disponible"}
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.freight_class || "No disponible"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCargoId(line.id)
-                                setCargoFormValues({
-                                  loadType: line.load_type,
-                                  commodities: line.commodities || "",
-                                  pieceCount:
-                                    line.piece_count != null ? String(line.piece_count) : "",
-                                  width: line.width != null ? String(line.width) : "",
-                                  length: line.length != null ? String(line.length) : "",
-                                  height: line.height != null ? String(line.height) : "",
-                                  weight: line.weight != null ? String(line.weight) : "",
-                                  freightClass: line.freight_class || "",
-                                  sortOrder: String(line.sort_order || 1),
-                                })
-                                setShowCargoModal(true)
-                              }}
-                              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteCargoLine(line.id)}
-                              disabled={deletingCargoId === line.id}
-                              className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {deletingCargoId === line.id ? "Eliminando..." : "Eliminar"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-        {canSeePricingOutcome ? (
-          <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-[#111827]">Opciones de pricing</h2>
-                <p className="mt-1 text-sm text-[#6B7280]">
-                  Pricing captura una o varias opciones de compra. CRM las consulta para preparar la salida comercial.
-                </p>
-              </div>
-            </div>
-
-            {chargeOptionSummaries.length > 0 ? (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {chargeOptionSummaries.map((summary) => (
-                  <div
-                    key={summary.optionId}
-                    className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                          {summary.optionLabel}
-                        </div>
-                        <div className="mt-1 text-xs text-[#64748B]">
-                          {summary.lines.length} cargo(s)
-                        </div>
-                      </div>
-                      {canEditCommercialSale ? (
-                        <label className="flex items-center gap-2 text-xs font-medium text-[#475569]">
-                          <input
-                            type="checkbox"
-                            checked={summary.includeInCustomerQuote}
-                            disabled={updatingVisibleOptionId === summary.optionId}
-                            onChange={() => void handleToggleCustomerOption(summary)}
-                          />
-                          Mostrar al cliente
-                        </label>
-                      ) : (
-                        <div className="text-xs text-[#64748B]">
-                          {summary.includeInCustomerQuote ? "Visible al cliente" : "Oculta al cliente"}
-                        </div>
-                      )}
-                    </div>
-                    {canViewCost ? (
-                      <div className="mt-2 text-lg font-semibold text-[#111827]">
-                        {formatCurrency(summary.totalPurchaseMxn)}
-                      </div>
-                    ) : null}
-                    <div className="mt-1 text-sm text-[#6B7280]">
-                      Vigencia compra: {summary.purchaseValidUntil || "No disponible"}
-                    </div>
-                    <div className="mt-1 text-sm text-[#6B7280]">
-                      Vigencia venta: {summary.salesValidUntil || "No disponible"}
-                    </div>
-                    {summary.salesValidityOverridden ? (
-                      <div className="mt-1 text-xs font-medium text-[#7C2D12]">
-                        Vigencia de venta ajustada manualmente por Admin
-                      </div>
-                    ) : null}
-                    <div className="mt-1 text-sm text-[#6B7280]">
-                      Proveedores:{" "}
-                      {summary.providers.size > 0
-                        ? Array.from(summary.providers).join(", ")
-                        : "Sin proveedor"}
-                    </div>
-                    {canViewSalePrice ? (
-                      <div className="mt-1 text-sm text-[#6B7280]">
-                        Subtotal venta MXN: {formatCurrency(summary.totalSaleMxn)}
-                      </div>
-                    ) : null}
-                    {canViewExpectedProfit ? (
-                      <div className="mt-1 text-sm text-[#6B7280]">
-                        Profit MXN: {formatCurrency(summary.totalProfitMxn)}
-                      </div>
-                    ) : null}
-                    {canViewSalePrice ? (
-                      <div className="mt-1 text-sm text-[#6B7280]">
-                        Total con IVA MXN:{" "}
-                        {formatCurrency(
-                          summary.lines.reduce(
-                            (sum, line) =>
-                              sum +
-                              ((line.sale_amount_mxn ?? line.sale_amount ?? 0) *
-                                (1 + (line.vat_rate ?? 0) / 100)),
-                            0
-                          )
-                        )}
-                      </div>
-                    ) : null}
-                    {currentUserRoleName === "Admin" ? (
-                      <div className="mt-4 rounded-lg border border-[#E2E8F0] bg-white p-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                          Override de vigencia de venta
-                        </div>
-                        <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                          <input
-                            type="date"
-                            className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                            value={salesValidityDrafts[summary.optionId] ?? ""}
-                            onChange={(event) =>
-                              setSalesValidityDrafts((current) => ({
-                                ...current,
-                                [summary.optionId]: event.target.value,
-                              }))
-                            }
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void handleSaveSalesValidity(summary)}
-                            disabled={savingOptionValidityId === summary.optionId}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {savingOptionValidityId === summary.optionId ? "Guardando..." : "Guardar vigencia"}
-                          </button>
-                        </div>
-                        <div className="mt-2 text-xs text-[#64748B]">
-                          Si no se ajusta manualmente, la vigencia de venta replica la vigencia de compra.
-                        </div>
-                      </div>
-                    ) : null}
-                    {canEditCommercialSale ? (
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={() => openSalesOption(summary)}
-                          className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                        >
-                          {summary.hasCompleteSale ? "Editar venta" : "Anadir venta"}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
+            {createdShipment ? (
+              <div className="mt-4 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3 text-sm text-[#065F46]">
+                Booking generado correctamente: {createdShipment.shipment_reference || createdShipment.id}
               </div>
             ) : null}
 
-            {chargeLines.length === 0 ? (
-              <p className="text-sm text-[#6B7280]">
-                Todavia no hay cargos registrados para esta cotizacion.
-              </p>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-                <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                  <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                    <tr>
-                      <th className="px-4 py-3">Proveedor</th>
-                      <th className="px-4 py-3">Concepto</th>
-                      {canViewCost ? <th className="px-4 py-3">Compra</th> : null}
-                      {canViewSalePrice ? <th className="px-4 py-3">Venta</th> : null}
-                      {canViewExpectedProfit ? <th className="px-4 py-3">Profit MXN</th> : null}
-                      <th className="px-4 py-3">IVA</th>
-                      <th className="px-4 py-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                    {chargeLines.map((line) => (
-                      <tr key={line.id}>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.provider_name || "No asignado"}
-                          <div className="text-xs text-[#94A3B8]">
-                            {line.option_label || `Opcion ${line.option_sort_order ?? 1}`}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-[#475569]">
-                          {line.accounting_concept || line.service_name}
-                        </td>
-                        {canViewCost ? (
-                          <td className="px-4 py-3 text-[#475569]">
-                            {formatCurrency(line.purchase_amount, line.purchase_currency)}
-                            <div className="text-xs text-[#94A3B8]">
-                              {formatCurrency(line.purchase_amount_mxn)}
-                            </div>
-                          </td>
-                        ) : null}
-                        {canViewSalePrice ? (
-                          <td className="px-4 py-3 text-[#475569]">
-                            {formatCurrency(line.sale_amount, line.sale_currency)}
-                            <div className="text-xs text-[#94A3B8]">
-                              {formatCurrency(line.sale_amount_mxn)}
-                            </div>
-                          </td>
-                        ) : null}
-                        {canViewExpectedProfit ? (
-                          <td className="px-4 py-3 text-[#475569]">
-                            {formatCurrency(line.profit_amount_mxn ?? line.profit_amount)}
-                          </td>
-                        ) : null}
-                        <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
-                        <td className="px-4 py-3 text-right text-[#6B7280]">
-                          {canEditCommercialSale ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const summary = chargeOptionSummaries.find(
-                                  (item) => item.optionId === line.quotation_option_id
-                                )
-                                if (summary) {
-                                  openSalesOption(summary)
-                                }
-                              }}
-                              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 text-xs font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                            >
-                              Venta
-                            </button>
-                          ) : (
-                            "Solo lectura"
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {quotation.status === "enviada" ? (
+                <button
+                  type="button"
+                  onClick={() => void handleMarkAccepted()}
+                  disabled={markingAccepted}
+                  className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {markingAccepted ? "Actualizando..." : "Marcar aceptada"}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void handleCreateBooking()}
+                disabled={creatingBooking || quotation.status !== "aceptada"}
+                className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {creatingBooking ? "Creando booking..." : "Convertir a booking"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFormValues({
+                    ...buildStatusFormValues(quotation),
+                    status: "renegociar_tarifa",
+                    rejectionReasonId: "",
+                    cancellationNotes: "",
+                  })
+                  setShowStatusModal(true)
+                }}
+                className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
+              >
+                Renegociar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFormValues({
+                    ...buildStatusFormValues(quotation),
+                    status: "rechazada",
+                    cancellationNotes: "",
+                  })
+                  setShowStatusModal(true)
+                }}
+                className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-2 text-sm font-medium text-[#B91C1C] hover:bg-[#FEE2E2]"
+              >
+                Rechazada
+              </button>
+            </div>
           </section>
-        ) : null}
+
+        </section>
       </div>
 
       {showSalesModal && selectedSalesOptionSummary && canEditSalePrice ? (
@@ -1971,12 +1947,22 @@ export default function QuotationDetailPage() {
             title={editingCargoId ? "Editar consolidacion de carga" : "Nueva consolidacion de carga"}
             description="Usa dimensiones en cm y peso en kg para estandarizar los calculos."
             serviceType={quotation.service_type}
-            values={cargoFormValues}
-            onChange={(field, value) => {
-              setCargoFormValues((current) => ({
-                ...current,
-                [field]: value,
-              }))
+            rows={cargoFormRows}
+            existingLines={cargoLines}
+            onChangeRow={(draftId, field, value) => {
+              setCargoFormRows((current) =>
+                current.map((row) =>
+                  row.draftId === draftId ? { ...row, [field]: value } : row
+                )
+              )
+            }}
+            onAddRow={() => {
+              setCargoFormRows((current) => [...current, createEmptyCargoForm()])
+            }}
+            onRemoveRow={(draftId) => {
+              setCargoFormRows((current) =>
+                current.filter((row) => row.draftId !== draftId)
+              )
             }}
             onSubmit={handleSaveCargoLine}
             submitLabel={editingCargoId ? "Guardar cambios" : "Guardar detalle"}

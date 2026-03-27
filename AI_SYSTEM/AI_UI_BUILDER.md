@@ -102,6 +102,26 @@ Sidebar visual direction:
 - remember the desktop collapsed state between sessions
 - behave as a slide-in drawer on mobile with a strong close affordance
 
+
+--------------------------------------------------
+QUOTATION CARGO CAPTURE
+--------------------------------------------------
+
+When a quotation needs load-detail capture:
+
+- use a spreadsheet-style grid instead of stacked form cards
+- keep the visual reading order:
+  cantidad
+  tipo
+  largo
+  ancho
+  alto
+  peso
+  commodities
+- allow multiple draft rows through an explicit "Anadir otro tipo de carga" button
+- do not expose sort-order or derived freight-class inputs as manual fields
+- show accumulated calculations for all rows inside the same modal
+
 Example modules
 
 🏠 Dashboard  

@@ -42,6 +42,13 @@ Overall status:
 Partially aligned, materially improved after Sprint 1 through Sprint 3 remediation, with the
 quotation RPC stabilization pass completed on 2026-03-25.
 
+Latest stabilization note:
+
+- quotation cargo capture was simplified again on 2026-03-26
+- the prior single-row cargo-entry assumption is no longer canonical
+- the live quotation detail now uses a multi-row spreadsheet-style cargo modal with accumulated calculations
+- AI governance documents were updated in the same change set to keep the cargo workflow synchronized
+
 What is now aligned:
 
 - canonical schema, functions, views, and triggers
@@ -49,6 +56,7 @@ What is now aligned:
 - AI database governance documents
 - frontend clients, contacts, and opportunities query layer
 - current repo path inventory in the top-level context documents
+- live quotation cargo capture behavior and the AI documents that describe it
 
 What still has residual drift:
 
@@ -141,6 +149,7 @@ continue in future migrations.
    - one canonical RPC contract per action
    - explicit `drop function if exists` cleanup for legacy signatures
    - regenerated frontend types after backend changes
+   - synchronized AI_SYSTEM updates whenever live quotation UX rules change
 
 
 --------------------------------------------------
@@ -178,6 +187,7 @@ The remaining high-impact gaps are:
 1. keep quotation RPC cleanup discipline in future migrations and regenerate Supabase types after backend changes
 2. decide whether "/" or "/dashboard" is the canonical entry point
 3. implement planned modules before exposing them in navigation or presenting them as complete UI areas
+4. keep quotation cargo UX rules synchronized across live code, AI_CONTEXT, AI_QUERY_GUIDE, and AI_UI_BUILDER whenever the spreadsheet modal evolves
 4. continue tightening UI governance docs so target state and live state are clearly separated
 
 

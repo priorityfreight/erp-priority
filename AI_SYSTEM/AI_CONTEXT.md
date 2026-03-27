@@ -173,6 +173,9 @@ CURRENT QUOTATION NORMALIZATION
 - provider purchase capture and CRM sale capture may use MXN, USD, or EUR
 - accounting totals and profit must be normalized to MXN using the latest available exchange rate dated on or before the previous day
 - when a quotation is accepted, the USD and EUR rates used for accounting must be locked on the quotation record
+- quotation cargo capture now uses a spreadsheet-style multi-row modal with an "Anadir otro tipo de carga" action
+- the canonical cargo entry order is: cantidad, tipo, largo, ancho, alto, peso, commodities
+- cargo summary calculations must accumulate all visible draft rows plus persisted quotation_cargo_lines rows
 
 
 --------------------------------------------------
