@@ -13,6 +13,7 @@ import { normalizeWhatsAppLink } from "@/lib/quotations/calculations"
 import {
   deleteQuotationChargeLine,
   getProviderPricingCandidates,
+  getQuotationCargoLines,
   getQuotationById,
   getProviders,
   getQuotationChargeLines,
@@ -23,6 +24,7 @@ import {
   updateQuotationStatus,
   type Provider,
   type ProviderPricingCandidate,
+  type QuotationCargoLine,
   type QuotationChargeLine,
   type QuotationSummary,
   type SalesAccountingConcept,
@@ -145,17 +147,112 @@ function getPrimaryProviderContact(candidate: ProviderPricingCandidate) {
   return candidate.contacts.find((contact) => contact.status === "activo") ?? null
 }
 
-function buildCargoSummary(quotation: QuotationSummary) {
-  const parts = [
-    quotation.pickup_address ? `Recoleccion: ${quotation.pickup_address}` : null,
-    quotation.delivery_address ? `Entrega: ${quotation.delivery_address}` : null,
-    quotation.required_quote_date ? `Fecha requerida: ${quotation.required_quote_date}` : null,
-  ].filter(Boolean)
+type ProviderMessageLanguage = "es" | "en"
 
-  return parts.length > 0 ? parts.join("\n") : "Sin detalle complementario de ruta."
+function buildCargoDetailsSection(
+  cargoLines: QuotationCargoLine[],
+  language: ProviderMessageLanguage
+) {
+  if (cargoLines.length === 0) {
+    return language === "es"
+      ? "Sin detalles de carga capturados todavia."
+      : "No cargo details captured yet."
+  }
+
+  const cargoRows = cargoLines.map((line, index) => {
+    const loadType = line.load_type || (language === "es" ? "GRL" : "General")
+    const dimensions =
+      [line.length, line.width, line.height].every((value) => value != null)
+        ? `${line.length} x ${line.width} x ${line.height} cm`
+        : language === "es"
+          ? "Sin medidas"
+          : "No dimensions"
+    const weight =
+      line.weight != null
+        ? `${line.weight} kg`
+        : language === "es"
+          ? "Sin peso"
+          : "No weight"
+
+    return `${index + 1} ${loadType} ${dimensions} ${weight}`
+  })
+
+  const commodityValues = Array.from(
+    new Set(
+      cargoLines.map((line) => {
+        const value = String(line.commodities || "").trim()
+        return value.length > 0 ? value : "GRL"
+      })
+    )
+  )
+
+  const commodityLabel = language === "es" ? "Commodities" : "Commodities"
+
+  return [...cargoRows, `${commodityLabel}: ${commodityValues.join(", ")}`].join("\n")
 }
 
-function buildProviderEmailLink(candidate: ProviderPricingCandidate, quotation: QuotationSummary) {
+function buildProviderMessageBody(
+  candidate: ProviderPricingCandidate,
+  quotation: QuotationSummary,
+  cargoLines: QuotationCargoLine[],
+  language: ProviderMessageLanguage
+) {
+  const primaryContact = getPrimaryProviderContact(candidate)
+  const contactName = primaryContact?.name || candidate.provider.name
+
+  if (language === "es") {
+    return [
+      `Hola ${contactName}, espero que te encuentres bien,`,
+      "",
+      "Agradeceremos su apoyo con su mejor tarifa y condiciones para la siguiente cotizacion:",
+      "",
+      `Incoterm: ${quotation.incoterm_code || "No disponible"}`,
+      "",
+      `Origen: ${quotation.pickup_address || "No disponible"}`,
+      `POL: ${quotation.origin || "No disponible"}`,
+      `POD: ${quotation.destination || "No disponible"}`,
+      `Destino: ${quotation.delivery_address || "No disponible"}`,
+      "",
+      "DETALLES DE CARGA:",
+      buildCargoDetailsSection(cargoLines, language),
+      "",
+      `Fecha de que la carga esta lista: ${quotation.required_quote_date || "No disponible"}`,
+      "",
+      "Favor de compartir tarifa, vigencia, tiempos libres, itinerario y cualquier observacion o condicion especial aplicable.",
+      "",
+      "Quedamos atentos a su pronta respuesta.",
+    ].join("\n")
+  }
+
+  return [
+    `Hello ${contactName}, I hope you are doing well,`,
+    "",
+    "Could you please support us with your best rate and terms for the following quotation:",
+    "",
+    `Incoterm: ${quotation.incoterm_code || "Not available"}`,
+    "",
+    `Origin: ${quotation.pickup_address || "Not available"}`,
+    `POL: ${quotation.origin || "Not available"}`,
+    `POD: ${quotation.destination || "Not available"}`,
+    `Destination: ${quotation.delivery_address || "Not available"}`,
+    "",
+    "CARGO DETAILS:",
+    buildCargoDetailsSection(cargoLines, language),
+    "",
+    `Cargo ready date: ${quotation.required_quote_date || "Not available"}`,
+    "",
+    "Please share your rate, validity, free time, itinerary, and any special remarks or conditions that may apply.",
+    "",
+    "We look forward to your prompt response.",
+  ].join("\n")
+}
+
+function buildProviderEmailLink(
+  candidate: ProviderPricingCandidate,
+  quotation: QuotationSummary,
+  cargoLines: QuotationCargoLine[],
+  language: ProviderMessageLanguage
+) {
   const primaryContact = getPrimaryProviderContact(candidate)
   const targetEmail = primaryContact?.email || candidate.provider.company_email
 
@@ -163,31 +260,13 @@ function buildProviderEmailLink(candidate: ProviderPricingCandidate, quotation: 
     return null
   }
 
-  const subject = encodeURIComponent(
-    `Solicitud de tarifa ${quotation.reference_number || ""} | ${quotation.service_type || ""}`.trim()
-  )
+  const subjectText =
+    language === "es"
+      ? `Solicitud de tarifa ${quotation.reference_number || ""} | ${quotation.service_type || ""}`.trim()
+      : `Rate request ${quotation.reference_number || ""} | ${quotation.service_type || ""}`.trim()
+  const subject = encodeURIComponent(subjectText)
   const body = encodeURIComponent(
-    [
-      `Hola ${primaryContact?.name || candidate.provider.name},`,
-      "",
-      "Buen dia.",
-      "",
-      "Agradeceremos su apoyo con su mejor tarifa y condiciones para la siguiente solicitud de pricing:",
-      "",
-      `Referencia interna: ${quotation.reference_number || "Pendiente"}`,
-      `Servicio: ${quotation.service_type || ""}${quotation.transport_type ? ` / ${quotation.transport_type}` : ""}`,
-      `Operacion: ${quotation.operation_type || "No disponible"}`,
-      `Incoterm: ${quotation.incoterm_code || "No disponible"}`,
-      `Lane: ${quotation.origin || "Origen"} -> ${quotation.destination || "Destino"}`,
-      "",
-      buildCargoSummary(quotation),
-      "",
-      "Favor de compartir tarifa, vigencia, tiempos libres y cualquier observacion o condicion especial aplicable.",
-      "",
-      "Quedamos atentos a su pronta respuesta.",
-      "Equipo de Pricing",
-      "Priority Freight Intelligence",
-    ].join("\n")
+    buildProviderMessageBody(candidate, quotation, cargoLines, language)
   )
 
   return `mailto:${targetEmail}?subject=${subject}&body=${body}`
@@ -195,7 +274,9 @@ function buildProviderEmailLink(candidate: ProviderPricingCandidate, quotation: 
 
 function buildProviderWhatsAppLink(
   candidate: ProviderPricingCandidate,
-  quotation: QuotationSummary
+  quotation: QuotationSummary,
+  cargoLines: QuotationCargoLine[],
+  language: ProviderMessageLanguage
 ) {
   const primaryContact = getPrimaryProviderContact(candidate)
   const base =
@@ -207,19 +288,7 @@ function buildProviderWhatsAppLink(
   }
 
   const text = encodeURIComponent(
-    [
-      `Hola ${primaryContact?.name || candidate.provider.name},`,
-      "Solicitamos apoyo con tarifa para la siguiente solicitud de pricing:",
-      `Referencia interna: ${quotation.reference_number || "Pendiente"}`,
-      `Servicio: ${quotation.service_type || ""}${quotation.transport_type ? ` / ${quotation.transport_type}` : ""}`,
-      `Operacion: ${quotation.operation_type || "No disponible"}`,
-      `Incoterm: ${quotation.incoterm_code || "No disponible"}`,
-      `Lane: ${quotation.origin || "Origen"} -> ${quotation.destination || "Destino"}`,
-      buildCargoSummary(quotation),
-      "Favor de compartir mejor tarifa, vigencia y condiciones.",
-      "Quedamos atentos. Gracias.",
-      "Priority Freight Intelligence",
-    ].join("\n")
+    buildProviderMessageBody(candidate, quotation, cargoLines, language)
   )
 
   return `${base}&text=${text}`
@@ -240,6 +309,7 @@ export default function PricingQuotationsPage() {
   const [showProvidersModal, setShowProvidersModal] = useState(false)
   const [showChargesModal, setShowChargesModal] = useState(false)
   const [providerCandidates, setProviderCandidates] = useState<ProviderPricingCandidate[]>([])
+  const [providerCargoLines, setProviderCargoLines] = useState<QuotationCargoLine[]>([])
   const [allProviders, setAllProviders] = useState<Provider[]>([])
   const [chargeLines, setChargeLines] = useState<QuotationChargeLine[]>([])
   const [concepts, setConcepts] = useState<SalesAccountingConcept[]>([])
@@ -311,11 +381,15 @@ export default function PricingQuotationsPage() {
       setSelectedQuotation(quotation)
       setShowProvidersModal(true)
       setLoadingProviders(true)
-      const candidates = await getProviderPricingCandidates({
-        serviceType: quotation.service_type,
-        transportType: quotation.transport_type,
-      })
+      const [candidates, cargoLines] = await Promise.all([
+        getProviderPricingCandidates({
+          serviceType: quotation.service_type,
+          transportType: quotation.transport_type,
+        }),
+        getQuotationCargoLines(quotation.id),
+      ])
       setProviderCandidates(candidates)
+      setProviderCargoLines(cargoLines)
     } catch (error) {
       console.error(error)
       alert("No se pudieron cargar los proveedores sugeridos")
@@ -871,15 +945,6 @@ export default function PricingQuotationsPage() {
               <div className="mt-1">
                 Fecha requerida para cotizar: {formatDate(selectedQuotation.required_quote_date)}
               </div>
-              <div className="mt-4">
-                <Link
-                  href={`/quotations/${selectedQuotation.id}/pricing-request`}
-                  target="_blank"
-                  className="inline-flex rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                >
-                  Abrir PDF solicitud a proveedor
-                </Link>
-              </div>
             </div>
 
             {loadingProviders ? (
@@ -893,8 +958,30 @@ export default function PricingQuotationsPage() {
               <div className="space-y-3">
                 {providerCandidates.map((candidate) => {
                   const primaryContact = getPrimaryProviderContact(candidate)
-                  const mailToLink = buildProviderEmailLink(candidate, selectedQuotation)
-                  const whatsAppLink = buildProviderWhatsAppLink(candidate, selectedQuotation)
+                  const mailToLinkEs = buildProviderEmailLink(
+                    candidate,
+                    selectedQuotation,
+                    providerCargoLines,
+                    "es"
+                  )
+                  const mailToLinkEn = buildProviderEmailLink(
+                    candidate,
+                    selectedQuotation,
+                    providerCargoLines,
+                    "en"
+                  )
+                  const whatsAppLinkEs = buildProviderWhatsAppLink(
+                    candidate,
+                    selectedQuotation,
+                    providerCargoLines,
+                    "es"
+                  )
+                  const whatsAppLinkEn = buildProviderWhatsAppLink(
+                    candidate,
+                    selectedQuotation,
+                    providerCargoLines,
+                    "en"
+                  )
 
                   return (
                     <section
@@ -928,22 +1015,40 @@ export default function PricingQuotationsPage() {
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                          {mailToLink ? (
+                          {mailToLinkEs ? (
                             <a
-                              href={mailToLink}
+                              href={mailToLinkEs}
                               className="rounded-md bg-[#2563EB] px-3 py-2 text-sm font-medium text-white hover:bg-[#1D4ED8]"
                             >
-                              Correo listo
+                              Correo ES
                             </a>
                           ) : null}
-                          {whatsAppLink ? (
+                          {mailToLinkEn ? (
                             <a
-                              href={whatsAppLink}
+                              href={mailToLinkEn}
+                              className="rounded-md border border-[#93C5FD] bg-[#EFF6FF] px-3 py-2 text-sm font-medium text-[#1D4ED8] hover:bg-[#DBEAFE]"
+                            >
+                              Email EN
+                            </a>
+                          ) : null}
+                          {whatsAppLinkEs ? (
+                            <a
+                              href={whatsAppLinkEs}
                               target="_blank"
                               rel="noreferrer"
                               className="rounded-md border border-[#86EFAC] bg-[#F0FDF4] px-3 py-2 text-sm font-medium text-[#166534] hover:bg-[#DCFCE7]"
                             >
-                              WhatsApp listo
+                              WhatsApp ES
+                            </a>
+                          ) : null}
+                          {whatsAppLinkEn ? (
+                            <a
+                              href={whatsAppLinkEn}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-md border border-[#BBF7D0] bg-[#F7FEE7] px-3 py-2 text-sm font-medium text-[#166534] hover:bg-[#ECFCCB]"
+                            >
+                              WhatsApp EN
                             </a>
                           ) : null}
                         </div>

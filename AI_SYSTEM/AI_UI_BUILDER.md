@@ -185,6 +185,11 @@ Rules:
   route
   required date
   cargo information
+- in the pricing provider modal, primary outreach actions should be bilingual:
+  Correo ES
+  Email EN
+  WhatsApp ES
+  WhatsApp EN
 
 Example modules
 

@@ -197,6 +197,16 @@ CURRENT QUOTATION NORMALIZATION
 - provider-facing pricing request PDFs are generated on demand in memory and downloaded directly; they must not be stored in Supabase, Vercel, or any other cloud bucket
 - the web preview under frontend/app/quotations/[id]/pricing-request/page.tsx is a reference surface and must stay synchronized with the downloadable provider PDF
 - provider-facing pricing requests may show service, operation type, route, required date, and cargo information, but must never expose the client name or commercial sale amounts
+- the provider-sourcing workflow currently prioritizes polished email and WhatsApp outreach over a formal provider PDF
+- provider outreach actions must expose separate Spanish and English variants so pricing can select the language per supplier
+- provider outreach content must include:
+  incoterm
+  pickup origin
+  POL
+  POD
+  delivery destination
+  cargo details as compact load rows followed by one consolidated commodities line
+  cargo ready date
 
 
 --------------------------------------------------

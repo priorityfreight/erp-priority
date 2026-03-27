@@ -221,6 +221,10 @@ Quotation-specific write rules:
 - provider-facing pricing requests should be served through frontend/app/quotations/[id]/pricing-request/pdf/route.ts as real generated PDFs instead of browser print flows
 - provider-facing pricing-request PDFs must be generated in memory and downloaded directly; do not persist them in Supabase storage or cloud buckets
 - keep frontend/app/quotations/[id]/pricing-request/page.tsx aligned with the real provider-facing PDF output so preview and download do not drift
+- provider sourcing actions should prioritize direct email and WhatsApp outreach with polished bilingual templates
+- expose separate ES and EN provider outreach actions so pricing may choose the language per supplier
+- provider outreach templates must not expose client name
+- provider outreach templates should include pickup origin, POL, POD, delivery destination, incoterm, cargo ready date, and cargo details rendered as compact load rows plus one consolidated commodities line
 - pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view
 - pricing screens should surface target_rate and sales feedback when status = renegociar_tarifa
 - quotation purchase and sale lines may use MXN, USD, or EUR
