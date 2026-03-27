@@ -11,7 +11,6 @@ import {
 import { PageContainer } from "@/components/layout/PageContainer"
 import { normalizeWhatsAppLink } from "@/lib/quotations/calculations"
 import {
-  createQuotationChargeLine,
   deleteQuotationChargeLine,
   getProviderPricingCandidates,
   getQuotationById,
@@ -19,8 +18,8 @@ import {
   getQuotationChargeLines,
   getQuotations,
   getSalesAccountingConcepts,
+  saveQuotationPurchaseOption,
   takeQuotationForPricing,
-  updateQuotationChargeLine,
   updateQuotationStatus,
   type Provider,
   type ProviderPricingCandidate,
@@ -31,19 +30,60 @@ import {
 
 const statusOptions = ["pendiente", "cotizando", "lista_para_enviar", "renegociar_tarifa"]
 
-const emptyChargeForm: QuotationChargeLineFormValues = {
-  providerId: "",
-  salesAccountingConceptId: "",
-  purchaseAmount: "",
-  purchaseCurrency: "MXN",
-  purchaseValidUntil: "",
-  saleAmount: "",
-  saleCurrency: "MXN",
-  vatRate: "",
-  notes: "",
+function createChargeDraftId() {
+  if (typeof globalThis !== "undefined" && "crypto" in globalThis && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `charge-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-const NEW_OPTION_VALUE = "__new__"
+function createEmptyChargeForm(
+  defaults?: Partial<
+    Pick<QuotationChargeLineFormValues, "purchaseCurrency" | "purchaseValidUntil" | "vatRate">
+  >
+): QuotationChargeLineFormValues {
+  return {
+    draftId: createChargeDraftId(),
+    existingChargeId: null,
+    providerId: "",
+    salesAccountingConceptId: "",
+    purchaseAmount: "",
+    purchaseCurrency: defaults?.purchaseCurrency || "MXN",
+    purchaseValidUntil: defaults?.purchaseValidUntil || "",
+    saleAmount: "",
+    saleCurrency: "MXN",
+    vatRate: defaults?.vatRate || "",
+    notes: "",
+  }
+}
+
+function buildChargeFormFromLine(line: QuotationChargeLine): QuotationChargeLineFormValues {
+  return {
+    draftId: createChargeDraftId(),
+    existingChargeId: line.id,
+    providerId: line.provider_id || "",
+    salesAccountingConceptId: line.sales_accounting_concept_id || "",
+    purchaseAmount: line.purchase_amount != null ? String(line.purchase_amount) : "",
+    purchaseCurrency: line.purchase_currency || "MXN",
+    purchaseValidUntil: line.option_purchase_valid_until || "",
+    saleAmount: line.sale_amount != null ? String(line.sale_amount) : "",
+    saleCurrency: line.sale_currency || "MXN",
+    vatRate: String(line.vat_rate ?? 0),
+    notes: line.notes || "",
+  }
+}
+
+function isChargeDraftEmpty(row: QuotationChargeLineFormValues) {
+  return ![
+    row.providerId,
+    row.salesAccountingConceptId,
+    row.purchaseAmount,
+    row.purchaseValidUntil,
+    row.vatRate,
+    row.notes,
+  ].some((value) => value.trim())
+}
 
 function formatCurrency(value: number | null | undefined, currency = "MXN") {
   if (value == null) {
@@ -207,11 +247,12 @@ export default function PricingQuotationsPage() {
   const [loadingCharges, setLoadingCharges] = useState(false)
   const [savingCharge, setSavingCharge] = useState(false)
   const [deletingChargeId, setDeletingChargeId] = useState<string | null>(null)
-  const [editingChargeId, setEditingChargeId] = useState<string | null>(null)
   const [movingToReadyId, setMovingToReadyId] = useState<string | null>(null)
-  const [selectedChargeOptionId, setSelectedChargeOptionId] = useState<string>(NEW_OPTION_VALUE)
-  const [chargeFormValues, setChargeFormValues] =
-    useState<QuotationChargeLineFormValues>(emptyChargeForm)
+  const [showChargeEditor, setShowChargeEditor] = useState(false)
+  const [editingChargeOptionId, setEditingChargeOptionId] = useState<string | null>(null)
+  const [chargeFormRows, setChargeFormRows] = useState<QuotationChargeLineFormValues[]>([
+    createEmptyChargeForm(),
+  ])
 
   async function loadItems(search = "", status = "all", nextPage = 1) {
     try {
@@ -241,9 +282,15 @@ export default function PricingQuotationsPage() {
   }, [deferredQuery, page, statusFilter])
 
   function resetChargeForm() {
-    setEditingChargeId(null)
-    setSelectedChargeOptionId(NEW_OPTION_VALUE)
-    setChargeFormValues(emptyChargeForm)
+    setShowChargeEditor(false)
+    setEditingChargeOptionId(null)
+    setChargeFormRows([createEmptyChargeForm()])
+  }
+
+  function openNewChargeOptionEditor() {
+    setEditingChargeOptionId(null)
+    setChargeFormRows([createEmptyChargeForm()])
+    setShowChargeEditor(true)
   }
 
   async function handleTakeQuotation(id: string) {
@@ -348,58 +395,58 @@ export default function PricingQuotationsPage() {
       return
     }
 
-    if (!chargeFormValues.providerId) {
-      alert("Selecciona un proveedor")
-      return
-    }
+    const rowsToSave = chargeFormRows.filter((row) => !isChargeDraftEmpty(row))
 
-    if (!chargeFormValues.salesAccountingConceptId) {
-      alert("Selecciona un concepto contable")
-      return
-    }
-
-    if (!chargeFormValues.purchaseValidUntil) {
-      alert("Captura la validez de tarifa compra para esta opcion")
+    if (rowsToSave.length === 0) {
+      alert("Agrega al menos un concepto de compra")
       return
     }
 
     try {
       setSavingCharge(true)
-
-      if (editingChargeId) {
-        await updateQuotationChargeLine(editingChargeId, {
-          quotation_option_id:
-            selectedChargeOptionId !== NEW_OPTION_VALUE ? selectedChargeOptionId : null,
-          provider_id: chargeFormValues.providerId || null,
-          sales_accounting_concept_id: chargeFormValues.salesAccountingConceptId,
-          purchase_amount: chargeFormValues.purchaseAmount
-            ? Number(chargeFormValues.purchaseAmount)
-            : null,
-          purchase_currency: chargeFormValues.purchaseCurrency || "USD",
-          option_purchase_valid_until: chargeFormValues.purchaseValidUntil || null,
-          sale_amount: null,
-          sale_currency: chargeFormValues.saleCurrency || "USD",
-          vat_rate: chargeFormValues.vatRate ? Number(chargeFormValues.vatRate) : undefined,
-          notes: chargeFormValues.notes.trim() || null,
-        })
-      } else {
-        await createQuotationChargeLine({
-          quotation_id: selectedQuotation.id,
-          quotation_option_id:
-            selectedChargeOptionId !== NEW_OPTION_VALUE ? selectedChargeOptionId : null,
-          provider_id: chargeFormValues.providerId || null,
-          sales_accounting_concept_id: chargeFormValues.salesAccountingConceptId,
-          purchase_amount: chargeFormValues.purchaseAmount
-            ? Number(chargeFormValues.purchaseAmount)
-            : null,
-          purchase_currency: chargeFormValues.purchaseCurrency || "USD",
-          option_purchase_valid_until: chargeFormValues.purchaseValidUntil || null,
-          sale_amount: null,
-          sale_currency: chargeFormValues.saleCurrency || "USD",
-          vat_rate: chargeFormValues.vatRate ? Number(chargeFormValues.vatRate) : undefined,
-          notes: chargeFormValues.notes.trim() || null,
-        })
+      const validities = Array.from(
+        new Set(rowsToSave.map((row) => row.purchaseValidUntil.trim()).filter(Boolean))
+      )
+      if (validities.length !== 1) {
+        alert("Todos los conceptos de una misma opcion deben compartir la misma validez")
+        return
       }
+
+      const nextOptionLabel =
+        editingChargeOptionId == null
+          ? `Opcion ${chargeOptionSummaries.reduce(
+              (maxValue, summary) => Math.max(maxValue, summary.optionSortOrder),
+              0
+            ) + 1}`
+          : null
+
+      for (const row of rowsToSave) {
+        if (!row.providerId) {
+          throw new Error("Cada concepto debe tener proveedor")
+        }
+        if (!row.salesAccountingConceptId) {
+          throw new Error("Cada concepto debe tener concepto contable")
+        }
+        if (!row.purchaseValidUntil) {
+          throw new Error("Cada concepto debe incluir validez de tarifa compra")
+        }
+      }
+
+      await saveQuotationPurchaseOption({
+        quotationId: selectedQuotation.id,
+        quotationOptionId: editingChargeOptionId ?? null,
+        optionLabel: editingChargeOptionId == null ? nextOptionLabel : null,
+        purchaseValidUntil: validities[0] || null,
+        lines: rowsToSave.map((row) => ({
+          id: row.existingChargeId ?? null,
+          provider_id: row.providerId || null,
+          sales_accounting_concept_id: row.salesAccountingConceptId || null,
+          purchase_amount: row.purchaseAmount ? Number(row.purchaseAmount) : null,
+          purchase_currency: row.purchaseCurrency || "MXN",
+          vat_rate: row.vatRate ? Number(row.vatRate) : null,
+          notes: row.notes.trim() || null,
+        })),
+      })
 
       resetChargeForm()
       await reloadChargeContext(selectedQuotation)
@@ -512,7 +559,6 @@ export default function PricingQuotationsPage() {
   ])
   const canCaptureCharges = !pricingChargeDisabledReason
 
-  const totalPurchase = chargeLines.reduce((sum, line) => sum + (line.purchase_amount_mxn ?? 0), 0)
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const showingFrom = totalCount === 0 ? 0 : (page - 1) * pageSize + 1
   const showingTo = totalCount === 0 ? 0 : Math.min(page * pageSize, totalCount)
@@ -531,6 +577,7 @@ export default function PricingQuotationsPage() {
         totalWithVatMxn: number
         providers: Set<string>
         lineCount: number
+        lines: QuotationChargeLine[]
       }
     >()
 
@@ -550,6 +597,7 @@ export default function PricingQuotationsPage() {
         totalWithVatMxn: 0,
         providers: new Set<string>(),
         lineCount: 0,
+        lines: [],
       }
 
       current.totalPurchase += line.purchase_amount ?? 0
@@ -560,11 +608,18 @@ export default function PricingQuotationsPage() {
         current.providers.add(line.provider_name)
       }
       current.lineCount += 1
+      current.lines.push(line)
       grouped.set(optionId, current)
     }
 
     return Array.from(grouped.values()).sort((left, right) => left.optionSortOrder - right.optionSortOrder)
   }, [chargeLines])
+
+  function openExistingChargeOptionEditor(summary: (typeof chargeOptionSummaries)[number]) {
+    setEditingChargeOptionId(summary.optionId)
+    setChargeFormRows(summary.lines.map((line) => buildChargeFormFromLine(line)))
+    setShowChargeEditor(true)
+  }
 
   return (
     <PageContainer
@@ -913,6 +968,24 @@ export default function PricingQuotationsPage() {
         <Modal
           title={`Cargos de pricing · ${selectedQuotation.reference_number || "Cotizacion"}`}
           description="Pricing captura una o varias opciones de compra por proveedor. Guarda avances y al final envia la propuesta a ventas."
+          headerActions={
+            ["cotizando", "renegociar_tarifa"].includes(selectedQuotation.status) ? (
+              <button
+                type="button"
+                onClick={() => void handleMoveToReadyForSend()}
+                disabled={
+                  movingToReadyId === selectedQuotation.id ||
+                  !canCaptureCharges ||
+                  chargeLines.length === 0
+                }
+                className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {movingToReadyId === selectedQuotation.id
+                  ? "Actualizando..."
+                  : "Enviar propuesta"}
+              </button>
+            ) : null
+          }
           onClose={() => {
             setShowChargesModal(false)
             setSelectedQuotation(null)
@@ -957,13 +1030,19 @@ export default function PricingQuotationsPage() {
               </div>
               <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Compra acumulada MXN
+                  Opciones capturadas
                 </div>
                 <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {selectedQuotation.can_view_cost ? formatCurrency(totalPurchase) : "Sin permiso"}
+                  {chargeOptionSummaries.length}
                 </div>
               </div>
             </div>
+
+            {["cotizando", "renegociar_tarifa"].includes(selectedQuotation.status) ? (
+              <div className="rounded-xl border border-[#CCFBF1] bg-[#F0FDFA] px-4 py-3 text-sm text-[#134E4A]">
+                Cuando las opciones esten completas, usa <span className="font-semibold">Enviar propuesta</span> en la cabecera del modal para regresarla a ventas.
+              </div>
+            ) : null}
 
             {loadingCharges ? (
               <p className="text-sm text-[#6B7280]">Cargando cargos...</p>
@@ -974,63 +1053,175 @@ export default function PricingQuotationsPage() {
                     <div>
                       <h3 className="text-base font-semibold text-[#111827]">Compra consolidada</h3>
                       <p className="mt-1 text-sm text-[#6B7280]">
-                        Pricing registra proveedor, concepto contable y monto compra para cada opcion.
+                        Las compras deben organizarse por opcion. Cada opcion puede contener varios conceptos de proveedor.
                       </p>
                     </div>
-                    {chargeLines.length > 0 &&
-                    ["cotizando", "renegociar_tarifa"].includes(selectedQuotation.status) ? (
+                    {canCaptureCharges ? (
                       <button
                         type="button"
-                        onClick={() => void handleMoveToReadyForSend()}
-                        disabled={
-                          movingToReadyId === selectedQuotation.id || !canCaptureCharges
-                        }
-                        className="rounded-md bg-[#0F766E] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => openNewChargeOptionEditor()}
+                        className="rounded-md border border-[#CBD5E1] bg-white px-4 py-2 text-sm font-medium text-[#1E3A8A] shadow-sm hover:bg-[#F8FAFC]"
                       >
-                        {movingToReadyId === selectedQuotation.id
-                          ? "Actualizando..."
-                          : "Enviar propuesta"}
+                        Anadir opcion
                       </button>
                     ) : null}
                   </div>
 
                   {chargeOptionSummaries.length > 0 ? (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="space-y-4">
                       {chargeOptionSummaries.map((summary) => (
                         <div
                           key={summary.optionId}
                           className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
                         >
-                          <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                            {summary.optionLabel}
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                                {summary.optionLabel}
+                              </div>
+                              <div className="mt-2 text-lg font-semibold text-[#111827]">
+                                {selectedQuotation.can_view_cost
+                                  ? formatCurrency(summary.totalPurchaseMxn)
+                                  : "Sin permiso"}
+                              </div>
+                              <div className="mt-1 text-sm text-[#6B7280]">
+                                Total c/IVA MXN: {formatCurrency(summary.totalWithVatMxn)}
+                              </div>
+                              <div className="mt-1 text-sm text-[#6B7280]">
+                                {summary.lineCount} cargo(s)
+                              </div>
+                              <div className="mt-1 text-sm text-[#6B7280]">
+                                Vigencia compra: {formatDate(summary.purchaseValidUntil)}
+                              </div>
+                              <div className="mt-1 text-sm text-[#6B7280]">
+                                Vigencia venta: {formatDate(summary.salesValidUntil)}
+                              </div>
+                              <div className="mt-1 text-sm text-[#6B7280]">
+                                {summary.providers.size > 0
+                                  ? Array.from(summary.providers).join(", ")
+                                  : "Sin proveedor"}
+                              </div>
+                              <div className="mt-1 text-xs text-[#94A3B8]">
+                                {summary.includeInCustomerQuote
+                                  ? "Visible para propuesta comercial"
+                                  : "Oculta para propuesta comercial"}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openExistingChargeOptionEditor(summary)}
+                                disabled={!selectedQuotation.can_edit_purchase_amount}
+                                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                Editar opcion
+                              </button>
+                            </div>
                           </div>
-                          <div className="mt-2 text-lg font-semibold text-[#111827]">
-                            {selectedQuotation.can_view_cost
-                              ? formatCurrency(summary.totalPurchaseMxn)
-                              : "Sin permiso"}
+
+                          <div className="mt-4 overflow-x-auto rounded-xl border border-[#E5E7EB] bg-white">
+                            <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
+                              <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                                <tr>
+                                  <th className="px-4 py-3">Proveedor</th>
+                                  <th className="px-4 py-3">Concepto</th>
+                                  <th className="px-4 py-3">Compra</th>
+                                  <th className="px-4 py-3">Compra MXN</th>
+                                  <th className="px-4 py-3">Vigencia compra</th>
+                                  <th className="px-4 py-3">IVA</th>
+                                  <th className="px-4 py-3">Notas</th>
+                                  <th className="px-4 py-3 text-right">Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                                {summary.lines.map((line) => (
+                                  <tr key={line.id}>
+                                    <td className="px-4 py-3 text-[#475569]">
+                                      {line.provider_name || "No asignado"}
+                                    </td>
+                                    <td className="px-4 py-3 text-[#475569]">
+                                      {line.accounting_concept || line.service_name}
+                                    </td>
+                                    <td className="px-4 py-3 text-[#475569]">
+                                      {selectedQuotation.can_view_cost
+                                        ? formatCurrency(line.purchase_amount, line.purchase_currency)
+                                        : "Sin permiso"}
+                                    </td>
+                                    <td className="px-4 py-3 text-[#475569]">
+                                      {selectedQuotation.can_view_cost
+                                        ? formatCurrency(line.purchase_amount_mxn)
+                                        : "Sin permiso"}
+                                    </td>
+                                    <td className="px-4 py-3 text-[#475569]">
+                                      {formatDate(line.option_purchase_valid_until)}
+                                    </td>
+                                    <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
+                                    <td className="px-4 py-3 text-[#475569]">
+                                      {line.notes || "No disponible"}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => void handleDeleteChargeLine(line.id)}
+                                          disabled={
+                                            deletingChargeId === line.id ||
+                                            !selectedQuotation.can_edit_purchase_amount
+                                          }
+                                          className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                          {deletingChargeId === line.id ? "Eliminando..." : "Eliminar"}
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                          <div className="mt-1 text-sm text-[#6B7280]">
-                            Total c/IVA MXN: {formatCurrency(summary.totalWithVatMxn)}
-                          </div>
-                          <div className="mt-1 text-sm text-[#6B7280]">
-                            {summary.lineCount} cargo(s)
-                          </div>
-                          <div className="mt-1 text-sm text-[#6B7280]">
-                            Vigencia compra: {formatDate(summary.purchaseValidUntil)}
-                          </div>
-                          <div className="mt-1 text-sm text-[#6B7280]">
-                            Vigencia venta: {formatDate(summary.salesValidUntil)}
-                          </div>
-                          <div className="mt-1 text-sm text-[#6B7280]">
-                            {summary.providers.size > 0
-                              ? Array.from(summary.providers).join(", ")
-                              : "Sin proveedor"}
-                          </div>
-                          <div className="mt-1 text-xs text-[#94A3B8]">
-                            {summary.includeInCustomerQuote
-                              ? "Visible para propuesta comercial"
-                              : "Oculta para propuesta comercial"}
-                          </div>
+
+                          {showChargeEditor && editingChargeOptionId === summary.optionId ? (
+                            <div className="mt-4">
+                              <QuotationChargeLineForm
+                                title={`Editar ${summary.optionLabel}`}
+                                description="Modifica todos los conceptos de la opcion en conjunto. Los cambios se guardan sobre la misma opcion."
+                                rows={chargeFormRows}
+                                providers={providersForChargeForm}
+                                concepts={concepts}
+                                serviceType={selectedQuotation.service_type}
+                                operationType={selectedQuotation.operation_type}
+                                disabled={!canCaptureCharges}
+                                disabledReason={pricingChargeDisabledReason}
+                                onChangeRow={(draftId, field, value) => {
+                                  setChargeFormRows((current) =>
+                                    current.map((row) =>
+                                      row.draftId === draftId ? { ...row, [field]: value } : row
+                                    )
+                                  )
+                                }}
+                                onAddRow={() => {
+                                  setChargeFormRows((current) => [
+                                    ...current,
+                                    createEmptyChargeForm({
+                                      purchaseCurrency: current[0]?.purchaseCurrency || "MXN",
+                                      purchaseValidUntil: current[0]?.purchaseValidUntil || "",
+                                      vatRate: "",
+                                    }),
+                                  ])
+                                }}
+                                onRemoveRow={(draftId) => {
+                                  setChargeFormRows((current) =>
+                                    current.filter((row) => row.draftId !== draftId)
+                                  )
+                                }}
+                                onCancel={() => resetChargeForm()}
+                                onSubmit={handleSaveChargeLine}
+                                submitLabel="Guardar opcion"
+                                loading={savingCharge}
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       ))}
                     </div>
@@ -1040,149 +1231,48 @@ export default function PricingQuotationsPage() {
                     <p className="text-sm text-[#6B7280]">
                       Todavia no hay compras capturadas para esta cotizacion.
                     </p>
-                  ) : (
-                    <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-                      <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                        <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                          <tr>
-                            <th className="px-4 py-3">Opcion</th>
-                            <th className="px-4 py-3">Proveedor</th>
-                            <th className="px-4 py-3">Concepto</th>
-                            <th className="px-4 py-3">Compra</th>
-                            <th className="px-4 py-3">Compra MXN</th>
-                            <th className="px-4 py-3">Vigencia compra</th>
-                            <th className="px-4 py-3">IVA</th>
-                            <th className="px-4 py-3 text-right">Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                          {chargeLines.map((line) => (
-                            <tr key={line.id}>
-                              <td className="px-4 py-3 text-[#475569]">
-                                {line.option_label || `Opcion ${line.option_sort_order ?? 1}`}
-                              </td>
-                              <td className="px-4 py-3 text-[#475569]">
-                                {line.provider_name || "No asignado"}
-                              </td>
-                              <td className="px-4 py-3 text-[#475569]">
-                                {line.accounting_concept || line.service_name}
-                              </td>
-                              <td className="px-4 py-3 text-[#475569]">
-                                {selectedQuotation.can_view_cost
-                                  ? formatCurrency(line.purchase_amount, line.purchase_currency)
-                                  : "Sin permiso"}
-                              </td>
-                              <td className="px-4 py-3 text-[#475569]">
-                                {selectedQuotation.can_view_cost
-                                  ? formatCurrency(line.purchase_amount_mxn)
-                                  : "Sin permiso"}
-                              </td>
-                              <td className="px-4 py-3 text-[#475569]">
-                                {formatDate(line.option_purchase_valid_until)}
-                              </td>
-                              <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
-                              <td className="px-4 py-3">
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingChargeId(line.id)
-                                      setSelectedChargeOptionId(
-                                        line.quotation_option_id || NEW_OPTION_VALUE
-                                      )
-                                      setChargeFormValues({
-                                        providerId: line.provider_id || "",
-                                        salesAccountingConceptId:
-                                          line.sales_accounting_concept_id || "",
-                                        purchaseAmount:
-                                          line.purchase_amount != null
-                                            ? String(line.purchase_amount)
-                                            : "",
-                                        purchaseCurrency: line.purchase_currency || "USD",
-                                        purchaseValidUntil:
-                                          line.option_purchase_valid_until || "",
-                                        saleAmount:
-                                          line.sale_amount != null ? String(line.sale_amount) : "",
-                                        saleCurrency: line.sale_currency || "USD",
-                                        vatRate: String(line.vat_rate ?? 0),
-                                        notes: line.notes || "",
-                                      })
-                                    }}
-                                    disabled={!selectedQuotation.can_edit_purchase_amount}
-                                    className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleDeleteChargeLine(line.id)}
-                                    disabled={
-                                      deletingChargeId === line.id ||
-                                      !selectedQuotation.can_edit_purchase_amount
-                                    }
-                                    className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {deletingChargeId === line.id ? "Eliminando..." : "Eliminar"}
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </section>
-
-                <section className="space-y-3 rounded-xl border border-[#E5E7EB] bg-white p-4">
-                  <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[#64748B]">
-                      Destino del cargo
-                    </h3>
-                    <p className="mt-1 text-sm text-[#6B7280]">
-                      Selecciona si este cargo crea una opcion nueva o si se suma a una opcion existente.
-                    </p>
-                  </div>
-                  <select
-                    className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                    value={selectedChargeOptionId}
-                    disabled={Boolean(editingChargeId) || !canCaptureCharges}
-                    onChange={(event) => setSelectedChargeOptionId(event.target.value)}
-                  >
-                    <option value={NEW_OPTION_VALUE}>Crear nueva opcion</option>
-                    {chargeOptionSummaries.map((summary) => (
-                      <option key={summary.optionId} value={summary.optionId}>
-                        {summary.optionLabel}
-                      </option>
-                    ))}
-                  </select>
-                  {editingChargeId ? (
-                    <div className="text-xs text-[#64748B]">
-                      El cargo editado conserva su opcion actual. Para moverlo, primero eliminelo y vuelvalo a crear en otra opcion.
-                    </div>
                   ) : null}
                 </section>
 
-                <QuotationChargeLineForm
-                  title={editingChargeId ? "Editar compra de proveedor" : "Agregar compra de proveedor"}
-                  description="Captura proveedor, concepto contable, compra y la vigencia de esa opcion. Si necesitas varios cargos en una misma opcion, selecciona la opcion existente y agrega otro cargo."
-                  values={chargeFormValues}
-                  providers={providersForChargeForm}
-                  concepts={concepts}
-                  serviceType={selectedQuotation.service_type}
-                  operationType={selectedQuotation.operation_type}
-                  disabled={!canCaptureCharges}
-                  disabledReason={pricingChargeDisabledReason}
-                  onChange={(field, value) => {
-                    setChargeFormValues((current) => ({
-                      ...current,
-                      [field]: value,
-                    }))
-                  }}
-                  onSubmit={handleSaveChargeLine}
-                  submitLabel={editingChargeId ? "Guardar" : "Guardar"}
-                  loading={savingCharge}
-                />
+                {showChargeEditor && !editingChargeOptionId ? (
+                  <QuotationChargeLineForm
+                    title="Agregar compra de proveedor"
+                    description="Captura uno o varios conceptos de compra para construir una nueva opcion."
+                    rows={chargeFormRows}
+                    providers={providersForChargeForm}
+                    concepts={concepts}
+                    serviceType={selectedQuotation.service_type}
+                    operationType={selectedQuotation.operation_type}
+                    disabled={!canCaptureCharges}
+                    disabledReason={pricingChargeDisabledReason}
+                    onChangeRow={(draftId, field, value) => {
+                      setChargeFormRows((current) =>
+                        current.map((row) =>
+                          row.draftId === draftId ? { ...row, [field]: value } : row
+                        )
+                      )
+                    }}
+                    onAddRow={() => {
+                      setChargeFormRows((current) => [
+                        ...current,
+                        createEmptyChargeForm({
+                          purchaseCurrency: current[0]?.purchaseCurrency || "MXN",
+                          purchaseValidUntil: current[0]?.purchaseValidUntil || "",
+                          vatRate: "",
+                        }),
+                      ])
+                    }}
+                    onRemoveRow={(draftId) => {
+                      setChargeFormRows((current) =>
+                        current.filter((row) => row.draftId !== draftId)
+                      )
+                    }}
+                    onCancel={() => resetChargeForm()}
+                    onSubmit={handleSaveChargeLine}
+                    submitLabel="Guardar"
+                    loading={savingCharge}
+                  />
+                ) : null}
               </>
             )}
           </div>

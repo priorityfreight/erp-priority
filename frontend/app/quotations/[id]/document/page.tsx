@@ -14,55 +14,19 @@ import {
   type QuotationChargeLine,
   type QuotationSummary,
 } from "@/lib/db"
+import {
+  formatCurrency,
+  getCustomerOptionRemarks,
+  getPrimaryContact,
+  getVisibleCustomerOptionSummaries,
+  priorityPalette,
+} from "@/lib/quotations/customerDocument"
 
 type DocumentState = {
   quotation: QuotationSummary
   chargeLines: QuotationChargeLine[]
   cargoLines: QuotationCargoLine[]
   clientContacts: Contact[]
-}
-
-function formatCurrency(value: number | null | undefined) {
-  if (value == null) {
-    return "No disponible"
-  }
-
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-function formatOptionCurrency(value: number | null | undefined, currency = "MXN") {
-  if (value == null) {
-    return "No disponible"
-  }
-
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-function getPrimaryContact(contacts: Contact[]) {
-  return (
-    contacts.find((contact) => contact.status === "activo" && contact.is_primary) ||
-    contacts.find((contact) => contact.status === "activo") ||
-    null
-  )
-}
-
-const priorityPalette = {
-  navy: "#0B1F3B",
-  burgundy: "#800020",
-  burgundyLight: "#B33A5B",
-  gray: "#909EAE",
-  lightText: "#E5E5E5",
-  softGray: "#CFCFCF",
 }
 
 export default function QuotationDocumentPage() {
@@ -123,69 +87,12 @@ export default function QuotationDocumentPage() {
     }
   }, [quotationId])
 
-  const totals = useMemo(() => {
-    if (!details) {
-      return { sale: 0, vat: 0, grandTotal: 0 }
-    }
-
-    return details.chargeLines
-      .filter((line) => line.include_in_customer_quote !== false)
-      .reduce(
-      (accumulator, line) => {
-        const sale = line.sale_amount ?? 0
-        const vat = sale * ((line.vat_rate ?? 0) / 100)
-
-        return {
-          sale: accumulator.sale + sale,
-          vat: accumulator.vat + vat,
-          grandTotal: accumulator.grandTotal + sale + vat,
-        }
-      },
-      { sale: 0, vat: 0, grandTotal: 0 }
-    )
-  }, [details])
-
   const visibleOptionSummaries = useMemo(() => {
     if (!details) {
       return []
     }
 
-    const grouped = new Map<
-      string,
-      {
-        optionId: string
-        optionLabel: string
-        sortOrder: number
-        lines: QuotationChargeLine[]
-        salesValidUntil: string | null
-        subtotalMxn: number
-        totalMxn: number
-      }
-    >()
-
-    for (const line of details.chargeLines.filter((entry) => entry.include_in_customer_quote !== false)) {
-      const optionId = line.quotation_option_id || line.id
-      const current = grouped.get(optionId) ?? {
-        optionId,
-        optionLabel: line.option_label || `Opcion ${line.option_sort_order ?? 1}`,
-        sortOrder: line.option_sort_order ?? 1,
-        lines: [],
-        salesValidUntil:
-          line.option_sales_valid_until ?? line.option_purchase_valid_until ?? null,
-        subtotalMxn: 0,
-        totalMxn: 0,
-      }
-
-      const saleMxn = line.sale_amount_mxn ?? line.sale_amount ?? 0
-      const totalMxn = saleMxn * (1 + (line.vat_rate ?? 0) / 100)
-
-      current.lines.push(line)
-      current.subtotalMxn += saleMxn
-      current.totalMxn += totalMxn
-      grouped.set(optionId, current)
-    }
-
-    return Array.from(grouped.values()).sort((left, right) => left.sortOrder - right.sortOrder)
+    return getVisibleCustomerOptionSummaries(details.chargeLines)
   }, [details])
 
   if (!quotationId) {
@@ -202,6 +109,7 @@ export default function QuotationDocumentPage() {
 
   const { quotation, cargoLines, clientContacts } = details
   const primaryContact = getPrimaryContact(clientContacts)
+  const pdfHref = `/quotations/${quotation.id}/document/pdf`
 
   return (
     <main
@@ -218,86 +126,86 @@ export default function QuotationDocumentPage() {
           >
             Regresar a cotizacion
           </Link>
-          <button
-            type="button"
-            onClick={() => window.print()}
+          <Link
+            href={pdfHref}
+            target="_blank"
             className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
           >
-            Imprimir / Guardar PDF
-          </button>
+            Descargar PDF
+          </Link>
         </div>
 
         <header
-          className="overflow-hidden rounded-[1.75rem] border pb-0 md:flex md:items-stretch md:justify-between"
+          className="overflow-hidden rounded-[1.75rem] border pb-0"
           style={{
             borderColor: "#D7DEE8",
             background: `linear-gradient(135deg, ${priorityPalette.navy} 0%, #122B52 60%, ${priorityPalette.burgundy} 100%)`,
           }}
         >
-          <div className="flex flex-1 flex-col gap-5 px-7 py-7">
-            <div className="flex items-start gap-5">
-              <div className="rounded-2xl bg-white/8 p-3 ring-1 ring-white/10 backdrop-blur-sm">
-                <Image
-                  src="/assets/logo-vertical-dark-transparent.png"
-                  alt="Priority Freight Intelligence"
-                  width={140}
-                  height={140}
-                  className="h-24 w-24 object-contain"
-                  unoptimized
-                  priority
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
-                  Priority Freight Intelligence
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.45fr)_20rem]">
+            <div className="px-7 py-7">
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                <div className="rounded-2xl bg-white/95 p-4 shadow-[0_18px_40px_rgba(11,31,59,0.18)]">
+                  <Image
+                    src="/assets/logo-horizontal-transparent.png"
+                    alt="Priority Freight Intelligence"
+                    width={520}
+                    height={150}
+                    className="h-auto w-full object-contain"
+                    unoptimized
+                    priority
+                  />
                 </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-white">
-                  Cotizacion Comercial
-                </h1>
-                <p className="max-w-xl text-sm leading-6 text-[#E5E5E5]">
-                  Propuesta formal de servicio logístico preparada para evaluación comercial.
-                  Los importes mostrados corresponden únicamente a la versión dirigida al cliente.
-                </p>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
-                  Referencia
-                </div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {quotation.reference_number || "Pendiente"}
+                <div className="mt-6 max-w-3xl space-y-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+                    Priority Freight Intelligence
+                  </div>
+                  <h1 className="text-4xl font-semibold tracking-tight text-white">
+                    Cotizacion Comercial
+                  </h1>
                 </div>
               </div>
-              <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
-                  Fecha de emision
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                    Referencia
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-white">
+                    {quotation.reference_number || "Pendiente"}
+                  </div>
                 </div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {new Date().toLocaleDateString("es-MX")}
+                <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                    Fecha de emision
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-white">
+                    {new Date().toLocaleDateString("es-MX")}
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
-                  Estatus
-                </div>
-                <div className="mt-1 text-sm font-semibold uppercase text-white">
-                  {quotation.status.replaceAll("_", " ")}
+                <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                    Fecha requerida
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-white">
+                    {quotation.required_quote_date || "No disponible"}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="border-t px-6 py-7 text-sm md:w-[18.5rem] md:border-l md:border-t-0" style={{ borderColor: "rgba(229,229,229,0.12)", backgroundColor: "rgba(255,255,255,0.06)" }}>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">
-              Dirigido a
-            </div>
-            <div className="mt-3 text-xl font-semibold text-white">
-              {quotation.client_name || "Cliente"}
-            </div>
-            <div className="mt-5 space-y-2 text-sm text-[#E5E5E5]">
-              <div>{primaryContact?.name || "Sin contacto principal"}</div>
-              <div>{primaryContact?.email || "Sin correo"}</div>
-              <div>{primaryContact?.phone || "Sin telefono"}</div>
+            <div className="border-t border-white/10 bg-white/5 px-7 py-7 lg:border-l lg:border-t-0">
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">
+                  Dirigido a
+                </div>
+                <div className="mt-4 text-3xl font-semibold leading-tight text-white">
+                  {quotation.client_name || "Cliente"}
+                </div>
+                <div className="mt-6 space-y-3 text-base text-[#E5E5E5]">
+                  <div>{primaryContact?.name || "Sin contacto principal"}</div>
+                  <div>{primaryContact?.email || "Sin correo"}</div>
+                  <div>{primaryContact?.phone || "Sin telefono"}</div>
+                </div>
+              </div>
             </div>
           </div>
         </header>
@@ -335,60 +243,42 @@ export default function QuotationDocumentPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <section className="space-y-4 rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
-            <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-              Informacion de la Ruta
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Origen
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">{quotation.origin || "No disponible"}</div>
+        <section className="space-y-4 rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
+            Informacion de la Ruta
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                Origen
               </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Destino
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.destination || "No disponible"}
-                </div>
+              <div className="mt-1 text-sm text-[#111827]">{quotation.origin || "No disponible"}</div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                Destino
               </div>
-              <div className="md:col-span-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Pickup
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.pickup_address || "No disponible"}
-                </div>
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Entrega
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.delivery_address || "No disponible"}
-                </div>
+              <div className="mt-1 text-sm text-[#111827]">
+                {quotation.destination || "No disponible"}
               </div>
             </div>
-          </section>
-
-          <section className="space-y-4 rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
-            <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-              Seguimiento Comercial
-            </h2>
-            <div className="grid gap-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Fecha requerida de la solicitud
-                </div>
-                <div className="mt-1 text-sm text-[#111827]">
-                  {quotation.required_quote_date || "No disponible"}
-                </div>
+            <div className="md:col-span-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                Pickup
+              </div>
+              <div className="mt-1 text-sm text-[#111827]">
+                {quotation.pickup_address || "No disponible"}
               </div>
             </div>
-          </section>
+            <div className="md:col-span-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                Entrega
+              </div>
+              <div className="mt-1 text-sm text-[#111827]">
+                {quotation.delivery_address || "No disponible"}
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
@@ -482,8 +372,8 @@ export default function QuotationDocumentPage() {
                       </div>
                     </div>
                     <div className="grid gap-1 text-sm text-white md:text-right">
-                      <div>Subtotal MXN: {formatOptionCurrency(option.subtotalMxn)}</div>
-                      <div className="font-semibold">Total MXN: {formatOptionCurrency(option.totalMxn)}</div>
+                      <div>Subtotal MXN: {formatCurrency(option.subtotalMxn)}</div>
+                      <div className="font-semibold">Total MXN: {formatCurrency(option.totalMxn)}</div>
                     </div>
                   </div>
 
@@ -508,11 +398,11 @@ export default function QuotationDocumentPage() {
                                 {line.accounting_concept || line.service_name}
                               </td>
                               <td className="px-4 py-3 text-[#475569]">
-                                {formatOptionCurrency(line.sale_amount, line.sale_currency)}
+                                {formatCurrency(line.sale_amount, line.sale_currency)}
                               </td>
                               <td className="px-4 py-3 text-[#475569]">{line.vat_rate}%</td>
                               <td className="px-4 py-3 font-medium text-[#111827]">
-                                {formatOptionCurrency(totalMxn)}
+                                {formatCurrency(totalMxn)}
                               </td>
                             </tr>
                           )
@@ -520,35 +410,35 @@ export default function QuotationDocumentPage() {
                       </tbody>
                     </table>
                   </div>
+
+                  {getCustomerOptionRemarks(option.lines).length > 0 ? (
+                    <div className="border-t border-[#E5E7EB] bg-[#FBFCFE] px-4 py-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[#800020]">
+                        Remarks:
+                      </div>
+                      <div className="mt-3 space-y-3">
+                        {getCustomerOptionRemarks(option.lines).map((remark, index) => (
+                          <div key={`${remark.heading}-${index}`}>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-[#111827]">
+                              {remark.heading}:
+                            </div>
+                            <div className="mt-1 text-sm leading-6 text-[#475569]">{remark.note}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               ))}
             </div>
           )}
+        </section>
 
-          <div className="mt-5 ml-auto grid max-w-sm gap-3">
-            <div className="flex items-center justify-between rounded-lg border border-[#E7EAF0] bg-[#F8FAFC] px-4 py-3">
-              <span className="text-sm font-medium text-[#475569]">Subtotal</span>
-              <span className="text-sm font-semibold text-[#111827]">{formatCurrency(totals.sale)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-[#E7EAF0] bg-[#F8FAFC] px-4 py-3">
-              <span className="text-sm font-medium text-[#475569]">IVA</span>
-              <span className="text-sm font-semibold text-[#111827]">{formatCurrency(totals.vat)}</span>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg border px-4 py-3"
-              style={{
-                borderColor: "#D8C4CB",
-                background: `linear-gradient(135deg, rgba(128,0,32,0.08) 0%, rgba(11,31,59,0.06) 100%)`,
-              }}
-            >
-              <span className="text-sm font-semibold" style={{ color: priorityPalette.burgundy }}>
-                Total
-              </span>
-              <span className="text-base font-semibold" style={{ color: priorityPalette.navy }}>
-                {formatCurrency(totals.grandTotal)}
-              </span>
-            </div>
-          </div>
+        <section className="rounded-2xl border border-[#E7EAF0] bg-[#FBFCFE] p-6 text-center shadow-sm">
+          <p className="mx-auto max-w-3xl text-base leading-8 text-[#475569]">
+            Propuesta formal de servicio logístico preparada para evaluación comercial.
+            Los importes mostrados corresponden únicamente a la versión dirigida al cliente
+          </p>
         </section>
       </div>
     </main>

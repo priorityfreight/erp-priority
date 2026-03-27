@@ -122,6 +122,48 @@ When a quotation needs load-detail capture:
 - do not expose sort-order or derived freight-class inputs as manual fields
 - show accumulated calculations for all rows inside the same modal
 
+
+--------------------------------------------------
+PRICING COST CAPTURE
+--------------------------------------------------
+
+When pricing captures provider costs:
+
+- use a spreadsheet-style grid instead of stacked card forms
+- keep the visual reading order:
+  proveedor
+  concepto contable
+  compra
+  iva
+  divisa
+  valides
+  notas del cargo
+- allow multiple draft rows through an explicit "Anadir otro concepto" button
+- accumulate totals per quotation option inside the modal
+- do not show a global "Compra acumulada MXN" summary card in the capture area
+
+
+--------------------------------------------------
+CUSTOMER QUOTATION OUTPUT
+--------------------------------------------------
+
+Customer-facing quotation output must feel like a formal commercial proposal, not a browser print screen.
+
+Rules:
+
+- use the official company branding from the runtime asset copies sourced from ASSETS/
+- prefer the dark-background horizontal logo when the document header is dark
+- do not show quotation status in the customer document
+- do not show internal commercial-tracking panels in the customer document
+- keep information hierarchy tight enough so quotation summary, route, and load information fit on page 1 whenever reasonably possible
+- if a section would split awkwardly between pages, move the full section to the next page
+- render each selected quotation option as its own commercial block or page
+- after each option total, render a REMARKS section using only:
+  concept heading
+  charge notes
+- hide provider names and purchase values completely
+- place the institutional closing sentence at the end of the document, not in the header
+
 Example modules
 
 🏠 Dashboard  
@@ -593,6 +635,26 @@ Form
 Name
 Email
 Phone
+
+--------------------------------------------------
+QUOTATION CUSTOMER PDF
+--------------------------------------------------
+
+Live commercial output now has two layers:
+
+- Web preview:
+  `frontend/app/quotations/[id]/document/page.tsx`
+- Real PDF output:
+  `frontend/app/quotations/[id]/document/pdf/route.ts`
+
+Rules:
+
+- do not show quotation status in customer-facing document
+- do not show commercial status-tracking box in customer-facing document
+- do not show provider names or purchase amounts
+- render each selected customer option as its own block
+- after each option total, render a `REMARKS` section from charge-line notes
+- do not show a single global total across multiple customer options unless business rules change later
 
 
 

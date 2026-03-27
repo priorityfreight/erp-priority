@@ -197,6 +197,12 @@ Quotation-specific write rules:
 - detail screens may read quotation_summary_view plus quotation_cost_line_secure_view and quotation_cargo_lines rows
 - pricing purchase options should be grouped by quotation_options
 - one quotation option may contain multiple charge lines and multiple providers
+- pricing purchase capture UI is multi-row and spreadsheet-like; multiple draft purchase concepts may be saved in one modal action
+- the canonical purchase capture column order is: proveedor, concepto contable, compra, iva, divisa, valides, notas del cargo
+- the pricing capture modal must accumulate totals by quotation option, not through a global "Compra acumulada MXN" card
+- use save_quotation_purchase_option() to save all purchase concepts for one quotation option in a single backend transaction
+- editing an existing option must happen inside the same rendered option card; do not route users to a detached editor below the list
+- the pricing modal header should expose `Enviar propuesta` as the explicit closeout action for the pricing step
 - quotation header capture must only use required_quote_date; purchase_valid_until and sales_valid_until must not be captured on the quotation header UI anymore
 - purchase_valid_until must be stored per quotation option
 - sales_valid_until must default to the option purchase_valid_until unless Admin explicitly overrides it through update_quotation_option_validity()
@@ -206,6 +212,10 @@ Quotation-specific write rules:
 - Pricing must not receive sale_amount or expected_profit visibility through the default quotation workflow
 - registered field permissions now use deny-by-default behavior until an explicit role_field_permissions rule exists
 - client-facing commercial documents must hide provider and purchase fields
+- client-facing commercial documents must be served through frontend/app/quotations/[id]/document/pdf/route.ts as real generated PDFs, not as screenshot-style browser printouts
+- customer quotation PDFs must be generated in memory and downloaded directly; do not persist quotation PDFs in Supabase storage or cloud buckets
+- keep frontend/app/quotations/[id]/document/page.tsx aligned with the real PDF output so preview and download do not drift
+- each selected customer option must render separately with its own totals and REMARKS content
 - provider-facing pricing requests must not expose the client name
 - provider-facing internal pricing request documents must not expose commercial sale amounts
 - pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view

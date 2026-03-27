@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient"
 import { getBackendMode } from "./backendMode"
+import { mapContact } from "./mappers"
 import type {
   Contact,
   ContactWithClient,
@@ -10,22 +11,6 @@ import type {
 const CONTACT_COLUMNS = "id,client_id,name,email,phone,linkedin_url,position,status,is_primary,created_at,updated_at"
 const CONTACT_VIEW_COLUMNS =
   "id,client_id,name,email,phone,linkedin_url,position,status,is_primary,created_at,updated_at,client_name"
-
-function mapContact(row: Record<string, unknown>): Contact {
-  return {
-    id: String(row.id),
-    client_id: String(row.client_id),
-    name: String(row.name ?? ""),
-    email: (row.email as string | null | undefined) ?? null,
-    phone: (row.phone as string | null | undefined) ?? null,
-    linkedin_url: (row.linkedin_url as string | null | undefined) ?? null,
-    position: (row.position as string | null | undefined) ?? null,
-    status: String(row.status ?? "activo"),
-    is_primary: Boolean(row.is_primary ?? false),
-    created_at: String(row.created_at ?? new Date(0).toISOString()),
-    updated_at: (row.updated_at as string | null | undefined) ?? null,
-  }
-}
 
 function applyContactFilters(
   contacts: ContactWithClient[],

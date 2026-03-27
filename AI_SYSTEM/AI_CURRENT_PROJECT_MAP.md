@@ -142,6 +142,7 @@ Current route files:
 - frontend/app/quotations/page.tsx
 - frontend/app/quotations/[id]/page.tsx
 - frontend/app/quotations/[id]/document/page.tsx
+- frontend/app/quotations/[id]/document/pdf/route.ts
 - frontend/app/quotations/[id]/pricing-request/page.tsx
 - frontend/app/pricing/providers/page.tsx
 - frontend/app/pricing/providers/[id]/page.tsx
@@ -217,6 +218,13 @@ Current implemented frontend modules:
 - quotation rejection reasons catalog
 - accounting exchange-rate catalog
 - UN/LOCODE lookup
+
+Current quotation document outputs:
+
+- frontend/app/quotations/[id]/document/page.tsx is the live customer-document web preview
+- frontend/app/quotations/[id]/document/pdf/route.ts is the canonical customer-facing PDF download endpoint
+- customer PDFs are generated on demand and downloaded directly; they are not persisted in cloud storage
+- frontend/app/quotations/[id]/pricing-request/page.tsx remains the internal provider-facing pricing request surface
 
 Pricing module status:
 
@@ -383,6 +391,19 @@ quotations.ts
   client-facing document route under frontend/app/quotations/[id]/document/page.tsx
   provider-facing internal request route under frontend/app/quotations/[id]/pricing-request/page.tsx
   accepted quotations expose a manual Create booking action
+- pricing quotations purchase workspace now uses a spreadsheet-style multi-row cost capture modal
+- pricing cost capture groups multiple provider cost concepts into the same quotation option in one save action
+- pricing cost capture column order is:
+  proveedor
+  concepto contable
+  compra
+  iva
+  divisa
+  valides
+  notas del cargo
+- pricing cost option edits now render inline inside the same option card
+- pricing option save path now uses a batch backend contract to avoid repeated FX refresh and totals recalculation per line
+- the pricing charges modal header now owns the `Enviar propuesta` action next to the close control
 
 
 --------------------------------------------------
@@ -456,6 +477,9 @@ Do not introduce apps/web or other parallel app roots unless a deliberate restru
 3. Build shipments and finance routes before exposing them in navigation.
 
 4. Reconcile the landing page and dashboard into one intentional entry point.
+
+5. For quotations, treat `/quotations/[id]/document/pdf` as the real customer-facing document output.
+The `/quotations/[id]/document` page is only a web preview/reference surface.
 
 
 --------------------------------------------------

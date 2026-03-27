@@ -48,6 +48,14 @@ Latest stabilization note:
 - the prior single-row cargo-entry assumption is no longer canonical
 - the live quotation detail now uses a multi-row spreadsheet-style cargo modal with accumulated calculations
 - AI governance documents were updated in the same change set to keep the cargo workflow synchronized
+- pricing cost capture was also normalized into a multi-row spreadsheet-style modal on 2026-03-26
+- the older stacked single-charge layout is no longer the canonical pricing capture pattern
+- pricing option persistence was optimized into a batch-save path so multi-line option edits no longer trigger repeated quotation recalculation per row
+- customer-facing quotation output was upgraded again on 2026-03-27
+- the canonical customer document is now the server-side PDF download route under frontend/app/quotations/[id]/document/pdf/route.ts
+- customer quotation PDFs are generated in memory and downloaded directly; they are not persisted in cloud storage
+- the customer quotation preview remains a separate web reference surface and must stay synchronized with the real PDF
+- customer quotation layout now treats route, load information, and per-option commercial presentation as governed UX areas
 
 What is now aligned:
 
@@ -64,6 +72,9 @@ What still has residual drift:
 - generated Supabase types can drift again if future schema changes do not explicitly clean legacy RPC signatures
 - some planned ERP modules exist only at the database layer
 - the quotation domain has historically changed faster than its migration cleanup discipline
+- the provider-facing pricing-request route still uses a browser print flow and has not yet been upgraded to the same real-PDF standard as the customer quotation
+- route duplication between "/" and "/dashboard" still exists
+- backendMode.ts remains as rollback safety even though the linked cloud environment is now canonical
 
 
 --------------------------------------------------
@@ -150,6 +161,46 @@ continue in future migrations.
    - explicit `drop function if exists` cleanup for legacy signatures
    - regenerated frontend types after backend changes
    - synchronized AI_SYSTEM updates whenever live quotation UX rules change
+   - synchronized customer-preview and customer-PDF layouts whenever branding or commercial structure changes
+
+
+--------------------------------------------------
+RELEASE-READINESS CLEANUP BACKLOG
+--------------------------------------------------
+
+Current version is materially improved and close to release-ready, but these cleanup items should be treated as the next controlled hardening pass:
+
+1. Upgrade the provider-facing pricing-request output away from browser print toward the same governed PDF standard used for the customer quotation.
+
+2. Decide whether "/" or "/dashboard" is the canonical post-login landing route and reduce duplicate shell entry points.
+
+3. Keep backendMode.ts only as temporary rollback safety; remove fallback branches once the next stabilization cycle passes.
+
+4. Continue tightening shared quotation document tokens so the preview page and the downloadable PDF cannot drift visually.
+
+5. Add a small release smoke suite for:
+   - opportunity → quotation
+   - pricing option capture
+   - customer option selection
+   - PDF download
+   - accepted quotation → booking
+
+
+--------------------------------------------------
+AUTOMATION OPPORTUNITIES
+--------------------------------------------------
+
+Highest-value automation opportunities before the next major module:
+
+1. Daily or pre-release smoke-test execution for login, CRM, quotations, pricing, and booking.
+
+2. Branding asset sync from repository-level ASSETS/ into frontend/public/assets/ to avoid broken or outdated runtime logos.
+
+3. Quotation-governance checklist automation reminding that any change to:
+   - pricing capture UX
+   - customer quotation output
+   - provider pricing request output
+   must also update AI_CONTEXT, AI_QUERY_GUIDE, AI_UI_BUILDER, and AI_SYSTEM_AUDIT.
 
 
 --------------------------------------------------
@@ -188,7 +239,8 @@ The remaining high-impact gaps are:
 2. decide whether "/" or "/dashboard" is the canonical entry point
 3. implement planned modules before exposing them in navigation or presenting them as complete UI areas
 4. keep quotation cargo UX rules synchronized across live code, AI_CONTEXT, AI_QUERY_GUIDE, and AI_UI_BUILDER whenever the spreadsheet modal evolves
-4. continue tightening UI governance docs so target state and live state are clearly separated
+5. continue tightening UI governance docs so target state and live state are clearly separated
+6. keep customer-document preview and real PDF output synchronized whenever quotation commercial layout changes
 
 
 --------------------------------------------------

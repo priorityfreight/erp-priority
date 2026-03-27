@@ -905,8 +905,7 @@ export default function QuotationDetailPage() {
     )
   }
 
-  const { quotation, chargeLines, cargoLines, clientContacts, rejectionReasons } =
-    details
+  const { quotation, cargoLines, clientContacts, rejectionReasons } = details
   const canViewCost = quotation.can_view_cost ?? false
   const canViewSalePrice = quotation.can_view_sale_price ?? false
   const canEditSalePrice = quotation.can_edit_sale_price ?? false
@@ -918,24 +917,9 @@ export default function QuotationDetailPage() {
   const hasSendableOption = chargeOptionSummaries.some(
     (summary) => summary.includeInCustomerQuote && summary.hasCompleteSale
   )
-  const pricingSummary = chargeLines.reduce(
-    (accumulator, line) => {
-      const purchase = line.purchase_amount ?? 0
-      const sale = line.sale_amount ?? 0
-      const profit = line.profit_amount_mxn ?? line.profit_amount ?? sale - purchase
-
-      return {
-        purchase: accumulator.purchase + (line.purchase_amount_mxn ?? purchase),
-        sale: accumulator.sale + (line.sale_amount_mxn ?? sale),
-        profit: accumulator.profit + profit,
-        vat: accumulator.vat + ((line.sale_amount_mxn ?? sale) * ((line.vat_rate ?? 0) / 100)),
-      }
-    },
-    { purchase: 0, sale: 0, profit: 0, vat: 0 }
-  )
 
   const primaryContact = getPrimaryContact(clientContacts)
-  const documentHref = `/quotations/${quotation.id}/document`
+  const documentHref = `/quotations/${quotation.id}/document/pdf`
   const documentUrl =
     typeof window === "undefined" ? documentHref : `${window.location.origin}${documentHref}`
   const mailToLink = buildMailToLink(quotation, primaryContact, documentUrl)
@@ -1057,7 +1041,7 @@ export default function QuotationDetailPage() {
               {quotation.service_type || "No definido"}
             </div>
           </div>
-          {canViewCost ? (
+          {canViewCost && quotation.status === "aceptada" ? (
             <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
                 Costo estimado
@@ -1067,7 +1051,7 @@ export default function QuotationDetailPage() {
               </div>
             </div>
           ) : null}
-          {canViewExpectedProfit ? (
+          {canViewExpectedProfit && quotation.status === "aceptada" ? (
             <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
                 Profit estimado
@@ -1210,78 +1194,12 @@ export default function QuotationDetailPage() {
           <div>
             <h2 className="text-lg font-semibold text-[#111827]">Costos</h2>
             <p className="mt-1 text-sm text-[#6B7280]">
-              Resumen economico y opciones de costo preparadas para esta cotizacion.
+              Opciones de costo preparadas para esta cotizacion.
             </p>
           </div>
 
           {canSeePricingOutcome ? (
-            <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-              {(canViewCost || canViewSalePrice || canViewExpectedProfit) ? (
-                <section className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
-                  <h3 className="text-base font-semibold text-[#111827]">Resumen economico</h3>
-                  <p className="mt-1 text-sm text-[#6B7280]">
-                    Consolidado de venta, compra, profit e IVA segun las opciones capturadas.
-                  </p>
-                  <div className="mt-5 grid gap-3">
-                    {canViewCost ? (
-                      <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                          Compra total MXN
-                        </div>
-                        <div className="mt-1 text-base font-semibold text-[#111827]">
-                          {formatCurrency(pricingSummary.purchase)}
-                        </div>
-                      </div>
-                    ) : null}
-                    {canViewSalePrice ? (
-                      <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                          Venta total MXN
-                        </div>
-                        <div className="mt-1 text-base font-semibold text-[#111827]">
-                          {formatCurrency(pricingSummary.sale)}
-                        </div>
-                      </div>
-                    ) : null}
-                    {canViewExpectedProfit ? (
-                      <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                          Profit MXN
-                        </div>
-                        <div className="mt-1 text-base font-semibold text-[#111827]">
-                          {formatCurrency(pricingSummary.profit)}
-                        </div>
-                      </div>
-                    ) : null}
-                    <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                        IVA estimado MXN
-                      </div>
-                      <div className="mt-1 text-base font-semibold text-[#111827]">
-                        {formatCurrency(pricingSummary.vat)}
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#475569]">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                        Tipo de cambio contable
-                      </div>
-                      <div className="mt-1">
-                        USD → MXN:{" "}
-                        {quotation.accepted_usd_to_mxn_rate != null
-                          ? `${quotation.accepted_usd_to_mxn_rate.toFixed(4)} (${quotation.accepted_usd_rate_date || "sin fecha"})`
-                          : "Ultima tasa disponible"}
-                      </div>
-                      <div className="mt-1">
-                        EUR → MXN:{" "}
-                        {quotation.accepted_eur_to_mxn_rate != null
-                          ? `${quotation.accepted_eur_to_mxn_rate.toFixed(4)} (${quotation.accepted_eur_rate_date || "sin fecha"})`
-                          : "Ultima tasa disponible"}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              ) : null}
-
+            <div>
               <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
                 <div>
                   <h3 className="text-base font-semibold text-[#111827]">Opciones de costo</h3>

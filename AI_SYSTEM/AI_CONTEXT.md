@@ -120,6 +120,7 @@ Current live route files:
 - frontend/app/quotations/page.tsx
 - frontend/app/quotations/[id]/page.tsx
 - frontend/app/quotations/[id]/document/page.tsx
+- frontend/app/quotations/[id]/document/pdf/route.ts
 - frontend/app/quotations/[id]/pricing-request/page.tsx
 - frontend/app/pricing/providers/page.tsx
 - frontend/app/pricing/providers/[id]/page.tsx
@@ -176,6 +177,21 @@ CURRENT QUOTATION NORMALIZATION
 - quotation cargo capture now uses a spreadsheet-style multi-row modal with an "Anadir otro tipo de carga" action
 - the canonical cargo entry order is: cantidad, tipo, largo, ancho, alto, peso, commodities
 - cargo summary calculations must accumulate all visible draft rows plus persisted quotation_cargo_lines rows
+- pricing purchase capture now uses a spreadsheet-style multi-row modal with an "Anadir otro concepto" action
+- a single quotation option may be captured through multiple purchase concepts in one modal save
+- purchase capture column order is: proveedor, concepto contable, compra, iva, divisa, valides, notas del cargo
+- option totals must accumulate by purchase option; do not surface a global "Compra acumulada MXN" summary card in the pricing capture modal
+- editing an existing purchase option must happen inline inside the same option card, not in a detached editor below the list
+- pricing purchase saves should use a single batch option-save path so FX refresh and quotation total recalculation happen once per option save
+- the `Enviar propuesta` action belongs in the pricing modal header next to the close control
+- the customer-facing quotation must be delivered through the server PDF route at frontend/app/quotations/[id]/document/pdf/route.ts
+- customer quotation PDFs are generated on demand in memory and downloaded directly; they must not be stored in Supabase, Vercel, or any other cloud bucket
+- the web document preview under frontend/app/quotations/[id]/document/page.tsx is a reference surface and must stay synchronized with the downloadable PDF
+- the customer-facing quotation must hide status and commercial-tracking panels
+- each customer-visible quotation option must render independently with its own totals and REMARKS section
+- the institutional sentence belongs at the end of the customer quotation, not in the header
+- customer quotation layout should keep quotation summary, route, and load information together on page 1 whenever content volume allows
+- when an option does not fit cleanly, the PDF should move the whole option block to the next page instead of splitting the section mid-page
 
 
 --------------------------------------------------
@@ -639,3 +655,6 @@ For AI generation in this repository:
 - public.users stores profile, role, username, phone, and active status
 - passwords must never be stored in public.users or any other ERP business table
 - first-user bootstrap currently requires creating the auth user in Supabase Auth and activating the matching public.users profile
+- customer quotations now have a real PDF route at `frontend/app/quotations/[id]/document/pdf/route.ts`
+- customer PDF is the commercial source of truth for sharing with clients; it must not expose provider names, purchase costs, internal status, or the commercial status-tracking panel
+- if multiple customer-visible options are selected, the PDF must render each option separately with its own validity, totals, and `REMARKS` section built from charge-line notes

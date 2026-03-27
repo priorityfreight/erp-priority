@@ -113,6 +113,10 @@ Implementation
 
 scheduled jobs or cron tasks.
 
+Current live example:
+
+- BANXICO exchange-rate sync runs daily at 6:00 a.m. and loads the latest applicable previous-day USD and EUR rates against MXN
+
 
 
 --------------------------------------------------
@@ -208,6 +212,24 @@ QUOTATION AUTOMATIONS
 
 quotation cost line changed
 → recalculate quotation totals
+
+quotation purchase option saved
+→ persist all option concepts in one transaction
+→ refresh FX-normalized quotation totals once
+
+accepted quotation
+→ lock accounting FX on the quotation
+
+
+--------------------------------------------------
+NEXT AUTOMATION CANDIDATES
+--------------------------------------------------
+
+Recommended before the next major module:
+
+- release smoke-test checklist automation for login, CRM, quotations, pricing, and booking
+- asset-sync automation from ASSETS/ into frontend/public/assets/ when branding changes
+- AI_SYSTEM sync checklist automation after quotation-process changes
 
 
 
