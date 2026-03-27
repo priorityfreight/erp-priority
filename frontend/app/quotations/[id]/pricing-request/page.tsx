@@ -83,6 +83,7 @@ export default function QuotationPricingRequestPage() {
   }
 
   const { quotation, cargoLines } = details
+  const pdfHref = `/quotations/${quotation.id}/pricing-request/pdf`
 
   return (
     <main
@@ -99,13 +100,13 @@ export default function QuotationPricingRequestPage() {
           >
             Regresar a cotizacion
           </Link>
-          <button
-            type="button"
-            onClick={() => window.print()}
+          <Link
+            href={pdfHref}
+            target="_blank"
             className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
           >
-            Imprimir / Guardar PDF
-          </button>
+            Descargar PDF
+          </Link>
         </div>
 
         <header
@@ -119,11 +120,11 @@ export default function QuotationPricingRequestPage() {
             <div className="flex items-start gap-5">
               <div className="rounded-2xl bg-white/8 p-3 ring-1 ring-white/10">
                 <Image
-                  src="/assets/logo-vertical-dark-transparent.png"
+                  src="/assets/logo-horizontal-dark-transparent.png"
                   alt="Priority Freight Intelligence"
-                  width={140}
-                  height={140}
-                  className="h-24 w-24 object-contain"
+                  width={520}
+                  height={150}
+                  className="h-auto w-full max-w-[20rem] object-contain"
                   unoptimized
                   priority
                 />

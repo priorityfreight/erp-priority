@@ -144,6 +144,7 @@ Current route files:
 - frontend/app/quotations/[id]/document/page.tsx
 - frontend/app/quotations/[id]/document/pdf/route.ts
 - frontend/app/quotations/[id]/pricing-request/page.tsx
+- frontend/app/quotations/[id]/pricing-request/pdf/route.ts
 - frontend/app/pricing/providers/page.tsx
 - frontend/app/pricing/providers/[id]/page.tsx
 - frontend/app/pricing/quotations/page.tsx
@@ -224,7 +225,8 @@ Current quotation document outputs:
 - frontend/app/quotations/[id]/document/page.tsx is the live customer-document web preview
 - frontend/app/quotations/[id]/document/pdf/route.ts is the canonical customer-facing PDF download endpoint
 - customer PDFs are generated on demand and downloaded directly; they are not persisted in cloud storage
-- frontend/app/quotations/[id]/pricing-request/page.tsx remains the internal provider-facing pricing request surface
+- frontend/app/quotations/[id]/pricing-request/page.tsx is the internal provider-facing web preview
+- frontend/app/quotations/[id]/pricing-request/pdf/route.ts is the canonical provider-facing PDF download endpoint
 
 Pricing module status:
 
@@ -457,8 +459,7 @@ This is valid, but AI must not assume those routes already exist.
 
 2. frontend/src/types/supabase.ts is generated from the linked canonical Supabase backend.
 
-3. The landing page at frontend/app/page.tsx is separate from the dashboard route.
-The app has both "/" and "/dashboard", which may confuse future navigation work.
+3. frontend/app/page.tsx now redirects to `/dashboard`, which is the canonical post-login landing route.
 
 4. UI design documents describe a richer system than the live layout currently implements.
 
@@ -476,9 +477,8 @@ Do not introduce apps/web or other parallel app roots unless a deliberate restru
 
 3. Build shipments and finance routes before exposing them in navigation.
 
-4. Reconcile the landing page and dashboard into one intentional entry point.
-
-5. For quotations, treat `/quotations/[id]/document/pdf` as the real customer-facing document output.
+4. For quotations, treat `/quotations/[id]/document/pdf` as the real customer-facing document output.
+5. For provider sourcing, treat `/quotations/[id]/pricing-request/pdf` as the real provider-facing document output.
 The `/quotations/[id]/document` page is only a web preview/reference surface.
 
 

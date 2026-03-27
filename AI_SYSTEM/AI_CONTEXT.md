@@ -122,6 +122,7 @@ Current live route files:
 - frontend/app/quotations/[id]/document/page.tsx
 - frontend/app/quotations/[id]/document/pdf/route.ts
 - frontend/app/quotations/[id]/pricing-request/page.tsx
+- frontend/app/quotations/[id]/pricing-request/pdf/route.ts
 - frontend/app/pricing/providers/page.tsx
 - frontend/app/pricing/providers/[id]/page.tsx
 - frontend/app/pricing/quotations/page.tsx
@@ -192,6 +193,10 @@ CURRENT QUOTATION NORMALIZATION
 - the institutional sentence belongs at the end of the customer quotation, not in the header
 - customer quotation layout should keep quotation summary, route, and load information together on page 1 whenever content volume allows
 - when an option does not fit cleanly, the PDF should move the whole option block to the next page instead of splitting the section mid-page
+- the provider-facing pricing request must be delivered through the server PDF route at frontend/app/quotations/[id]/pricing-request/pdf/route.ts
+- provider-facing pricing request PDFs are generated on demand in memory and downloaded directly; they must not be stored in Supabase, Vercel, or any other cloud bucket
+- the web preview under frontend/app/quotations/[id]/pricing-request/page.tsx is a reference surface and must stay synchronized with the downloadable provider PDF
+- provider-facing pricing requests may show service, operation type, route, required date, and cargo information, but must never expose the client name or commercial sale amounts
 
 
 --------------------------------------------------

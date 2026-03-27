@@ -218,6 +218,9 @@ Quotation-specific write rules:
 - each selected customer option must render separately with its own totals and REMARKS content
 - provider-facing pricing requests must not expose the client name
 - provider-facing internal pricing request documents must not expose commercial sale amounts
+- provider-facing pricing requests should be served through frontend/app/quotations/[id]/pricing-request/pdf/route.ts as real generated PDFs instead of browser print flows
+- provider-facing pricing-request PDFs must be generated in memory and downloaded directly; do not persist them in Supabase storage or cloud buckets
+- keep frontend/app/quotations/[id]/pricing-request/page.tsx aligned with the real provider-facing PDF output so preview and download do not drift
 - pricing sourcing suggestions should filter providers through provider_service_offering_view and then read active contacts through provider_contacts_view
 - pricing screens should surface target_rate and sales feedback when status = renegociar_tarifa
 - quotation purchase and sale lines may use MXN, USD, or EUR

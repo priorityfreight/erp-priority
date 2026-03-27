@@ -164,6 +164,28 @@ Rules:
 - hide provider names and purchase values completely
 - place the institutional closing sentence at the end of the document, not in the header
 
+
+--------------------------------------------------
+PROVIDER PRICING REQUEST OUTPUT
+--------------------------------------------------
+
+Provider-facing pricing requests must also feel formal and branded, but clearly internal.
+
+Rules:
+
+- serve a real generated PDF, not a browser print flow
+- keep branding aligned with the quotation document family
+- label the document as internal pricing output
+- hide the client name completely
+- hide commercial sale values completely
+- show only operational context needed for sourcing:
+  service
+  operation type
+  incoterm
+  route
+  required date
+  cargo information
+
 Example modules
 
 🏠 Dashboard  

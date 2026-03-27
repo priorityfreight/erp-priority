@@ -72,8 +72,8 @@ What still has residual drift:
 - generated Supabase types can drift again if future schema changes do not explicitly clean legacy RPC signatures
 - some planned ERP modules exist only at the database layer
 - the quotation domain has historically changed faster than its migration cleanup discipline
-- the provider-facing pricing-request route still uses a browser print flow and has not yet been upgraded to the same real-PDF standard as the customer quotation
-- route duplication between "/" and "/dashboard" still exists
+- the provider-facing pricing-request route now has a real PDF download path and a separate web preview surface
+- route duplication between "/" and "/dashboard" has been reduced by redirecting "/" to the canonical "/dashboard" entry point
 - backendMode.ts remains as rollback safety even though the linked cloud environment is now canonical
 
 
@@ -154,7 +154,7 @@ continue in future migrations.
 
 3. UI governance docs still describe a richer shell and component system than the current app implements.
 
-4. The app currently has both "/" and "/dashboard" as user-facing entry points.
+4. backendMode.ts still remains as temporary rollback safety even though the linked cloud environment is now canonical.
 
 5. Quotation process changes must now be treated as a governed area:
    - one canonical RPC contract per action
@@ -170,15 +170,11 @@ RELEASE-READINESS CLEANUP BACKLOG
 
 Current version is materially improved and close to release-ready, but these cleanup items should be treated as the next controlled hardening pass:
 
-1. Upgrade the provider-facing pricing-request output away from browser print toward the same governed PDF standard used for the customer quotation.
+1. Keep backendMode.ts only as temporary rollback safety; remove fallback branches once the next stabilization cycle passes.
 
-2. Decide whether "/" or "/dashboard" is the canonical post-login landing route and reduce duplicate shell entry points.
+2. Continue tightening shared quotation document tokens so the preview pages and downloadable PDFs cannot drift visually.
 
-3. Keep backendMode.ts only as temporary rollback safety; remove fallback branches once the next stabilization cycle passes.
-
-4. Continue tightening shared quotation document tokens so the preview page and the downloadable PDF cannot drift visually.
-
-5. Add a small release smoke suite for:
+3. Add a small release smoke suite for:
    - opportunity → quotation
    - pricing option capture
    - customer option selection
@@ -236,11 +232,10 @@ That issue is now substantially reduced.
 The remaining high-impact gaps are:
 
 1. keep quotation RPC cleanup discipline in future migrations and regenerate Supabase types after backend changes
-2. decide whether "/" or "/dashboard" is the canonical entry point
-3. implement planned modules before exposing them in navigation or presenting them as complete UI areas
-4. keep quotation cargo UX rules synchronized across live code, AI_CONTEXT, AI_QUERY_GUIDE, and AI_UI_BUILDER whenever the spreadsheet modal evolves
-5. continue tightening UI governance docs so target state and live state are clearly separated
-6. keep customer-document preview and real PDF output synchronized whenever quotation commercial layout changes
+2. implement planned modules before exposing them in navigation or presenting them as complete UI areas
+3. keep quotation cargo UX rules synchronized across live code, AI_CONTEXT, AI_QUERY_GUIDE, and AI_UI_BUILDER whenever the spreadsheet modal evolves
+4. continue tightening UI governance docs so target state and live state are clearly separated
+5. keep customer-document and provider-document previews synchronized with their real PDF outputs whenever quotation layout changes
 
 
 --------------------------------------------------

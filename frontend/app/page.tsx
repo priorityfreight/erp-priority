@@ -1,5 +1,5 @@
-import { CrmOverview } from "@/components/crm/CrmOverview"
+import { redirect } from "next/navigation"
 
 export default function Home() {
-  return <CrmOverview />
+  redirect("/dashboard")
 }
