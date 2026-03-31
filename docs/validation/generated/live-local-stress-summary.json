@@ -1,0 +1,319 @@
+{
+  "generatedAt": "2026-03-28T08:29:35.142Z",
+  "loadLevel": "stress",
+  "runPrefix": "LOADTEST_1774686575142_",
+  "completed": 48,
+  "skipped": [],
+  "errors": [],
+  "scenarios": [
+    {
+      "label": "sales-flow-1",
+      "ok": true,
+      "durationMs": 9669,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-2",
+      "ok": true,
+      "durationMs": 8623,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-3",
+      "ok": true,
+      "durationMs": 9357,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-4",
+      "ok": true,
+      "durationMs": 7455,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-5",
+      "ok": true,
+      "durationMs": 7523,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-6",
+      "ok": true,
+      "durationMs": 8417,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-7",
+      "ok": true,
+      "durationMs": 7834,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-8",
+      "ok": true,
+      "durationMs": 7632,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-9",
+      "ok": true,
+      "durationMs": 8590,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-10",
+      "ok": true,
+      "durationMs": 7988,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-11",
+      "ok": true,
+      "durationMs": 7426,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-12",
+      "ok": true,
+      "durationMs": 9630,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-13",
+      "ok": true,
+      "durationMs": 8794,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-14",
+      "ok": true,
+      "durationMs": 6505,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-15",
+      "ok": true,
+      "durationMs": 7411,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-16",
+      "ok": true,
+      "durationMs": 7259,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-17",
+      "ok": true,
+      "durationMs": 9502,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-18",
+      "ok": true,
+      "durationMs": 9601,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-19",
+      "ok": true,
+      "durationMs": 8618,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "sales-flow-20",
+      "ok": true,
+      "durationMs": 7024,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-1",
+      "ok": true,
+      "durationMs": 12315,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-2",
+      "ok": true,
+      "durationMs": 11355,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-3",
+      "ok": true,
+      "durationMs": 11730,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-4",
+      "ok": true,
+      "durationMs": 10981,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-5",
+      "ok": true,
+      "durationMs": 11055,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-6",
+      "ok": true,
+      "durationMs": 11304,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-7",
+      "ok": true,
+      "durationMs": 12285,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-8",
+      "ok": true,
+      "durationMs": 12291,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-9",
+      "ok": true,
+      "durationMs": 12067,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-10",
+      "ok": true,
+      "durationMs": 10930,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-11",
+      "ok": true,
+      "durationMs": 11603,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-12",
+      "ok": true,
+      "durationMs": 12365,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-13",
+      "ok": true,
+      "durationMs": 12372,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-14",
+      "ok": true,
+      "durationMs": 11653,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "pricing-flow-15",
+      "ok": true,
+      "durationMs": 11114,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-1",
+      "ok": true,
+      "durationMs": 2720,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-2",
+      "ok": true,
+      "durationMs": 7661,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-3",
+      "ok": true,
+      "durationMs": 2622,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-4",
+      "ok": true,
+      "durationMs": 6397,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-5",
+      "ok": true,
+      "durationMs": 8502,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-6",
+      "ok": true,
+      "durationMs": 8363,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-7",
+      "ok": true,
+      "durationMs": 7378,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-8",
+      "ok": true,
+      "durationMs": 5865,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-9",
+      "ok": true,
+      "durationMs": 5816,
+      "attemptsUsed": 1
+    },
+    {
+      "label": "admin-flow-10",
+      "ok": true,
+      "durationMs": 6374,
+      "attemptsUsed": 1
+    }
+  ],
+  "metrics": {
+    "averageMs": 8933,
+    "p95Ms": 12315,
+    "maxMs": 12372,
+    "minMs": 2622
+  },
+  "sessionPool": {
+    "maxUsers": 30,
+    "configuredLoadProfile": {
+      "sales": 20,
+      "pricing": 15,
+      "admin": 10,
+      "authenticated": 5
+    },
+    "requiredCounts": {
+      "sales": 18,
+      "pricing": 7,
+      "admin": 5,
+      "authenticated": 5
+    },
+    "signedInCounts": {
+      "sales": 18,
+      "pricing": 7,
+      "admin": 5
+    }
+  },
+  "authenticatedChecks": {
+    "mode": "post-peak-pooled-subset",
+    "desiredCount": 3,
+    "executedCount": 3,
+    "personasChecked": [
+      "sales",
+      "pricing",
+      "admin"
+    ],
+    "skipped": false,
+    "reason": null
+  },
+  "findings": []
+}

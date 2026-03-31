@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-03-27T08:32:46.404Z",
+  "target": {
+    "kind": "protected-linked-cloud",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "checks": [
+    {
+      "label": "validation:rollback",
+      "ok": true,
+      "stdout": "Rollback metadata written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/rollback-metadata.json",
+      "stderr": ""
+    },
+    {
+      "label": "validation:inventory",
+      "ok": true,
+      "stdout": "Discovered 22 live/local modules with 15 static signals.",
+      "stderr": ""
+    },
+    {
+      "label": "validation:baseline",
+      "ok": true,
+      "stdout": "Row-count baseline written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/row-count-baseline-2026-03-27T08-32-32-556Z.json",
+      "stderr": ""
+    },
+    {
+      "label": "lint",
+      "ok": true,
+      "stdout": "> frontend@0.1.0 lint\n> eslint",
+      "stderr": ""
+    },
+    {
+      "label": "build",
+      "ok": true,
+      "stdout": "> frontend@0.1.0 build\n> next build\n\n▲ Next.js 16.1.6 (Turbopack)\n- Environments: .env.local\n\n  Creating an optimized production build ...\n✓ Compiled successfully in 2.6s\n  Running TypeScript ...\n  Collecting page data using 7 workers ...\n  Generating static pages using 7 workers (0/24) ...\n  Generating static pages using 7 workers (6/24) \r\n  Generating static pages using 7 workers (12/24) \r\n  Generating static pages using 7 workers (18/24) \r\n✓ Generating static pages using 7 workers (24/24) in 248.0ms\n  Finalizing page optimization ...\n\nRoute (app)\n┌ ○ /\n├ ○ /_not-found\n├ ƒ /api/admin/exchange-rates/sync\n├ ƒ /api/admin/users\n├ ƒ /api/cron/exchange-rates\n├ ƒ /api/master-data/unlocodes\n├ ○ /clients\n├ ƒ /clients/[id]\n├ ○ /contacts\n├ ○ /dashboard\n├ ƒ /login\n├ ○ /master-data\n├ ƒ /master-data/accounting/exchange-rates\n├ ○ /master-data/sales/accounting-concepts\n├ ○ /master-data/sales/quotation-rejection-reasons\n├ ○ /master-data/sales/service-types\n├ ○ /master-data/unlocode\n├ ƒ /master-data/users\n├ ƒ /master-data/users/roles\n├ ○ /opportunities\n├ ƒ /opportunities/[id]\n├ ○ /pricing/providers\n├ ƒ /pricing/providers/[id]\n├ ○ /pricing/quotations\n├ ○ /quotations\n├ ƒ /quotations/[id]\n├ ƒ /quotations/[id]/document\n├ ƒ /quotations/[id]/document/pdf\n├ ƒ /quotations/[id]/pricing-request\n└ ƒ /quotations/[id]/pricing-request/pdf\n\n\nƒ Proxy (Middleware)\n\n○  (Static)   prerendered as static content\nƒ  (Dynamic)  server-rendered on demand",
+      "stderr": ""
+    }
+  ]
+}

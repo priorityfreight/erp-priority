@@ -1,15 +1,24 @@
 "use client"
 
-import Link from "next/link"
-import { useCallback, useDeferredValue, useEffect, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import type { ColumnDef } from "@tanstack/react-table"
 import {
   createProvider,
   deleteProvider,
   getProviderSummaries,
   type ProviderSummary,
 } from "@/lib/db"
+import { getErrorMessage, notifyError, notifyWarning } from "@/lib/feedback"
+import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
+import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
 import {
   ProviderForm,
   type ProviderFormValues,
@@ -35,15 +44,15 @@ const emptyForm: ProviderFormValues = {
 }
 
 export default function ProvidersPage() {
+  const router = useRouter()
   const [providers, setProviders] = useState<ProviderSummary[]>([])
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
-  const [sortBy, setSortBy] = useState("name")
-  const [page, setPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [formValues, setFormValues] = useState<ProviderFormValues>(emptyForm)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { confirm, confirmDialog } = usePriorityConfirm()
 
   const loadProviders = useCallback(async (query = "") => {
     try {
@@ -58,10 +67,6 @@ export default function ProvidersPage() {
     void loadProviders(deferredSearch)
   }, [deferredSearch, loadProviders])
 
-  useEffect(() => {
-    setPage(1)
-  }, [search, sortBy])
-
   function handleChange(field: keyof ProviderFormValues, value: string) {
     setFormValues((current) => ({
       ...current,
@@ -75,7 +80,7 @@ export default function ProvidersPage() {
 
   async function handleCreateProvider() {
     if (!formValues.name.trim()) {
-      alert("Nombre del proveedor requerido")
+      notifyWarning("Nombre del proveedor requerido")
       return
     }
 
@@ -102,16 +107,19 @@ export default function ProvidersPage() {
       await loadProviders(search)
     } catch (error) {
       console.error(error)
-      alert("Error creating provider")
+      notifyError("Error creating provider", getErrorMessage(error, "The provider could not be saved."))
     } finally {
       setCreating(false)
     }
   }
 
-  async function handleDeleteProvider(id: string) {
-    const confirmed = window.confirm(
-      "Eliminar este proveedor tambien borrara sus contactos y servicios ofrecidos."
-    )
+  const handleDeleteProvider = useCallback(async (id: string) => {
+    const confirmed = await confirm({
+      title: "Eliminar proveedor",
+      description: "Se eliminara el proveedor junto con sus contactos y servicios ofrecidos.",
+      actionLabel: "Eliminar proveedor",
+      variant: "destructive",
+    })
 
     if (!confirmed) {
       return
@@ -123,35 +131,11 @@ export default function ProvidersPage() {
       await loadProviders(search)
     } catch (error) {
       console.error(error)
-      alert("Error deleting provider")
+      notifyError("Error deleting provider", getErrorMessage(error, "The provider could not be deleted."))
     } finally {
       setDeletingId(null)
     }
-  }
-
-  const sortedProviders = [...providers].sort((left, right) => {
-    if (sortBy === "type") {
-      return (left.provider_type || "").localeCompare(right.provider_type || "")
-    }
-
-    if (sortBy === "city") {
-      return (left.city || "").localeCompare(right.city || "")
-    }
-
-    if (sortBy === "services") {
-      return left.total_service_offerings - right.total_service_offerings
-    }
-
-    return left.provider_name.localeCompare(right.provider_name)
-  })
-
-  const pageSize = 8
-  const totalPages = Math.max(1, Math.ceil(sortedProviders.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const paginatedProviders = sortedProviders.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  )
+  }, [confirm, loadProviders, search])
 
   const activeProviders = providers.filter((provider) => provider.status === "activo").length
   const creditProviders = providers.filter((provider) => provider.credit_active).length
@@ -159,166 +143,158 @@ export default function ProvidersPage() {
     (sum, provider) => sum + provider.total_service_offerings,
     0
   )
+  const providerColumns = useMemo<ColumnDef<ProviderSummary>[]>(
+    () => [
+      {
+        accessorKey: "provider_name",
+        header: "Proveedor",
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => router.push(`/pricing/providers/${row.original.id}`)}
+            className="text-left font-semibold text-[var(--brand-navy)] transition hover:text-[var(--brand-burgundy)]"
+          >
+            {row.original.provider_name}
+          </button>
+        ),
+      },
+      {
+        accessorKey: "provider_type",
+        header: "Tipo",
+        cell: ({ row }) => row.original.provider_type || "No definido",
+      },
+      {
+        id: "location",
+        header: "Ubicacion",
+        cell: ({ row }) =>
+          [row.original.city, row.original.country].filter(Boolean).join(" · ") || "No disponible",
+      },
+      {
+        accessorKey: "status",
+        header: "Estatus",
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: "total_service_offerings",
+        header: "Servicios",
+      },
+      {
+        accessorKey: "total_contacts",
+        header: "Contactos",
+      },
+      {
+        id: "credit",
+        header: "Credito",
+        cell: ({ row }) =>
+          row.original.credit_active
+            ? `$${(row.original.credit_amount ?? 0).toLocaleString()} / ${row.original.credit_days ?? 0} dias`
+            : "No",
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <PriorityRowActions
+              actions={[
+                {
+                  label: "Ver detalle",
+                  onSelect: () => router.push(`/pricing/providers/${row.original.id}`),
+                },
+                {
+                  label: deletingId === row.original.id ? "Eliminando..." : "Eliminar",
+                  onSelect: () => void handleDeleteProvider(row.original.id),
+                  disabled: deletingId === row.original.id,
+                  destructive: true,
+                },
+              ]}
+            />
+          </div>
+        ),
+      },
+    ],
+    [deletingId, handleDeleteProvider, router]
+  )
 
   return (
     <PageContainer
       title="Providers"
       description="Pricing module for provider company records, offered services, and supplier contacts."
       actions={
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-        >
+        <Button type="button" onClick={() => setShowCreateModal(true)}>
           Anadir proveedor
-        </button>
+        </Button>
       }
     >
       <div className="space-y-8">
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
+            <PriorityTypography variant="eyebrow" className="text-[#1D4ED8]">
               Total Providers
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{providers.length}</div>
+            </PriorityTypography>
+            <PriorityTypography variant="sectionTitle" className="mt-2 text-[var(--brand-navy)]">
+              {providers.length}
+            </PriorityTypography>
           </div>
           <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
+            <PriorityTypography variant="eyebrow" className="text-[#047857]">
               Active Providers
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{activeProviders}</div>
+            </PriorityTypography>
+            <PriorityTypography variant="sectionTitle" className="mt-2 text-[var(--brand-navy)]">
+              {activeProviders}
+            </PriorityTypography>
           </div>
           <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
+            <PriorityTypography variant="eyebrow" className="text-[#B45309]">
               Service Offerings
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{totalOfferings}</div>
+            </PriorityTypography>
+            <PriorityTypography variant="sectionTitle" className="mt-2 text-[var(--brand-navy)]">
+              {totalOfferings}
+            </PriorityTypography>
           </div>
         </section>
 
         <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mb-4 space-y-4">
             <div>
-              <div className="text-lg font-semibold text-[#111827]">Provider registry</div>
-              <div className="text-sm text-[#6B7280]">
+              <PriorityTypography as="h2" variant="cardTitle">
+                Provider registry
+              </PriorityTypography>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 {creditProviders} proveedores con credito activo.
-              </div>
+              </PriorityTypography>
             </div>
-            <div className="flex flex-col gap-3 md:flex-row">
+            <PriorityToolbar className="justify-between">
               <input
                 className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
                 placeholder="Buscar proveedor"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
-              >
-                <option value="name">Ordenar por nombre</option>
-                <option value="type">Ordenar por tipo</option>
-                <option value="city">Ordenar por ciudad</option>
-                <option value="services">Ordenar por servicios</option>
-              </select>
-            </div>
+              <PriorityTypography variant="caption">
+                Usa las columnas para ordenar y el menu de acciones para operar cada proveedor.
+              </PriorityTypography>
+            </PriorityToolbar>
           </div>
 
-          {providers.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">
-              No providers yet. Create the first one from the popup.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Proveedor</th>
-                    <th className="px-4 py-3">Tipo</th>
-                    <th className="px-4 py-3">Ubicacion</th>
-                    <th className="px-4 py-3">Estatus</th>
-                    <th className="px-4 py-3">Servicios</th>
-                    <th className="px-4 py-3">Contactos</th>
-                    <th className="px-4 py-3">Credito</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {paginatedProviders.map((provider) => (
-                    <tr key={provider.id}>
-                      <td className="px-4 py-3 font-medium text-[#111827]">
-                        <Link
-                          href={`/pricing/providers/${provider.id}`}
-                          className="text-[#2563EB] hover:text-[#1D4ED8]"
-                        >
-                          {provider.provider_name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {provider.provider_type || "No definido"}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {[provider.city, provider.country].filter(Boolean).join(" · ") ||
-                          "No disponible"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={provider.status} />
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">{provider.total_service_offerings}</td>
-                      <td className="px-4 py-3 text-[#475569]">{provider.total_contacts}</td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {provider.credit_active
-                          ? `$${(provider.credit_amount ?? 0).toLocaleString()} / ${provider.credit_days ?? 0} dias`
-                          : "No"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/pricing/providers/${provider.id}`}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                          >
-                            Ver
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteProvider(provider.id)}
-                            disabled={deletingId === provider.id}
-                            className="rounded-md border border-[#FECACA] bg-white px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEF2F2] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingId === provider.id ? "Deleting..." : "Eliminar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <PriorityDataTable
+            columns={providerColumns}
+            data={providers}
+            emptyTitle="Sin proveedores todavia"
+            emptyDescription={
+              search
+                ? "No hay proveedores que coincidan con la busqueda actual."
+                : "Crea el primer proveedor para comenzar a construir el sourcing de pricing."
+            }
+            emptyVariant={search ? "search" : "default"}
+          />
 
-          <div className="mt-4 flex items-center justify-between text-sm text-[#6B7280]">
-            <div>
-              Pagina {currentPage} de {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={currentPage === 1}
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                disabled={currentPage === totalPages}
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
+          {creditProviders > 0 ? (
+            <PrioritySectionAlert title="Credito detectado" variant="info" className="mt-4">
+              Algunos proveedores ya cuentan con linea de credito. Revisa monto y dias directamente en el detalle antes de operar.
+            </PrioritySectionAlert>
+          ) : null}
         </section>
       </div>
 
@@ -343,6 +319,8 @@ export default function ProvidersPage() {
           />
         </Modal>
       ) : null}
+
+      {confirmDialog}
     </PageContainer>
   )
 }

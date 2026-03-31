@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
-import { getBackendMode } from "./backendMode"
+import { buildRpcPatch } from "./rpcPatch"
 import type {
   Opportunity,
   OpportunitySummary,
@@ -98,16 +98,10 @@ function applyOpportunityFilters(
   })
 }
 
-async function syncExpiredOpportunitiesIfCanonical() {
-  const mode = await getBackendMode()
-
-  if (mode !== "canonical") {
-    return mode
-  }
-
+async function syncExpiredOpportunities() {
   const now = Date.now()
   if (now - lastOpportunitySyncAt < OPPORTUNITY_SYNC_INTERVAL_MS) {
-    return mode
+    return
   }
 
   const { error } = await supabase.rpc("sync_expired_opportunities" as never)
@@ -116,93 +110,49 @@ async function syncExpiredOpportunitiesIfCanonical() {
   }
 
   lastOpportunitySyncAt = now
-
-  return mode
 }
 
 export async function getOpportunities(params?: {
   query?: string
   status?: string
 }): Promise<OpportunitySummary[]> {
-  const mode = await syncExpiredOpportunitiesIfCanonical()
+  await syncExpiredOpportunities()
 
-  if (mode === "canonical") {
-    let request = supabase
-      .from("open_opportunities_view")
-      .select(OPPORTUNITY_SUMMARY_COLUMNS)
-      .order("created_at", { ascending: false })
+  let request = supabase
+    .from("open_opportunities_view")
+    .select(OPPORTUNITY_SUMMARY_COLUMNS)
+    .order("created_at", { ascending: false })
 
-    const normalizedQuery = params?.query?.trim()
-    if (normalizedQuery) {
-      request = request.or(
-        `title.ilike.%${normalizedQuery}%,client_name.ilike.%${normalizedQuery}%,service_type.ilike.%${normalizedQuery}%,transport_type.ilike.%${normalizedQuery}%,operation_type.ilike.%${normalizedQuery}%,incoterm_code.ilike.%${normalizedQuery}%,origin.ilike.%${normalizedQuery}%,destination.ilike.%${normalizedQuery}%,salesperson_name.ilike.%${normalizedQuery}%`
-      )
-    }
-
-    const normalizedStatus = params?.status?.trim()
-    if (normalizedStatus && normalizedStatus !== "all") {
-      request = request.eq("status", normalizedStatus)
-    }
-
-    const { data, error } = await request
-
-    if (error) {
-      throw error
-    }
-
-    return ((data ?? []) as Record<string, unknown>[]).map((row) => mapOpportunitySummary(row))
+  const normalizedQuery = params?.query?.trim()
+  if (normalizedQuery) {
+    request = request.or(
+      `title.ilike.%${normalizedQuery}%,client_name.ilike.%${normalizedQuery}%,service_type.ilike.%${normalizedQuery}%,transport_type.ilike.%${normalizedQuery}%,operation_type.ilike.%${normalizedQuery}%,incoterm_code.ilike.%${normalizedQuery}%,origin.ilike.%${normalizedQuery}%,destination.ilike.%${normalizedQuery}%,salesperson_name.ilike.%${normalizedQuery}%`
+    )
   }
 
-  const [opportunitiesResult, clientsResult] = await Promise.all([
-    supabase.from("opportunities").select("*").order("created_at", { ascending: false }),
-    supabase.from("clients").select("id,company_name"),
-  ])
-
-  if (opportunitiesResult.error) {
-    throw opportunitiesResult.error
+  const normalizedStatus = params?.status?.trim()
+  if (normalizedStatus && normalizedStatus !== "all") {
+    request = request.eq("status", normalizedStatus)
   }
 
-  if (clientsResult.error) {
-    throw clientsResult.error
+  const { data, error } = await request
+
+  if (error) {
+    throw error
   }
 
-  const clientRows = ((clientsResult.data ?? []) as unknown) as Array<{
-    id: string
-    company_name: string | null
-  }>
-  const opportunityRows = (opportunitiesResult.data ?? []) as Record<string, unknown>[]
-
-  const clientNames = new Map(
-    clientRows.map((client) => [String(client.id), String(client.company_name ?? "")])
+  return applyOpportunityFilters(
+    ((data ?? []) as Record<string, unknown>[]).map((row) => mapOpportunitySummary(row)),
+    params
   )
-
-  return applyOpportunityFilters(opportunityRows.map((row) => ({
-    ...mapOpportunity(row),
-    client_name: clientNames.get(String(row.client_id)) ?? null,
-    salesperson_name: null,
-  })), params)
 }
 
 export async function getOpportunitiesByClientId(clientId: string): Promise<Opportunity[]> {
-  const mode = await syncExpiredOpportunitiesIfCanonical()
-
-  if (mode === "canonical") {
-    const { data, error } = await supabase
-      .from("open_opportunities_view")
-      .select(OPPORTUNITY_SUMMARY_COLUMNS)
-      .eq("client_id", clientId)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      throw error
-    }
-
-    return ((data ?? []) as Record<string, unknown>[]).map((row) => mapOpportunity(row))
-  }
+  await syncExpiredOpportunities()
 
   const { data, error } = await supabase
-    .from("opportunities")
-    .select("*")
+    .from("open_opportunities_view")
+    .select(OPPORTUNITY_SUMMARY_COLUMNS)
     .eq("client_id", clientId)
     .order("created_at", { ascending: false })
 
@@ -214,89 +164,13 @@ export async function getOpportunitiesByClientId(clientId: string): Promise<Oppo
 }
 
 export async function getOpportunityById(id: string): Promise<OpportunityWithClient | null> {
-  const mode = await syncExpiredOpportunitiesIfCanonical()
+  await syncExpiredOpportunities()
 
-  if (mode === "canonical") {
-    const { data, error } = await supabase
-      .from("opportunities")
-      .select(OPPORTUNITY_COLUMNS)
-      .eq("id", id)
-      .maybeSingle()
-
-    if (error) {
-      throw error
-    }
-
-    if (!data) {
-      return null
-    }
-
-    const record = data as unknown as Record<string, unknown>
-    const [clientResult, salespersonResult, incotermResult] = await Promise.all([
-      record.client_id
-        ? supabase
-            .from("clients")
-            .select("id,company_name")
-            .eq("id", String(record.client_id))
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      record.salesperson_id
-        ? supabase
-            .from("users")
-            .select("first_name,last_name")
-            .eq("id", String(record.salesperson_id))
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      record.incoterm_id
-        ? supabase
-            .from("incoterms")
-            .select("code")
-            .eq("id", String(record.incoterm_id))
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ])
-
-    if (clientResult.error) {
-      throw clientResult.error
-    }
-
-    if (salespersonResult.error) {
-      throw salespersonResult.error
-    }
-
-    if (incotermResult.error) {
-      throw incotermResult.error
-    }
-
-    const clientRelation = clientResult.data
-      ? {
-          id: String((clientResult.data as { id: string }).id),
-          company_name: String(
-            (clientResult.data as { company_name?: string | null }).company_name ?? ""
-          ),
-        }
-      : null
-
-    const salespersonName = salespersonResult.data
-      ? [
-          (salespersonResult.data as { first_name?: string | null }).first_name,
-          (salespersonResult.data as { last_name?: string | null }).last_name,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : null
-
-    return {
-      ...mapOpportunity(record),
-      incoterm_code: incotermResult.data
-        ? String((incotermResult.data as { code?: string | null }).code ?? "")
-        : null,
-      clients: clientRelation,
-      salesperson_name: salespersonName,
-    }
-  }
-
-  const { data, error } = await supabase.from("opportunities").select("*").eq("id", id).maybeSingle()
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select(OPPORTUNITY_COLUMNS)
+    .eq("id", id)
+    .maybeSingle()
 
   if (error) {
     throw error
@@ -306,19 +180,26 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
     return null
   }
 
-  const opportunityRow = data as Record<string, unknown>
+  const record = data as Record<string, unknown>
 
-  const [clientResult, incotermResult] = await Promise.all([
+  const [clientResult, salespersonResult, incotermResult] = await Promise.all([
     supabase
       .from("clients")
       .select("id,company_name")
-      .eq("id", String(opportunityRow.client_id))
+      .eq("id", String(record.client_id))
       .maybeSingle(),
-    opportunityRow.incoterm_id
+    record.salesperson_id
+      ? supabase
+          .from("users")
+          .select("first_name,last_name")
+          .eq("id", String(record.salesperson_id))
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    record.incoterm_id
       ? supabase
           .from("incoterms")
           .select("code")
-          .eq("id", String(opportunityRow.incoterm_id))
+          .eq("id", String(record.incoterm_id))
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ])
@@ -327,12 +208,25 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
     throw clientResult.error
   }
 
+  if (salespersonResult.error) {
+    throw salespersonResult.error
+  }
+
   if (incotermResult.error) {
     throw incotermResult.error
   }
 
+  const salespersonName = salespersonResult.data
+    ? [
+        (salespersonResult.data as { first_name?: string | null }).first_name,
+        (salespersonResult.data as { last_name?: string | null }).last_name,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : null
+
   return {
-    ...mapOpportunity(opportunityRow),
+    ...mapOpportunity(record),
     clients: clientResult.data
       ? {
           id: String((clientResult.data as { id: string }).id),
@@ -344,82 +238,58 @@ export async function getOpportunityById(id: string): Promise<OpportunityWithCli
     incoterm_code: incotermResult.data
       ? String((incotermResult.data as { code?: string | null }).code ?? "")
       : null,
-    salesperson_name: null,
+    salesperson_name: salespersonName,
   }
 }
 
 export async function createOpportunity(input: CreateOpportunityInput): Promise<string> {
-  const mode = await getBackendMode()
+  const { data, error } = await supabase.rpc("create_opportunity", {
+    p_client_id: input.clientId,
+    p_service_type: input.serviceType,
+    p_transport_type: input.transportType,
+    p_operation_type: input.operationType,
+    p_incoterm_id: input.incotermId || null,
+    p_origin_unlocode: input.originUnlocode,
+    p_destination_unlocode: input.destinationUnlocode,
+    p_expected_profit_usd: input.expectedProfitUsd,
+    p_service_quantity: input.serviceQuantity,
+    p_salesperson_id: input.salespersonId || null,
+    p_description: input.description || null,
+    p_status: "investigando",
+  } as never)
 
-  if (mode === "canonical") {
-    const { data, error } = await supabase.rpc("create_opportunity", {
-      p_client_id: input.clientId,
-      p_service_type: input.serviceType,
-      p_transport_type: input.transportType,
-      p_operation_type: input.operationType,
-      p_incoterm_id: input.incotermId || null,
-      p_origin_unlocode: input.originUnlocode,
-      p_destination_unlocode: input.destinationUnlocode,
-      p_expected_profit_usd: input.expectedProfitUsd,
-      p_service_quantity: input.serviceQuantity,
-      p_salesperson_id: input.salespersonId || null,
-      p_description: input.description || null,
-      p_status: "investigando",
-    } as never)
-
-    if (error || !data) {
-      throw error ?? new Error("Failed to create opportunity")
-    }
-
-    return String(data)
-  }
-
-  const { data, error } = await supabase
-    .from("opportunities")
-    .insert({
-      client_id: input.clientId,
-      salesperson_id: input.salespersonId || null,
-      title: "Opportunity",
-      service_type: input.serviceType,
-      transport_type: input.transportType,
-      operation_type: input.operationType,
-      incoterm_id: input.incotermId || null,
-      origin_unlocode: input.originUnlocode,
-      destination_unlocode: input.destinationUnlocode,
-      status: "investigando",
-      expected_profit_usd: input.expectedProfitUsd,
-      service_quantity: input.serviceQuantity,
-      description: input.description || null,
-    } as never)
-    .select("id")
-    .single()
-
-  const createdRow = data as { id?: string } | null
-
-  if (error || !createdRow?.id) {
+  if (error || !data) {
     throw error ?? new Error("Failed to create opportunity")
   }
 
-  return String(createdRow.id)
+  return String(data)
 }
 
 export async function updateOpportunity(
   id: string,
   changes: UpdateOpportunity
 ): Promise<Opportunity> {
-  const { data: updatedRow, error } = await supabase
+  const { data, error } = await supabase.rpc("update_opportunity_record" as never, {
+    p_opportunity_id: id,
+    p_changes: buildRpcPatch(changes),
+  } as never)
+
+  if (error || !data) {
+    throw error ?? new Error("Opportunity update is not permitted by the current backend")
+  }
+
+  const { data: updatedRow, error: readError } = await supabase
     .from("opportunities")
-    .update(changes as never)
-    .eq("id", id)
     .select("*")
+    .eq("id", id)
     .maybeSingle()
 
-  if (error) {
-    throw error
+  if (readError) {
+    throw readError
   }
 
   if (!updatedRow) {
-    throw new Error("Opportunity update is not permitted by the current backend")
+    throw new Error("Updated opportunity could not be loaded")
   }
 
   return mapOpportunity(updatedRow as Record<string, unknown>)
@@ -437,7 +307,9 @@ export async function updateOpportunityStatus(id: string, status: string): Promi
 }
 
 export async function deleteOpportunity(id: string): Promise<void> {
-  const { error } = await supabase.from("opportunities").delete().eq("id", id)
+  const { error } = await supabase.rpc("delete_opportunity_record" as never, {
+    p_opportunity_id: id,
+  } as never)
 
   if (error) {
     throw error

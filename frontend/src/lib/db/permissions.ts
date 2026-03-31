@@ -279,18 +279,13 @@ export async function upsertRoleResourcePermission(params: {
   conditionId: string
   allowed: boolean
 }) {
-  const { error } = await supabase.from("role_resource_permissions").upsert(
-    {
-      role_id: params.roleId,
-      resource_id: params.resourceId,
-      action_id: params.actionId,
-      condition_id: params.conditionId,
-      allowed: params.allowed,
-    },
-    {
-      onConflict: "role_id,resource_id,action_id",
-    }
-  )
+  const { error } = await supabase.rpc("upsert_role_resource_permission" as never, {
+    p_role_id: params.roleId,
+    p_resource_id: params.resourceId,
+    p_action_id: params.actionId,
+    p_condition_id: params.conditionId,
+    p_allowed: params.allowed,
+  } as never)
 
   if (error) {
     throw error
@@ -304,18 +299,13 @@ export async function upsertRoleFieldPermission(params: {
   conditionId: string
   allowed: boolean
 }) {
-  const { error } = await supabase.from("role_field_permissions").upsert(
-    {
-      role_id: params.roleId,
-      field_id: params.fieldId,
-      action_id: params.actionId,
-      condition_id: params.conditionId,
-      allowed: params.allowed,
-    },
-    {
-      onConflict: "role_id,field_id,action_id",
-    }
-  )
+  const { error } = await supabase.rpc("upsert_role_field_permission" as never, {
+    p_role_id: params.roleId,
+    p_field_id: params.fieldId,
+    p_action_id: params.actionId,
+    p_condition_id: params.conditionId,
+    p_allowed: params.allowed,
+  } as never)
 
   if (error) {
     throw error

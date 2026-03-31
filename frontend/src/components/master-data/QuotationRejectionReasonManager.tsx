@@ -1,8 +1,36 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { type ColumnDef } from "@tanstack/react-table"
+import { PencilLineIcon, PlusIcon, ShieldAlertIcon, Trash2Icon } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import { Modal } from "@/components/data/Modal"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import {
+  PriorityFormField,
+  PriorityFormSection,
+  PriorityInput,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
 import { PageContainer } from "@/components/layout/PageContainer"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback"
 import {
   createQuotationRejectionReason,
   deleteQuotationRejectionReason,
@@ -20,9 +48,9 @@ export function QuotationRejectionReasonManager() {
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<QuotationRejectionReason | null>(null)
   const [formValues, setFormValues] = useState(emptyForm)
 
   async function loadItems(search = "") {
@@ -34,6 +62,7 @@ export function QuotationRejectionReasonManager() {
       setItems(data)
     } catch (error) {
       console.error(error)
+      notifyError("No se pudo cargar el catalogo de motivos")
     } finally {
       setLoading(false)
     }
@@ -48,9 +77,14 @@ export function QuotationRejectionReasonManager() {
     setFormValues(emptyForm)
   }
 
+  function openCreateModal() {
+    resetForm()
+    setShowModal(true)
+  }
+
   async function handleSave() {
     if (!formValues.reason.trim()) {
-      alert("El motivo es obligatorio")
+      notifyWarning("El motivo es obligatorio")
       return
     }
 
@@ -60,10 +94,12 @@ export function QuotationRejectionReasonManager() {
         await updateQuotationRejectionReason(editingId, {
           reason: formValues.reason.trim(),
         })
+        notifySuccess("Motivo actualizado correctamente")
       } else {
         await createQuotationRejectionReason({
           reason: formValues.reason.trim(),
         })
+        notifySuccess("Motivo creado correctamente")
       }
 
       setShowModal(false)
@@ -71,140 +107,162 @@ export function QuotationRejectionReasonManager() {
       await loadItems(query)
     } catch (error) {
       console.error(error)
-      alert("No se pudo guardar el motivo")
+      notifyError("No se pudo guardar el motivo")
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm("Eliminar este motivo de rechazo?")
-    if (!confirmed) {
+  async function handleDeleteConfirm() {
+    if (!pendingDelete) {
       return
     }
 
     try {
-      setDeletingId(id)
-      await deleteQuotationRejectionReason(id)
+      await deleteQuotationRejectionReason(pendingDelete.id)
+      notifySuccess("Motivo eliminado correctamente")
+      setPendingDelete(null)
       await loadItems(query)
     } catch (error) {
       console.error(error)
-      alert("No se pudo eliminar el motivo")
-    } finally {
-      setDeletingId(null)
+      notifyError("No se pudo eliminar el motivo")
     }
   }
+
+  const columns = useMemo<ColumnDef<QuotationRejectionReason>[]>(
+    () => [
+      {
+        accessorKey: "reason",
+        header: "Motivo",
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <div className="font-medium text-[var(--brand-navy)]">{row.original.reason}</div>
+            <Badge
+              variant="outline"
+              className="border-[rgba(179,58,91,0.18)] bg-[rgba(179,58,91,0.06)] text-[var(--brand-burgundy)]"
+            >
+              Catalogo comercial
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        id: "updated",
+        header: "Actualizado",
+        cell: ({ row }) => (
+          <span className="text-[#5B6A7D]">{row.original.updated_at || row.original.created_at}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <PriorityRowActions
+              label="Acciones de motivo"
+              actions={[
+                {
+                  label: "Editar",
+                  icon: <PencilLineIcon />,
+                  onSelect: () => {
+                    setEditingId(row.original.id)
+                    setFormValues({
+                      reason: row.original.reason,
+                    })
+                    setShowModal(true)
+                  },
+                },
+                {
+                  label: "Eliminar",
+                  icon: <Trash2Icon />,
+                  onSelect: () => setPendingDelete(row.original),
+                  destructive: true,
+                },
+              ]}
+            />
+          </div>
+        ),
+      },
+    ],
+    []
+  )
 
   return (
     <PageContainer
       title="Motivos de rechazo de cotizacion"
       description="Catalogo editable para clasificar rechazos comerciales de forma consistente."
       actions={
-        <button
-          type="button"
-          onClick={() => {
-            resetForm()
-            setShowModal(true)
-          }}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-        >
+        <Button type="button" size="lg" onClick={openCreateModal}>
+          <PlusIcon />
           Anadir motivo
-        </button>
+        </Button>
       }
     >
       <div className="space-y-8">
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
+          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
               Registros
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{items.length}</div>
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{items.length}</div>
           </div>
-          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
+          <div className="rounded-[24px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(16,185,129,0.22)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#047857]">
               Catalogo activo
             </div>
-            <div className="mt-2 text-sm font-medium text-[#111827]">
+            <div className="mt-3 text-sm leading-7 text-[#27445D]">
               Reutilizable en CRM, Pricing y reportes.
             </div>
           </div>
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
+          <div className="rounded-[24px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(217,119,6,0.18)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">
               Uso recomendado
             </div>
-            <div className="mt-2 text-sm font-medium text-[#111827]">
+            <div className="mt-3 text-sm leading-7 text-[#27445D]">
               Seleccion estandar en lugar de texto libre.
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Catalogo actual</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+              <PriorityCardTitle>Catalogo actual</PriorityCardTitle>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 Busca por texto y mantén una lista limpia de motivos reutilizables.
-              </p>
+              </PriorityTypography>
             </div>
-            <input
-              className="w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] sm:max-w-sm"
-              placeholder="Buscar motivo"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+            <PriorityToolbar className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
+              <PriorityInput
+                placeholder="Buscar motivo"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="sm:flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setQuery("")}
+                disabled={!query}
+              >
+                Limpiar
+              </Button>
+            </PriorityToolbar>
           </div>
 
           {loading ? (
-            <p className="text-sm text-[#6B7280]">Cargando motivos...</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">No hay motivos configurados todavia.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Motivo</th>
-                    <th className="px-4 py-3">Actualizado</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-medium text-[#111827]">{item.reason}</td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {item.updated_at || item.created_at}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingId(item.id)
-                              setFormValues({
-                                reason: item.reason,
-                              })
-                              setShowModal(true)
-                            }}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(item.id)}
-                            disabled={deletingId === item.id}
-                            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingId === item.id ? "Eliminando..." : "Eliminar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
             </div>
+          ) : (
+            <PriorityDataTable
+              columns={columns}
+              data={items}
+              emptyTitle="No hay motivos configurados todavia"
+              emptyDescription="Crea el primer motivo para estandarizar rechazos comerciales y evitar texto libre."
+            />
           )}
         </section>
       </div>
@@ -218,30 +276,67 @@ export function QuotationRejectionReasonManager() {
             resetForm()
           }}
         >
-          <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <input
-              className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              placeholder="Motivo de rechazo"
-              value={formValues.reason}
-              onChange={(event) =>
-                setFormValues({
-                  reason: event.target.value,
-                })
-              }
-            />
-            <div className="flex justify-end">
-              <button
+          <div className="space-y-5">
+            <PriorityFormSection
+              title="Motivo comercial"
+              description="Usa una etiqueta clara, corta y reutilizable para reportes y seguimiento."
+            >
+              <PriorityFormField label="Motivo">
+                <PriorityInput
+                  placeholder="Motivo de rechazo"
+                  value={formValues.reason}
+                  onChange={(event) =>
+                    setFormValues({
+                      reason: event.target.value,
+                    })
+                  }
+                />
+              </PriorityFormField>
+            </PriorityFormSection>
+            <PrioritySubmitBar>
+              <Button
                 type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
+                variant="outline"
+                onClick={() => {
+                  setShowModal(false)
+                  resetForm()
+                }}
               >
+                Cancelar
+              </Button>
+              <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+                {saving ? <Spinner className="text-current" /> : null}
                 {saving ? "Guardando..." : "Guardar motivo"}
-              </button>
-            </div>
-          </section>
+              </Button>
+            </PrioritySubmitBar>
+          </div>
         </Modal>
       ) : null}
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,246,249,0.96)_100%)] p-0 text-[var(--brand-navy)] shadow-[0_36px_80px_-36px_rgba(3,10,24,0.55)]">
+          <AlertDialogHeader className="px-6 pt-6 text-left sm:place-items-start sm:text-left">
+            <AlertDialogMedia className="bg-[rgba(179,58,91,0.08)] text-[var(--brand-burgundy)]">
+              <ShieldAlertIcon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Eliminar motivo</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `Vas a eliminar "${pendingDelete.reason}". Esta accion impacta catalogos operativos y no debe ejecutarse por error.`
+                : "Confirma la eliminacion del motivo."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="rounded-b-[28px] border-t border-[var(--border-subtle)] bg-[rgba(11,31,59,0.03)] px-6 py-4">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => void handleDeleteConfirm()}
+            >
+              Eliminar motivo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   )
 }

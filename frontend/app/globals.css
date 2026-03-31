@@ -1,14 +1,53 @@
 @import "tailwindcss";
+@import "../node_modules/tw-animate-css/dist/tw-animate.css";
+@import "shadcn/tailwind.css";
 
 :root {
   --background: #09162b;
   --foreground: #e5e5e5;
+  --card: rgba(255, 255, 255, 0.96);
+  --card-foreground: #0f172a;
+  --popover: rgba(255, 255, 255, 0.98);
+  --popover-foreground: #0f172a;
+  --primary: #800020;
+  --primary-foreground: #fff8fb;
+  --secondary: rgba(144, 158, 174, 0.18);
+  --secondary-foreground: #e5e5e5;
+  --muted: rgba(144, 158, 174, 0.12);
+  --muted-foreground: #8ea0b4;
+  --accent: rgba(179, 58, 91, 0.18);
+  --accent-foreground: #fff8fb;
+  --destructive: #b91c1c;
+  --destructive-foreground: #fff5f5;
+  --border: rgba(144, 158, 174, 0.22);
+  --input: rgba(144, 158, 174, 0.24);
+  --ring: rgba(179, 58, 91, 0.45);
+  --chart-1: #b33a5b;
+  --chart-2: #0b1f3b;
+  --chart-3: #64748b;
+  --chart-4: #c97a90;
+  --chart-5: #d4dde8;
+  --radius: 1.25rem;
+  --sidebar: rgba(9, 22, 43, 0.96);
+  --sidebar-foreground: #e5e5e5;
+  --sidebar-primary: #800020;
+  --sidebar-primary-foreground: #fff8fb;
+  --sidebar-accent: rgba(179, 58, 91, 0.18);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(144, 158, 174, 0.18);
+  --sidebar-ring: rgba(179, 58, 91, 0.42);
   --brand-navy: #0b1f3b;
   --brand-burgundy: #800020;
   --brand-burgundy-light: #b33a5b;
   --brand-gray: #909eae;
   --brand-light-gray: #e5e5e5;
   --brand-soft-gray: #cfcfcf;
+  --type-page-title-size: clamp(1.9rem, 3vw, 2.6rem);
+  --type-section-title-size: 1.5rem;
+  --type-card-title-size: 1.125rem;
+  --type-body-size: 0.95rem;
+  --type-caption-size: 0.75rem;
+  --type-eyebrow-size: 0.6875rem;
   --surface-base: rgba(7, 16, 32, 0.92);
   --surface-panel: rgba(11, 31, 59, 0.82);
   --surface-panel-strong: rgba(9, 22, 43, 0.94);
@@ -18,9 +57,45 @@
   --shadow-brand: 0 32px 80px -36px rgba(3, 10, 24, 0.72);
 }
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 0.5rem);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.5rem);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
@@ -91,4 +166,19 @@ body::before {
   );
   border: 1px solid rgba(144, 158, 174, 0.18);
   box-shadow: var(--shadow-brand);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" fill="none">
+  <defs>
+    <linearGradient id="orbitGrad" x1="10" y1="320" x2="640" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#800020"/>
+      <stop offset="0.55" stop-color="#B33A5B"/>
+      <stop offset="1" stop-color="#909EAE"/>
+    </linearGradient>
+    <linearGradient id="brainR" x1="380" y1="30" x2="580" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D7DCE3"/>
+      <stop offset="1" stop-color="#7A8798"/>
+    </linearGradient>
+    <linearGradient id="brainL" x1="150" y1="40" x2="360" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B01244"/>
+      <stop offset="1" stop-color="#800020"/>
+    </linearGradient>
+    <style>
+      .brand { font-family: Montserrat, Gotham, Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- symbol -->
+  <g transform="translate(10,10)">
+    <!-- back orbit segment -->
+    <path d="M32 282C80 180 187 109 321 103C416 99 506 132 580 176"
+          stroke="url(#orbitGrad)" stroke-width="18" stroke-linecap="round"/>
+
+    <!-- left brain -->
+    <g>
+      <path d="M340 67C302 67 276 93 276 129C255 121 224 132 207 162C188 197 196 242 226 266C207 284 204 315 219 340C238 370 278 378 307 361C319 384 345 400 374 400L374 47C364 41 351 38 340 38C310 38 289 54 277 80C289 69 305 67 340 67Z" fill="url(#brainL)"/>
+      <path d="M331 76C292 76 279 103 280 123C304 118 319 108 334 88C330 83 329 79 331 76Z" fill="transparent" stroke="#0B1F3B" stroke-width="7" stroke-linecap="round"/>
+      <path d="M273 140C236 140 216 171 214 199C260 200 295 184 321 152" fill="transparent" stroke="#0B1F3B" stroke-width="7" stroke-linecap="round"/>
+      <path d="M220 239C252 229 287 231 321 248" fill="transparent" stroke="#0B1F3B" stroke-width="7" stroke-linecap="round"/>
+      <path d="M236 331C264 302 297 294 321 299" fill="transparent" stroke="#0B1F3B" stroke-width="7" stroke-linecap="round"/>
+    </g>
+
+    <!-- right brain -->
+    <g>
+      <path d="M394 50C427 33 474 43 493 75C520 72 549 85 565 109C581 133 582 164 570 187C590 209 595 245 580 273C570 292 553 305 532 309C531 339 511 367 480 378C449 389 417 379 397 355L394 50Z" fill="url(#brainR)"/>
+      <path d="M394 50C427 33 474 43 493 75C520 72 549 85 565 109C581 133 582 164 570 187C590 209 595 245 580 273C570 292 553 305 532 309C531 339 511 367 480 378C449 389 417 379 397 355" stroke="#0B1F3B" stroke-width="8" stroke-linejoin="round"/>
+      <path d="M395 150H444L485 103" stroke="#27344C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M445 150H515" stroke="#27344C" stroke-width="8" stroke-linecap="round"/>
+      <path d="M396 242H458L507 193H558" stroke="#27344C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M445 242L484 299" stroke="#27344C" stroke-width="8" stroke-linecap="round"/>
+      <path d="M485 299L530 344" stroke="#27344C" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="445" cy="150" r="22" fill="#F5F2F2" stroke="#27344C" stroke-width="8"/>
+      <circle cx="507" cy="103" r="22" fill="#F5F2F2" stroke="#27344C" stroke-width="8"/>
+      <circle cx="558" cy="193" r="22" fill="#F5F2F2" stroke="#27344C" stroke-width="8"/>
+      <circle cx="438" cy="242" r="22" fill="#F5F2F2" stroke="#27344C" stroke-width="8"/>
+      <circle cx="521" cy="344" r="22" fill="#F5F2F2" stroke="#27344C" stroke-width="8"/>
+    </g>
+
+    <!-- front orbit segment -->
+    <path d="M18 337C89 398 221 421 357 411C507 400 610 334 679 188C701 142 702 98 687 64"
+          stroke="url(#orbitGrad)" stroke-width="24" stroke-linecap="round"/>
+
+    <!-- ship: simplified for small scale -->
+    <g transform="translate(62,292)">
+      <path d="M0 42H104L91 72H22L0 42Z" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+      <path d="M18 30H34V42H18Z" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+      <path d="M40 24H58V42H40Z" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+      <path d="M61 26H77V42H61Z" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+    </g>
+
+    <!-- truck aligned to orbit -->
+    <g transform="translate(555,282) rotate(0)">
+      <rect x="0" y="18" width="58" height="34" rx="3" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+      <path d="M58 28H82L94 40V52H58V28Z" fill="#25344C" stroke="#E5E5E5" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="71" y="31" width="12" height="10" fill="#E5E5E5"/>
+      <circle cx="18" cy="56" r="7" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+      <circle cx="74" cy="56" r="7" fill="#25344C" stroke="#E5E5E5" stroke-width="2"/>
+    </g>
+
+    <!-- plane with shorter trail -->
+    <g transform="translate(635,18) rotate(-22)">
+      <path d="M0 28L48 22L82 8L90 15L58 31L82 41L79 49L48 39L17 55L8 48L32 34L0 28Z" fill="#E5E5E5"/>
+    </g>
+    <path d="M596 84C620 82 646 82 670 86" stroke="#E5E5E5" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+    <path d="M601 94C623 93 645 95 665 99" stroke="#E5E5E5" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+  </g>
+
+  <!-- text -->
+  <g class="brand" transform="translate(780,115)">
+    <text x="0" y="95" fill="#E5E5E5" font-size="132" font-weight="800" letter-spacing="10">PRIORITY</text>
+    <text x="20" y="190" fill="#CFCFCF" font-size="50" font-weight="300" letter-spacing="7">FREIGHT INTELLIGENCE</text>
+    <line x1="8" y1="232" x2="765" y2="232" stroke="#CFCFCF" stroke-width="3"/>
+    <text x="36" y="298" fill="#E5E5E5" font-size="34" font-weight="400" letter-spacing="4">SMARTER • BETTER • FASTER</text>
+  </g>
+</svg>

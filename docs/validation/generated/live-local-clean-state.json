@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-03-28T16:39:14.673Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "prefixes": [
+    "TEST_",
+    "LOADTEST_",
+    "QA_",
+    "STRESS_"
+  ],
+  "scans": [
+    {
+      "table": "clients",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "contacts",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "client_logistics_parties",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "opportunities",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "providers",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "provider_contacts",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "quotation_options",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "quotation_costs",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "quotation_cargo_lines",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "sales_accounting_concepts",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "quotation_rejection_reasons",
+      "ok": true,
+      "count": 0
+    },
+    {
+      "table": "exchange_rates",
+      "ok": true,
+      "count": 0
+    }
+  ],
+  "clean": true
+}

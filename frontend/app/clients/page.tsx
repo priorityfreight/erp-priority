@@ -1,7 +1,8 @@
 "use client"
 
+import { type ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
-import { useDeferredValue, useEffect, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import {
   createClient,
   deleteClient,
@@ -12,15 +13,21 @@ import {
   type ClientSummary,
   type User,
 } from "@/lib/db"
+import { getErrorMessage, notifyError, notifyWarning } from "@/lib/feedback"
 import { PageContainer } from "@/components/layout/PageContainer"
 import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { ClientForm } from "@/components/forms/ClientForm"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientSummary[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [backendMode, setBackendMode] = useState<BackendMode>("legacy")
+  const [backendMode, setBackendMode] = useState<BackendMode>("canonical")
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [companyName, setCompanyName] = useState("")
   const [taxId, setTaxId] = useState("")
@@ -37,16 +44,21 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
   const [sortBy, setSortBy] = useState("name")
-  const [page, setPage] = useState(1)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const { confirm, confirmDialog } = usePriorityConfirm()
 
   async function loadClients(query: string) {
     try {
+      setLoading(true)
       const data = await getClientSummaries(query)
       setClients(data)
-    } catch (err) {
-      console.error(err)
+    } catch (error) {
+      console.error(error)
+      notifyError("No se pudieron cargar los clientes", getErrorMessage(error, "Intenta nuevamente."))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -67,17 +79,17 @@ export default function ClientsPage() {
 
   async function handleCreateClient() {
     if (!companyName.trim()) {
-      alert("Client name required")
+      notifyWarning("Client name required")
       return
     }
 
     if (!website.trim()) {
-      alert("Website required")
+      notifyWarning("Website required")
       return
     }
 
     if (!corporatePhone.trim()) {
-      alert("Corporate phone required")
+      notifyWarning("Corporate phone required")
       return
     }
 
@@ -101,18 +113,21 @@ export default function ClientsPage() {
       resetCreateForm()
       setShowCreateModal(false)
       await loadClients(search)
-    } catch (err) {
-      console.error(err)
-      alert("Error creating client")
+    } catch (error) {
+      console.error(error)
+      notifyError("Error creating client", getErrorMessage(error, "The client could not be saved."))
     } finally {
       setCreating(false)
     }
   }
 
-  async function handleDeleteClient(id: string) {
-    const confirmed = window.confirm(
-      "Delete this client? In the current dev backend this also removes linked contacts and opportunities."
-    )
+  const handleDeleteClient = useCallback(async (id: string, name: string) => {
+    const confirmed = await confirm({
+      title: "Eliminar cliente",
+      description: `Se eliminara ${name} y tambien los contactos y oportunidades vinculados por el workflow canonico.`,
+      actionLabel: "Eliminar cliente",
+      variant: "destructive",
+    })
 
     if (!confirmed) {
       return
@@ -124,11 +139,11 @@ export default function ClientsPage() {
       await loadClients(search)
     } catch (error) {
       console.error(error)
-      alert("Error deleting client")
+      notifyError("Error deleting client", getErrorMessage(error, "The client could not be deleted."))
     } finally {
       setDeletingId(null)
     }
-  }
+  }, [confirm, search])
 
   useEffect(() => {
     let cancelled = false
@@ -140,8 +155,8 @@ export default function ClientsPage() {
           setUsers(userData)
         }
       })
-      .catch((err) => {
-        console.error(err)
+      .catch((error) => {
+        console.error(error)
       })
 
     return () => {
@@ -150,54 +165,30 @@ export default function ClientsPage() {
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-
-    getClientSummaries(deferredSearch)
-      .then((data) => {
-        if (!cancelled) {
-          setClients(data)
-        }
-      })
-      .catch((err) => {
-        console.error(err)
-      })
-
-    return () => {
-      cancelled = true
-    }
+    void loadClients(deferredSearch)
   }, [deferredSearch])
 
-  useEffect(() => {
-    setPage(1)
-  }, [search, sortBy])
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((left, right) => {
+      if (sortBy === "country") {
+        return (left.country || "").localeCompare(right.country || "")
+      }
 
-  const sortedClients = [...clients].sort((left, right) => {
-    if (sortBy === "country") {
-      return (left.country || "").localeCompare(right.country || "")
-    }
+      if (sortBy === "city") {
+        return (left.city || "").localeCompare(right.city || "")
+      }
 
-    if (sortBy === "city") {
-      return (left.city || "").localeCompare(right.city || "")
-    }
+      if (sortBy === "opportunities") {
+        return (right.total_opportunities ?? 0) - (left.total_opportunities ?? 0)
+      }
 
-    if (sortBy === "opportunities") {
-      return (right.total_opportunities ?? 0) - (left.total_opportunities ?? 0)
-    }
+      if (sortBy === "pipeline") {
+        return (right.pipeline_value ?? 0) - (left.pipeline_value ?? 0)
+      }
 
-    if (sortBy === "pipeline") {
-      return (right.pipeline_value ?? 0) - (left.pipeline_value ?? 0)
-    }
-
-    return (left.client_name || "").localeCompare(right.client_name || "")
-  })
-
-  const pageSize = 8
-  const totalPages = Math.max(1, Math.ceil(sortedClients.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const paginatedClients = sortedClients.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  )
+      return (left.client_name || "").localeCompare(right.client_name || "")
+    })
+  }, [clients, sortBy])
 
   const totalPipelineValue = sortedClients.reduce(
     (sum, client) => sum + (client.pipeline_value ?? 0),
@@ -212,6 +203,76 @@ export default function ClientsPage() {
     0
   )
 
+  const clientColumns = useMemo<ColumnDef<ClientSummary>[]>(
+    () => [
+      {
+        accessorKey: "client_name",
+        header: "Cliente",
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <Link
+              href={`/clients/${row.original.id}`}
+              className="font-medium text-[var(--brand-navy)] hover:text-[var(--brand-burgundy)]"
+            >
+              {row.original.client_name || "Unnamed client"}
+            </Link>
+            <div className="text-xs text-[#5B6A7D]">{row.original.account_owner_name || "Sin owner"}</div>
+          </div>
+        ),
+      },
+      {
+        id: "status",
+        header: "Estatus",
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: "location",
+        header: "Ubicacion",
+        cell: ({ row }) =>
+          [row.original.city, row.original.country].filter(Boolean).join(" · ") || "No definida",
+      },
+      {
+        accessorKey: "account_owner_name",
+        header: "Owner",
+        cell: ({ row }) => row.original.account_owner_name || "Sin owner",
+      },
+      {
+        accessorKey: "total_opportunities",
+        header: "Oportunidades",
+        cell: ({ row }) => row.original.total_opportunities ?? 0,
+      },
+      {
+        accessorKey: "pipeline_value",
+        header: "Pipeline",
+        cell: ({ row }) => `$${(row.original.pipeline_value ?? 0).toLocaleString()}`,
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-2">
+            <Button asChild type="button" variant="outline" size="sm">
+              <Link href={`/clients/${row.original.id}`}>Ver</Link>
+            </Button>
+            <Button asChild type="button" variant="outline" size="sm">
+              <Link href={`/opportunities?clientId=${row.original.id}`}>Nueva oportunidad</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => void handleDeleteClient(row.original.id, row.original.client_name || "este cliente")}
+              disabled={deletingId === row.original.id}
+            >
+              {deletingId === row.original.id ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [deletingId, handleDeleteClient]
+  )
+
   return (
     <PageContainer
       title="Clients"
@@ -221,13 +282,9 @@ export default function ClientsPage() {
           <div className="text-xs text-[#6B7280]">
             Backend mode: <span className="font-semibold text-[#111827]">{backendMode}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-          >
+          <Button type="button" size="lg" onClick={() => setShowCreateModal(true)}>
             Anadir cliente
-          </button>
+          </Button>
         </div>
       }
     >
@@ -243,9 +300,7 @@ export default function ClientsPage() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
               Open Opportunities
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {totalOpportunities}
-            </div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">{totalOpportunities}</div>
           </div>
           <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
@@ -264,124 +319,53 @@ export default function ClientsPage() {
           </div>
         </section>
 
-        {backendMode !== "canonical" ? (
-          <section className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
-            The current cloud backend is still on the legacy client schema. Core client records are
-            saved in Supabase, and the extended client profile fields are stored locally in this browser
-            until the backend migration is applied.
-          </section>
-        ) : null}
-
-        <section className="space-y-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="text-lg font-semibold text-[#111827]">Client List</h2>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+        <section className="space-y-4 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.95)] p-5 shadow-[0_28px_60px_-46px_rgba(3,10,24,0.45)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--brand-navy)]">Client registry</h2>
+              <p className="mt-1 text-sm text-[#5B6A7D]">
+                Central CRM view with search, sort presets, pipeline value and direct drill-down.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row">
+              <PriorityInput
                 placeholder="Search by company"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
-              >
-                <option value="name">Sort: Name</option>
-                <option value="city">Sort: City</option>
-                <option value="country">Sort: Country</option>
-                <option value="opportunities">Sort: Opportunities</option>
-                <option value="pipeline">Sort: Pipeline Value</option>
-              </select>
+                onValueChange={setSortBy}
+                placeholder="Ordena la lista"
+                options={[
+                  { value: "name", label: "Sort: Name" },
+                  { value: "city", label: "Sort: City" },
+                  { value: "country", label: "Sort: Country" },
+                  { value: "opportunities", label: "Sort: Opportunities" },
+                  { value: "pipeline", label: "Sort: Pipeline Value" },
+                ]}
+              />
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-[#6B7280]">
-            <span>{sortedClients.length} visible clients</span>
-            <span>Page {currentPage} of {totalPages}</span>
-          </div>
-
-          {paginatedClients.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">
-              {clients.length === 0
-                ? "No clients yet. Add the first one with the button above."
-                : "No clients match the current search."}
-            </p>
-          ) : (
+          {loading ? (
             <div className="space-y-3">
-              {paginatedClients.map((client) => (
-                <div
-                  key={client.id}
-                  className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <Link
-                          href={`/clients/${client.id}`}
-                          className="text-base font-semibold text-[#111827] hover:text-[#2563EB]"
-                        >
-                          {client.client_name || "Unnamed client"}
-                        </Link>
-                        <StatusBadge status={client.status} />
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-sm text-[#6B7280]">
-                        <span>{client.city || "No city"}</span>
-                        <span>{client.country || "No country"}</span>
-                        <span>{client.account_owner_name || "Sin owner"}</span>
-                        <span>{client.total_opportunities ?? 0} opportunities</span>
-                        <span>${(client.pipeline_value ?? 0).toLocaleString()} pipeline</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/clients/${client.id}`}
-                        className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
-                      >
-                        View
-                      </Link>
-                      <Link
-                        href={`/opportunities?clientId=${client.id}`}
-                        className="rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-sm font-medium text-[#1D4ED8] hover:bg-[#DBEAFE]"
-                      >
-                        New Opportunity
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClient(client.id)}
-                        disabled={deletingId === client.id}
-                        className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-sm font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {deletingId === client.id ? "Deleting..." : "Delete"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <Skeleton className="h-12 rounded-[20px]" />
+              <Skeleton className="h-12 rounded-[20px]" />
+              <Skeleton className="h-12 rounded-[20px]" />
             </div>
+          ) : (
+            <PriorityDataTable
+              columns={clientColumns}
+              data={sortedClients}
+              emptyTitle={clients.length === 0 ? "Sin clientes registrados" : "Sin resultados"}
+              emptyDescription={
+                clients.length === 0
+                  ? "Todavia no hay clientes. Crea el primero para arrancar el CRM."
+                  : "No encontramos clientes con los filtros actuales."
+              }
+            />
           )}
-
-          {sortedClients.length > pageSize ? (
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.max(1, value - 1))}
-                disabled={currentPage === 1}
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-                disabled={currentPage === totalPages}
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Next
-              </button>
-            </div>
-          ) : null}
         </section>
       </div>
 
@@ -429,14 +413,12 @@ export default function ClientsPage() {
             onSubmit={handleCreateClient}
             submitLabel="Guardar cliente"
             loading={creating}
-            submitNote={
-              backendMode === "canonical"
-                ? "The full client profile is stored in the canonical backend."
-                : "In legacy mode, the extended client profile is preserved locally in this browser."
-            }
+            submitNote="The full client profile is stored in the canonical backend."
           />
         </Modal>
       ) : null}
+
+      {confirmDialog}
     </PageContainer>
   )
 }

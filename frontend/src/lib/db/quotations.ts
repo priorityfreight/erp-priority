@@ -4,6 +4,7 @@ import {
   mapQuotationChargeLine,
   mapQuotationSummary,
 } from "./mappers"
+import { buildRpcPatch } from "./rpcPatch"
 import type {
   NewQuotation,
   NewQuotationCargoLine,
@@ -41,6 +42,20 @@ function mapShipment(row: Record<string, unknown>): Shipment {
     created_at: String(row.created_at ?? new Date(0).toISOString()),
     updated_at: (row.updated_at as string | null | undefined) ?? null,
   }
+}
+
+async function readShipmentById(id: string): Promise<Shipment> {
+  const { data, error } = await supabase
+    .from("shipments")
+    .select("*")
+    .eq("id", id)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return mapShipment(data as Record<string, unknown>)
 }
 
 export async function getQuotations(params?: {
@@ -136,18 +151,10 @@ export async function createQuotation(payload: NewQuotation): Promise<string> {
 }
 
 export async function updateQuotation(id: string, payload: UpdateQuotation): Promise<void> {
-  const { error } = await supabase
-    .from("quotations")
-    .update({
-      pickup_address: payload.pickup_address ?? null,
-      delivery_address: payload.delivery_address ?? null,
-      required_quote_date: payload.required_quote_date ?? null,
-      target_rate: payload.target_rate ?? null,
-      rejection_reason_id: payload.rejection_reason_id ?? null,
-      rejection_notes: payload.rejection_notes ?? null,
-      cancellation_notes: payload.cancellation_notes ?? null,
-    })
-    .eq("id", id)
+  const { error } = await supabase.rpc("update_quotation_record" as never, {
+    p_quotation_id: id,
+    p_changes: buildRpcPatch(payload),
+  } as never)
 
   if (error) {
     throw error
@@ -413,15 +420,5 @@ export async function createBookingFromQuotation(quotationId: string): Promise<S
     throw error ?? new Error("Failed to create booking")
   }
 
-  const { data: shipment, error: shipmentError } = await supabase
-    .from("shipments")
-    .select("*")
-    .eq("id", data)
-    .single()
-
-  if (shipmentError) {
-    throw shipmentError
-  }
-
-  return mapShipment(shipment as Record<string, unknown>)
+  return readShipmentById(String(data))
 }

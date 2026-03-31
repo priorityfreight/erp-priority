@@ -1,7 +1,20 @@
 "use client"
 
-import type { ReactNode } from "react"
 import type { Client } from "@/lib/db"
+import { Button } from "@/components/ui/button"
+import {
+  PriorityFormHeader,
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 export type ContactFormValues = {
   clientId: string
@@ -25,26 +38,6 @@ type ContactFormProps = {
   disabled?: boolean
   createdAt?: string | null
   updatedAt?: string | null
-}
-
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#334155]">{title}</h3>
-        {description ? <p className="mt-1 text-sm text-[#64748B]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
 }
 
 function formatDate(value?: string | null) {
@@ -135,141 +128,161 @@ export function ContactForm({
   const linkedinValid = isValidLinkedInUrl(values.linkedinUrl)
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion del contacto"
         description="Datos base del contacto y su relacion con la cuenta."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.clientId}
-            onChange={(event) => onChange("clientId", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Cliente</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.company_name}
-              </option>
-            ))}
-          </select>
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Nombre del contacto *"
-            value={values.name}
-            onChange={(event) => onChange("name", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Puesto"
-            value={values.position}
-            onChange={(event) => onChange("position", event.target.value)}
-            disabled={disabled}
-          />
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.status}
-            onChange={(event) => onChange("status", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="activo">Activo</option>
-            <option value="ya_no_trabaja">Ya no trabaja</option>
-          </select>
-        </div>
-      </FormSection>
+        <PriorityFormGrid>
+          <PriorityFormField label="Cliente">
+            <PrioritySelectField
+              value={values.clientId}
+              onValueChange={(value) => onChange("clientId", value)}
+              placeholder="Selecciona un cliente"
+              disabled={disabled}
+              options={clients.map((client) => ({
+                value: client.id,
+                label: client.company_name,
+              }))}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Nombre del contacto">
+            <PriorityInput
+              placeholder="Nombre del contacto *"
+              value={values.name}
+              onChange={(event) => onChange("name", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Puesto">
+            <PriorityInput
+              placeholder="Puesto"
+              value={values.position}
+              onChange={(event) => onChange("position", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Estatus">
+            <div className="space-y-3">
+              <ToggleGroup
+                type="single"
+                value={values.status}
+                onValueChange={(value) => {
+                  if (value) {
+                    onChange("status", value)
+                  }
+                }}
+                className="w-full justify-start"
+              >
+                <ToggleGroupItem value="activo" className="min-w-[120px]">
+                  Activo
+                </ToggleGroupItem>
+                <ToggleGroupItem value="ya_no_trabaja" className="min-w-[140px]">
+                  Ya no trabaja
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <PriorityTypography variant="caption">
+                El estatus controla si el contacto debe considerarse para salida comercial activa.
+              </PriorityTypography>
+            </div>
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion de contacto"
         description="Canales directos de contacto y enlaces rapidos."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <input
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+        <PriorityFormGrid className="md:grid-cols-2">
+          <PriorityFormField
+            label="Telefono directo"
+            description={whatsappLink ? "Se puede abrir directo en WhatsApp." : "Sin enlace de WhatsApp."}
+          >
+            <PriorityInput
               placeholder="Telefono directo"
               value={values.phone}
               onChange={(event) => onChange("phone", event.target.value)}
               disabled={disabled}
             />
-            <div className="text-xs text-[#6B7280]">
-              {whatsappLink ? "Se puede abrir directo en WhatsApp." : "Sin enlace de WhatsApp."}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <input
-              className={`rounded-md border bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] ${
-                linkedinValid ? "border-[#D1D5DB]" : "border-[#FCA5A5]"
-              }`}
+          </PriorityFormField>
+          <PriorityFormField
+            label="LinkedIn URL"
+            description={
+              linkedinValid
+                ? "Usa una URL valida de linkedin.com."
+                : "La URL debe pertenecer a linkedin.com."
+            }
+          >
+            <PriorityInput
+              aria-invalid={!linkedinValid}
               placeholder="LinkedIn URL"
               value={values.linkedinUrl}
               onChange={(event) => onChange("linkedinUrl", event.target.value)}
               disabled={disabled}
+              className={!linkedinValid ? "border-[#FCA5A5] focus-visible:ring-[rgba(185,28,28,0.15)]" : undefined}
             />
-            <div className={`text-xs ${linkedinValid ? "text-[#6B7280]" : "text-[#B91C1C]"}`}>
-              {linkedinValid
-                ? "Usa una URL valida de linkedin.com."
-                : "La URL debe pertenecer a linkedin.com."}
-            </div>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <input
-              className={`rounded-md border bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] ${
-                emailValid ? "border-[#D1D5DB]" : "border-[#FCA5A5]"
-              }`}
+          </PriorityFormField>
+          <PriorityFormField
+            label="Correo"
+            description={
+              emailValid
+                ? "Validacion de formato solamente. La existencia real requiere verificacion externa."
+                : "El correo no tiene un formato valido."
+            }
+            className="md:col-span-2"
+          >
+            <PriorityInput
+              aria-invalid={!emailValid}
               placeholder="Correo"
               value={values.email}
               onChange={(event) => onChange("email", event.target.value)}
               disabled={disabled}
+              className={!emailValid ? "border-[#FCA5A5] focus-visible:ring-[rgba(185,28,28,0.15)]" : undefined}
             />
-            <div className={`text-xs ${emailValid ? "text-[#6B7280]" : "text-[#B91C1C]"}`}>
-              {emailValid
-                ? "Validacion de formato solamente. La existencia real requiere verificacion externa."
-                : "El correo no tiene un formato valido."}
-            </div>
-          </div>
-        </div>
-      </FormSection>
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
+
+      {!emailValid || !linkedinValid ? (
+        <PrioritySectionAlert title="Validaciones pendientes" variant="warning">
+          {!emailValid && !linkedinValid
+            ? "Corrige el formato del correo y la URL de LinkedIn antes de guardar."
+            : !emailValid
+              ? "Corrige el formato del correo antes de guardar."
+              : "Corrige la URL de LinkedIn antes de guardar."}
+        </PrioritySectionAlert>
+      ) : null}
+
+      {whatsappLink ? (
+        <PrioritySectionAlert title="Canal rapido disponible" variant="success">
+          Este contacto ya tiene un telefono apto para abrir conversacion directa en WhatsApp.
+        </PrioritySectionAlert>
+      ) : null}
 
       {(createdAt || updatedAt) ? (
-        <FormSection
+        <PriorityFormSection
           title="Registro"
           description="Campos automáticos controlados por la base de datos."
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Fecha de creacion
-              </div>
-              <div className="mt-1 text-sm font-medium text-[#111827]">{formatDate(createdAt)}</div>
-            </div>
-            <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Ultima vez actualizado
-              </div>
-              <div className="mt-1 text-sm font-medium text-[#111827]">{formatDate(updatedAt)}</div>
-            </div>
+            <PriorityInfoField label="Fecha de creacion" value={formatDate(createdAt)} />
+            <PriorityInfoField label="Ultima vez actualizado" value={formatDate(updatedAt)} />
           </div>
-        </FormSection>
+        </PriorityFormSection>
       ) : null}
 
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={disabled || loading || !emailValid || !linkedinValid}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Working..." : submitLabel}
-          </button>
-        </div>
+            {loading ? "Guardando..." : submitLabel}
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

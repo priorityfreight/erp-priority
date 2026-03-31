@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
-import { getMasterDataBackendMode, type MasterDataBackendMode } from "./backendMode"
+import { getMasterDataBackendMode } from "./backendMode"
 import type {
   ExchangeRate,
   NewExchangeRate,
@@ -109,8 +109,7 @@ function buildSearchFilter(query: string) {
 }
 
 async function getCanonicalUnlocodes(
-  params: UnlocodeSearchParams,
-  mode: MasterDataBackendMode
+  params: UnlocodeSearchParams
 ): Promise<UnlocodeSearchResult> {
   const pageSize = Math.min(Math.max(params.pageSize ?? 25, 1), 100)
   const page = Math.max(params.page ?? 1, 1)
@@ -183,39 +182,17 @@ async function getCanonicalUnlocodes(
     total: count ?? items.length,
     page,
     pageSize,
-    mode,
+    mode: "canonical",
     availableCountries: countrySummaries.map((entry) => entry.country_code),
     countrySummaries,
   }
 }
 
-async function getSnapshotUnlocodes(params: UnlocodeSearchParams): Promise<UnlocodeSearchResult> {
-  const searchParams = new URLSearchParams()
-
-  if (params.query) searchParams.set("query", params.query)
-  if (params.countryCode) searchParams.set("country", params.countryCode)
-  if (params.page) searchParams.set("page", String(params.page))
-  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize))
-
-  const response = await fetch(`/api/master-data/unlocodes?${searchParams.toString()}`)
-  if (!response.ok) {
-    throw new Error("Unable to load UN/LOCODE snapshot")
-  }
-
-  return (await response.json()) as UnlocodeSearchResult
-}
-
 export async function searchUnlocodes(
   params: UnlocodeSearchParams = {}
 ): Promise<UnlocodeSearchResult> {
-  const mode = await getMasterDataBackendMode()
-
-  if (mode === "canonical") {
-    return getCanonicalUnlocodes(params, mode)
-  }
-
-  // Temporary rollback safety only. Canonical backend search is the primary path.
-  return getSnapshotUnlocodes(params)
+  await getMasterDataBackendMode()
+  return getCanonicalUnlocodes(params)
 }
 
 export async function getServiceTransportTypes(params?: {

@@ -1,0 +1,138 @@
+{
+  "generatedAt": "2026-03-31T16:59:02.470Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "checks": [
+    {
+      "label": "client_overview_view",
+      "ok": true,
+      "durationMs": 701,
+      "details": {
+        "rows": 0
+      }
+    },
+    {
+      "label": "client_contacts_view",
+      "ok": true,
+      "durationMs": 689,
+      "details": {
+        "rows": 0
+      }
+    },
+    {
+      "label": "open_opportunities_view",
+      "ok": true,
+      "durationMs": 700,
+      "details": {
+        "rows": 0
+      }
+    },
+    {
+      "label": "quotation_summary_view",
+      "ok": true,
+      "durationMs": 689,
+      "details": {
+        "rows": 0
+      }
+    },
+    {
+      "label": "quotation_cost_line_secure_view",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 0
+      }
+    },
+    {
+      "label": "provider_overview_view",
+      "ok": true,
+      "durationMs": 695,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "provider_contacts_view",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 3
+      }
+    },
+    {
+      "label": "provider_service_offering_view",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "service_transport_type_lookup_view",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "sales_accounting_concept_lookup_view",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 2
+      }
+    },
+    {
+      "label": "quotation_rejection_reason_lookup_view",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "exchange_rates",
+      "ok": true,
+      "durationMs": 694,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "unlocode_lookup_view",
+      "ok": true,
+      "durationMs": 695,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "permission_resource_catalog_view",
+      "ok": true,
+      "durationMs": 701,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "role_resource_permission_matrix_view",
+      "ok": true,
+      "durationMs": 701,
+      "details": {
+        "rows": 5
+      }
+    },
+    {
+      "label": "search_unlocodes()",
+      "ok": true,
+      "durationMs": 1417,
+      "details": {
+        "rows": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,356 @@
+{
+  "generatedAt": "2026-03-28T08:28:45.540Z",
+  "loadLevel": "stress",
+  "requiredCounts": {
+    "sales": 18,
+    "pricing": 7,
+    "admin": 5,
+    "authenticated": 5
+  },
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm"
+  },
+  "generatedFilePath": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+  "records": [
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.0@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "8fac97d1-d210-4db6-891d-39eb4de5af09",
+      "erpUserId": "36888004-4c48-44ee-aed1-4c7bfa3dfca7"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.1@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "df21704b-ee06-4651-a300-3eac9f6b1d5b",
+      "erpUserId": "43eff435-fa0d-4c34-8535-adebac16bd49"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.2@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "511ba8f8-e1b3-41fd-84f6-8b62d1966fed",
+      "erpUserId": "d1e6e0be-c44b-4bd0-bb03-9ae487e69263"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.3@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "5488db8c-5f39-4328-b71b-d8b89446adbc",
+      "erpUserId": "55dc4e35-62ce-454d-9329-17c1863246bd"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.4@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "9c99b7a5-f179-4ab6-9535-82346ab71428",
+      "erpUserId": "311251e9-f3d0-4309-a2b7-9e7dbf048b78"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.5@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "8ed770d5-2c56-45a0-b3e7-d7a44e1e1bb5",
+      "erpUserId": "93f76fda-2ddd-469c-a2de-6b0a0c74f12d"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.6@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "57dd13a0-41ff-4f82-9808-49e48a2783ef",
+      "erpUserId": "a829834a-d45b-4aa5-8b4e-3e491272daf5"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.7@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "309d1930-5b56-4faa-b66b-735894fb52ef",
+      "erpUserId": "5eae231d-b726-4665-8225-f1154fd22861"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.8@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "42843c69-bdf1-4f7f-9277-56b97dd51f22",
+      "erpUserId": "186ccd2f-c2ed-4b5b-9f2e-405b0af78870"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.9@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "0d5b9e8a-177d-49b4-b878-c4ff8358f96b",
+      "erpUserId": "2821ebc6-bdc2-4626-8c9c-55c65598b530"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.10@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "c85bc5a5-633d-458b-96e9-34e7a6b6e928",
+      "erpUserId": "7df4e927-0c80-4b04-bec3-11c41372f6e9"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.11@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "638e6e1b-ef33-44a7-8c49-368c51700286",
+      "erpUserId": "8bb75c41-4a5e-458d-a21b-565c760c9e32"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.12@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "6adda48d-df23-45a6-94e0-6eadad0396e7",
+      "erpUserId": "68182e8f-c406-4572-9b2c-c92b0c8824bf"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.13@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "32912065-ca9f-4ceb-94b2-f2dff6b5baa8",
+      "erpUserId": "3fd095cf-0eb9-48f3-b856-a070d0553150"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.14@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "40eb2a17-b9db-4100-a247-07abbc99485f",
+      "erpUserId": "89377136-30be-4f1f-b07f-a6ebd2598d0f"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.15@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "31e6ab43-fcc7-4bba-8252-70af61c3ee70",
+      "erpUserId": "3b44cbe0-270f-4295-8966-fbeadbcda6c7"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.16@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "d94db020-06b0-4323-b41c-49d29f01923b",
+      "erpUserId": "4d26e590-6402-48d7-a131-920517753315"
+    },
+    {
+      "persona": "sales",
+      "roleName": "Ventas",
+      "email": "sales.1774686525842.17@validation.priority-erp.test",
+      "routePath": "/quotations",
+      "deniedRoutePaths": [
+        "/pricing/quotations",
+        "/master-data/users/roles"
+      ],
+      "authUserId": "a42291fc-f4c5-4c88-b48f-05e7a288d31c",
+      "erpUserId": "cf191dbd-ab58-4cfa-9ebb-08b47e2cd818"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.0@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "1ab2af7c-d4ae-49f4-b09a-0095c3686e81",
+      "erpUserId": "dbca758b-f80b-46f2-9915-f5cb737efd4c"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.1@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "e9cfc94c-2b27-49f8-be0b-6bee8d71b6fd",
+      "erpUserId": "da1c60fb-8f35-43bd-ad00-b2f10abbf214"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.2@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "3e6757ee-dbbb-4206-9882-e2ce4c7d1dfc",
+      "erpUserId": "5a091c15-5337-4f11-9756-10cb2d9a1212"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.3@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "71523d10-2e3c-4452-b10e-2eb563493bc0",
+      "erpUserId": "19976694-f02a-45cd-b439-4128a3545f70"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.4@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "8e6c1201-458a-498f-9238-bdddea869961",
+      "erpUserId": "279410cb-2e4e-401a-a7bb-f5fae1ca3bf3"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.5@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "09d8a8e3-fd49-436e-8d77-4c3610e01956",
+      "erpUserId": "165ec8b6-1a38-4efb-a886-f8ab06669285"
+    },
+    {
+      "persona": "pricing",
+      "roleName": "Pricing",
+      "email": "pricing.1774686525842.6@validation.priority-erp.test",
+      "routePath": "/pricing/quotations",
+      "deniedRoutePaths": [
+        "/master-data/users/roles"
+      ],
+      "authUserId": "95399eba-8a82-4676-aee6-4aa77cc73ef5",
+      "erpUserId": "d0e5b632-d728-45f3-ba36-00ef660c8f3a"
+    },
+    {
+      "persona": "admin",
+      "roleName": "Admin",
+      "email": "admin.1774686525842.0@validation.priority-erp.test",
+      "routePath": "/master-data/users/roles",
+      "deniedRoutePaths": [],
+      "authUserId": "e871a797-caf8-4f06-b0bc-8de447635a8f",
+      "erpUserId": "3ea81d02-cfbb-4210-a5e1-1d0e914659d8"
+    },
+    {
+      "persona": "admin",
+      "roleName": "Admin",
+      "email": "admin.1774686525842.1@validation.priority-erp.test",
+      "routePath": "/master-data/users/roles",
+      "deniedRoutePaths": [],
+      "authUserId": "234074bc-e4c2-4e5e-b972-53181127f951",
+      "erpUserId": "c2231a34-33bb-44ff-8bf9-c421f74e8551"
+    },
+    {
+      "persona": "admin",
+      "roleName": "Admin",
+      "email": "admin.1774686525842.2@validation.priority-erp.test",
+      "routePath": "/master-data/users/roles",
+      "deniedRoutePaths": [],
+      "authUserId": "8797e895-7f82-427e-8400-3079e6e5dbff",
+      "erpUserId": "bc5927c0-4af6-4366-a509-4e9e0e48bea6"
+    },
+    {
+      "persona": "admin",
+      "roleName": "Admin",
+      "email": "admin.1774686525842.3@validation.priority-erp.test",
+      "routePath": "/master-data/users/roles",
+      "deniedRoutePaths": [],
+      "authUserId": "c9f8735f-4775-45fd-aa9d-a61751e81d60",
+      "erpUserId": "735fa5a6-12e8-49d3-98c7-c95e5832826f"
+    },
+    {
+      "persona": "admin",
+      "roleName": "Admin",
+      "email": "admin.1774686525842.4@validation.priority-erp.test",
+      "routePath": "/master-data/users/roles",
+      "deniedRoutePaths": [],
+      "authUserId": "359d1e9c-5709-4ccb-85cf-adb46d21d720",
+      "erpUserId": "233e9460-9351-4065-8539-3351c782f371"
+    }
+  ],
+  "note": "Passwords are stored only in the runtime-generated session users file under frontend/.validation and should be removed by validation:cleanup."
+}

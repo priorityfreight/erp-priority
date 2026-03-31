@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
+import { buildRpcPatch } from "./rpcPatch"
 import type {
   NewProvider,
   NewProviderContact,
@@ -26,8 +27,6 @@ const PROVIDER_SUMMARY_COLUMNS =
   "id,provider_name,provider_type,city,country,status,credit_active,credit_amount,credit_days,total_contacts,total_service_offerings"
 const PROVIDER_CONTACT_COLUMNS =
   "id,provider_id,name,email,phone,linkedin_url,position,status,created_at,updated_at"
-const PROVIDER_SERVICE_BASE_COLUMNS =
-  "id,provider_id,service_transport_type_id,terms_and_conditions,created_at,updated_at"
 const PROVIDER_SERVICE_COLUMNS =
   "id,provider_id,service_transport_type_id,service_type,transport_type,terms_and_conditions,created_at,updated_at"
 
@@ -85,6 +84,48 @@ function mapProviderServiceOffering(
     created_at: String(row.created_at ?? new Date(0).toISOString()),
     updated_at: (row.updated_at as string | null | undefined) ?? null,
   }
+}
+
+async function readProviderById(id: string): Promise<Provider> {
+  const { data, error } = await supabase
+    .from("providers")
+    .select(PROVIDER_COLUMNS)
+    .eq("id", id)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return mapProvider(data as Record<string, unknown>)
+}
+
+async function readProviderContactById(id: string): Promise<ProviderContact> {
+  const { data, error } = await supabase
+    .from("provider_contacts")
+    .select(PROVIDER_CONTACT_COLUMNS)
+    .eq("id", id)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return mapProviderContact(data as Record<string, unknown>)
+}
+
+async function readProviderServiceOfferingById(id: string): Promise<ProviderServiceOffering> {
+  const { data, error } = await supabase
+    .from("provider_service_offering_view")
+    .select(PROVIDER_SERVICE_COLUMNS)
+    .eq("id", id)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return mapProviderServiceOffering(data as Record<string, unknown>)
 }
 
 export async function getProviders(): Promise<Provider[]> {
@@ -287,36 +328,26 @@ export async function createProvider(payload: NewProvider): Promise<Provider> {
     throw error ?? new Error("Failed to create provider")
   }
 
-  const { data: provider, error: providerError } = await supabase
-    .from("providers")
-    .select(PROVIDER_COLUMNS)
-    .eq("id", data)
-    .single()
-
-  if (providerError) {
-    throw providerError
-  }
-
-  return mapProvider(provider as Record<string, unknown>)
+  return readProviderById(String(data))
 }
 
 export async function updateProvider(id: string, changes: UpdateProvider): Promise<Provider> {
-  const { data, error } = await supabase
-    .from("providers")
-    .update(changes as never)
-    .eq("id", id)
-    .select(PROVIDER_COLUMNS)
-    .single()
+  const { data: updatedId, error } = await supabase.rpc("update_provider_record" as never, {
+    p_provider_id: id,
+    p_changes: buildRpcPatch(changes),
+  } as never)
 
-  if (error) {
-    throw error
+  if (error || !updatedId) {
+    throw error ?? new Error("Failed to update provider")
   }
 
-  return mapProvider(data as Record<string, unknown>)
+  return readProviderById(id)
 }
 
 export async function deleteProvider(id: string): Promise<void> {
-  const { error } = await supabase.from("providers").delete().eq("id", id)
+  const { error } = await supabase.rpc("delete_provider_record" as never, {
+    p_provider_id: id,
+  } as never)
 
   if (error) {
     throw error
@@ -340,39 +371,29 @@ export async function createProviderContact(
     throw error ?? new Error("Failed to create provider contact")
   }
 
-  const { data: contact, error: contactError } = await supabase
-    .from("provider_contacts")
-    .select(PROVIDER_CONTACT_COLUMNS)
-    .eq("id", data)
-    .single()
-
-  if (contactError) {
-    throw contactError
-  }
-
-  return mapProviderContact(contact as Record<string, unknown>)
+  return readProviderContactById(String(data))
 }
 
 export async function updateProviderContact(
   id: string,
   changes: UpdateProviderContact
 ): Promise<ProviderContact> {
-  const { data, error } = await supabase
-    .from("provider_contacts")
-    .update(changes as never)
-    .eq("id", id)
-    .select(PROVIDER_CONTACT_COLUMNS)
-    .single()
+  const { data: updatedId, error } = await supabase.rpc("update_provider_contact_record" as never, {
+    p_contact_id: id,
+    p_changes: buildRpcPatch(changes),
+  } as never)
 
-  if (error) {
-    throw error
+  if (error || !updatedId) {
+    throw error ?? new Error("Failed to update provider contact")
   }
 
-  return mapProviderContact(data as Record<string, unknown>)
+  return readProviderContactById(id)
 }
 
 export async function deleteProviderContact(id: string): Promise<void> {
-  const { error } = await supabase.from("provider_contacts").delete().eq("id", id)
+  const { error } = await supabase.rpc("delete_provider_contact_record" as never, {
+    p_contact_id: id,
+  } as never)
 
   if (error) {
     throw error
@@ -382,68 +403,39 @@ export async function deleteProviderContact(id: string): Promise<void> {
 export async function createProviderServiceOffering(
   payload: NewProviderServiceOffering
 ): Promise<ProviderServiceOffering> {
-  const { data, error } = await supabase
-    .from("provider_service_offerings")
-    .insert({
-      provider_id: payload.provider_id,
-      service_transport_type_id: payload.service_transport_type_id,
-      terms_and_conditions: payload.terms_and_conditions ?? null,
-    } as never)
-    .select(PROVIDER_SERVICE_BASE_COLUMNS)
-    .single()
+  const { data, error } = await supabase.rpc("create_provider_service_offering_record" as never, {
+    p_provider_id: payload.provider_id,
+    p_service_transport_type_id: payload.service_transport_type_id,
+    p_terms_and_conditions: payload.terms_and_conditions ?? null,
+  } as never)
 
-  if (error) {
-    throw error
+  if (error || !data) {
+    throw error ?? new Error("Failed to create provider service offering")
   }
 
-  const row = data as Record<string, unknown>
-  const { data: joined, error: joinedError } = await supabase
-    .from("provider_service_offering_view")
-    .select(PROVIDER_SERVICE_COLUMNS)
-    .eq("id", String(row.id))
-    .single()
-
-  if (joinedError) {
-    throw joinedError
-  }
-
-  return mapProviderServiceOffering(joined as Record<string, unknown>)
+  return readProviderServiceOfferingById(String(data))
 }
 
 export async function updateProviderServiceOffering(
   id: string,
   changes: UpdateProviderServiceOffering
 ): Promise<ProviderServiceOffering> {
-  const { error } = await supabase
-    .from("provider_service_offerings")
-    .update({
-      service_transport_type_id: changes.service_transport_type_id,
-      terms_and_conditions: changes.terms_and_conditions ?? null,
-    } as never)
-    .eq("id", id)
+  const { data: updatedId, error } = await supabase.rpc("update_provider_service_offering_record" as never, {
+    p_offering_id: id,
+    p_changes: buildRpcPatch(changes),
+  } as never)
 
-  if (error) {
-    throw error
+  if (error || !updatedId) {
+    throw error ?? new Error("Failed to update provider service offering")
   }
 
-  const { data, error: readError } = await supabase
-    .from("provider_service_offering_view")
-    .select(PROVIDER_SERVICE_COLUMNS)
-    .eq("id", id)
-    .single()
-
-  if (readError) {
-    throw readError
-  }
-
-  return mapProviderServiceOffering(data as Record<string, unknown>)
+  return readProviderServiceOfferingById(id)
 }
 
 export async function deleteProviderServiceOffering(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("provider_service_offerings")
-    .delete()
-    .eq("id", id)
+  const { error } = await supabase.rpc("delete_provider_service_offering_record" as never, {
+    p_offering_id: id,
+  } as never)
 
   if (error) {
     throw error

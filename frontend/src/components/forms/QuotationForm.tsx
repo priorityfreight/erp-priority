@@ -1,6 +1,16 @@
 "use client"
 
-import type { ReactNode } from "react"
+import {
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PrioritySubmitBar,
+  PriorityTextarea,
+} from "@/components/priority/PriorityForm"
+import { PriorityDateField } from "@/components/priority/PriorityDateField"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { Button } from "@/components/ui/button"
 
 export type QuotationFormValues = {
   pickupAddress: string
@@ -27,35 +37,6 @@ type QuotationFormProps = {
   disabled?: boolean
 }
 
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#334155]">{title}</h3>
-        {description ? <p className="mt-1 text-sm text-[#64748B]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function InfoField({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">{label}</div>
-      <div className="mt-1 text-sm font-medium text-[#111827]">{value || "No disponible"}</div>
-    </div>
-  )
-}
-
 export function QuotationForm({
   title,
   description,
@@ -75,78 +56,82 @@ export function QuotationForm({
   disabled = false,
 }: QuotationFormProps) {
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(248,250,252,0.82)] p-5 shadow-[0_26px_60px_-42px_rgba(3,10,24,0.42)]">
       <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
+        <PriorityTypography as="h2" variant="sectionTitle" className="text-xl">
+          {title}
+        </PriorityTypography>
+        {description ? (
+          <PriorityTypography variant="bodyMuted" className="mt-2">
+            {description}
+          </PriorityTypography>
+        ) : null}
       </div>
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion de la cotizacion"
         description="Esta informacion se arrastra desde la oportunidad comercial."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <InfoField label="Cliente" value={clientName} />
-          <InfoField label="Tipo de servicio" value={serviceType} />
-          <InfoField label="Tipo de transporte" value={transportType} />
-          <InfoField label="Tipo de operacion" value={operationType} />
-          <InfoField label="Incoterm" value={incotermCode} />
-          <InfoField label="Origen" value={origin} />
-          <InfoField label="Destino" value={destination} />
-          <InfoField label="Fecha creada" value={createdAt} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <PriorityInfoField label="Cliente" value={clientName} />
+          <PriorityInfoField label="Tipo de servicio" value={serviceType} />
+          <PriorityInfoField label="Tipo de transporte" value={transportType} />
+          <PriorityInfoField label="Tipo de operacion" value={operationType} />
+          <PriorityInfoField label="Incoterm" value={incotermCode} />
+          <PriorityInfoField label="Origen" value={origin} />
+          <PriorityInfoField label="Destino" value={destination} />
+          <PriorityInfoField label="Fecha creada" value={createdAt} />
         </div>
-      </FormSection>
+      </PriorityFormSection>
 
-      <FormSection title="Ruta" description="Captura unicamente las direcciones operativas de recoleccion y entrega.">
-        <div className="grid gap-3 md:grid-cols-2">
-          <textarea
-            className="min-h-[120px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.pickupAddress}
-            onChange={(event) => onChange("pickupAddress", event.target.value)}
-            placeholder="Direccion completa de pickup"
-            disabled={disabled}
-          />
-          <textarea
-            className="min-h-[120px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.deliveryAddress}
-            onChange={(event) => onChange("deliveryAddress", event.target.value)}
-            placeholder="Direccion completa de entrega"
-            disabled={disabled}
-          />
-        </div>
-      </FormSection>
+      <PriorityFormSection title="Ruta" description="Captura unicamente las direcciones operativas de recoleccion y entrega.">
+        <PriorityFormGrid className="md:grid-cols-2 xl:grid-cols-2">
+          <PriorityFormField label="Direccion de pickup">
+            <PriorityTextarea
+              value={values.pickupAddress}
+              onChange={(event) => onChange("pickupAddress", event.target.value)}
+              placeholder="Direccion completa de pickup"
+              disabled={disabled}
+              className="min-h-[120px]"
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Direccion de entrega">
+            <PriorityTextarea
+              value={values.deliveryAddress}
+              onChange={(event) => onChange("deliveryAddress", event.target.value)}
+              placeholder="Direccion completa de entrega"
+              disabled={disabled}
+              className="min-h-[120px]"
+            />
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Detalles de cotizacion"
         description="Captura las fechas comerciales necesarias para el seguimiento."
       >
-        <div className="grid gap-3 md:grid-cols-3">
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-              Fecha que requieren la cotizacion
-            </span>
-            <input
-              type="date"
-              className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+        <PriorityFormGrid className="md:grid-cols-2 xl:grid-cols-2">
+          <PriorityFormField label="Fecha que requieren la cotizacion">
+            <PriorityDateField
               value={values.requiredQuoteDate}
-              onChange={(event) => onChange("requiredQuoteDate", event.target.value)}
+              onChange={(value) => onChange("requiredQuoteDate", value)}
               disabled={disabled}
             />
-          </label>
-        </div>
-      </FormSection>
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={loading || disabled}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Guardando..." : submitLabel}
-          </button>
-        </div>
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

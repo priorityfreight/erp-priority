@@ -248,7 +248,7 @@ Uses:
 - create_erp_user_profile()
 - update_erp_user_profile()
 - unlocode_country_summary_view
-- /api/master-data/unlocodes snapshot fallback as temporary rollback safety when canonical master data is unavailable
+- live modules now use the canonical UN/LOCODE query layer only: unlocode_lookup_view + search_unlocodes()
 - service_transport_type_lookup_view
 - service_transport_types is read-only from the application
 - sales_accounting_concept_lookup_view

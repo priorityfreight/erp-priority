@@ -1,8 +1,44 @@
 "use client"
 
+import { type ColumnDef } from "@tanstack/react-table"
+import {
+  PencilLineIcon,
+  PlusIcon,
+  ShieldAlertIcon,
+  Trash2Icon,
+} from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Modal } from "@/components/data/Modal"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import {
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
 import { PageContainer } from "@/components/layout/PageContainer"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback"
 import {
   createSalesAccountingConcept,
   deleteSalesAccountingConcept,
@@ -37,9 +73,9 @@ export function SalesAccountingConceptManager() {
   const [operationTypeFilter, setOperationTypeFilter] = useState("all")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<SalesAccountingConcept | null>(null)
   const [formValues, setFormValues] = useState<FormValues>(emptyForm)
 
   async function loadItems() {
@@ -53,6 +89,7 @@ export function SalesAccountingConceptManager() {
       setItems(data)
     } catch (error) {
       console.error(error)
+      notifyError("No se pudo cargar el catalogo contable")
     } finally {
       setLoading(false)
     }
@@ -75,6 +112,9 @@ export function SalesAccountingConceptManager() {
         }
       } catch (error) {
         console.error(error)
+        if (!cancelled) {
+          notifyError("No se pudo cargar el catalogo contable")
+        }
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -94,47 +134,64 @@ export function SalesAccountingConceptManager() {
     [items]
   )
 
+  const serviceOptions = useMemo(
+    () => [{ value: "all", label: "Todos los servicios" }].concat(
+      serviceTypeOptions.map((option) => ({ value: option, label: option }))
+    ),
+    []
+  )
+
+  const operationOptions = useMemo(
+    () => [{ value: "all", label: "Todas las operaciones" }].concat(
+      operationTypeOptions.map((option) => ({ value: option, label: option }))
+    ),
+    []
+  )
+
   function resetForm() {
     setEditingId(null)
     setFormValues(emptyForm)
   }
 
+  function openCreateModal() {
+    resetForm()
+    setShowModal(true)
+  }
+
   async function handleSave() {
     if (!formValues.concept.trim()) {
-      alert("El concepto es obligatorio")
+      notifyWarning("El concepto es obligatorio")
       return
     }
 
     if (!formValues.satCode.trim()) {
-      alert("La clave SAT es obligatoria")
+      notifyWarning("La clave SAT es obligatoria")
       return
     }
 
     const parsedVat = Number(formValues.vatRate)
     if (!Number.isFinite(parsedVat) || parsedVat < 0 || parsedVat > 100) {
-      alert("IVA invalido")
+      notifyWarning("IVA invalido")
       return
     }
 
     try {
       setSaving(true)
 
+      const payload = {
+        concept: formValues.concept.trim(),
+        service_type: formValues.serviceType,
+        operation_type: formValues.operationType,
+        vat_rate: parsedVat,
+        sat_code: formValues.satCode.trim().toUpperCase(),
+      }
+
       if (editingId) {
-        await updateSalesAccountingConcept(editingId, {
-          concept: formValues.concept.trim(),
-          service_type: formValues.serviceType,
-          operation_type: formValues.operationType,
-          vat_rate: parsedVat,
-          sat_code: formValues.satCode.trim().toUpperCase(),
-        })
+        await updateSalesAccountingConcept(editingId, payload)
+        notifySuccess("Concepto contable actualizado correctamente")
       } else {
-        await createSalesAccountingConcept({
-          concept: formValues.concept.trim(),
-          service_type: formValues.serviceType,
-          operation_type: formValues.operationType,
-          vat_rate: parsedVat,
-          sat_code: formValues.satCode.trim().toUpperCase(),
-        })
+        await createSalesAccountingConcept(payload)
+        notifySuccess("Concepto contable creado correctamente")
       }
 
       setShowModal(false)
@@ -142,176 +199,196 @@ export function SalesAccountingConceptManager() {
       await loadItems()
     } catch (error) {
       console.error(error)
-      alert("No se pudo guardar el concepto contable")
+      notifyError("No se pudo guardar el concepto contable")
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm("Eliminar este concepto contable?")
-    if (!confirmed) {
+  async function handleDeleteConfirm() {
+    if (!pendingDelete) {
       return
     }
 
     try {
-      setDeletingId(id)
-      await deleteSalesAccountingConcept(id)
+      await deleteSalesAccountingConcept(pendingDelete.id)
+      notifySuccess("Concepto contable eliminado correctamente")
+      setPendingDelete(null)
       await loadItems()
     } catch (error) {
       console.error(error)
-      alert("No se pudo eliminar el concepto contable")
-    } finally {
-      setDeletingId(null)
+      notifyError("No se pudo eliminar el concepto contable")
     }
   }
+
+  const columns = useMemo<ColumnDef<SalesAccountingConcept>[]>(
+    () => [
+      {
+        accessorKey: "concept",
+        header: "Concepto",
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <div className="font-medium text-[var(--brand-navy)]">{row.original.concept}</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-[#7A8BA1]">
+              {row.original.sat_code}
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "service_type",
+        header: "Servicio",
+        cell: ({ row }) => <Badge variant="secondary">{row.original.service_type}</Badge>,
+      },
+      {
+        accessorKey: "operation_type",
+        header: "Operacion",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className="border-[rgba(37,99,235,0.18)] bg-[rgba(37,99,235,0.05)] text-[#1D4ED8]"
+          >
+            {row.original.operation_type}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "vat_rate",
+        header: "IVA",
+        cell: ({ row }) => <span className="font-medium">{row.original.vat_rate}%</span>,
+      },
+      {
+        accessorKey: "sat_code",
+        header: "Clave SAT",
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <PriorityRowActions
+              label="Acciones de concepto"
+              actions={[
+                {
+                  label: "Editar",
+                  icon: <PencilLineIcon />,
+                  onSelect: () => {
+                    setEditingId(row.original.id)
+                    setFormValues({
+                      concept: row.original.concept,
+                      serviceType: row.original.service_type,
+                      operationType: row.original.operation_type,
+                      vatRate: String(row.original.vat_rate),
+                      satCode: row.original.sat_code,
+                    })
+                    setShowModal(true)
+                  },
+                },
+                {
+                  label: "Eliminar",
+                  icon: <Trash2Icon />,
+                  onSelect: () => setPendingDelete(row.original),
+                  destructive: true,
+                },
+              ]}
+            />
+          </div>
+        ),
+      },
+    ],
+    []
+  )
 
   return (
     <PageContainer
       title="Conceptos contables"
       description="Catalogo SAT para ventas con tipo de servicio, operacion, IVA y clave SAT."
       actions={
-        <button
-          type="button"
-          onClick={() => {
-            resetForm()
-            setShowModal(true)
-          }}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-        >
+        <Button type="button" size="lg" onClick={openCreateModal}>
+          <PlusIcon />
           Anadir concepto
-        </button>
+        </Button>
       }
     >
       <div className="space-y-8">
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
+          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
               Registros
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{items.length}</div>
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{items.length}</div>
           </div>
-          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
+          <div className="rounded-[24px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(16,185,129,0.22)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#047857]">
               Tipos de servicio
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">
               {new Set(items.map((item) => item.service_type)).size}
             </div>
           </div>
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
+          <div className="rounded-[24px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(217,119,6,0.18)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">
               IVA acumulado
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">
               {totalVatConfigured.toLocaleString()}%
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
+          <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Catalogo actual</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+              <PriorityCardTitle>Catalogo actual</PriorityCardTitle>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 Filtra por servicio, operacion o busca por concepto y clave SAT.
-              </p>
+              </PriorityTypography>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                placeholder="Buscar"
+            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto]">
+              <PriorityInput
+                placeholder="Buscar concepto o clave SAT"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={serviceTypeFilter}
-                onChange={(event) => setServiceTypeFilter(event.target.value)}
-              >
-                <option value="all">Todos los servicios</option>
-                {serviceTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                onValueChange={setServiceTypeFilter}
+                placeholder="Servicio"
+                options={serviceOptions}
+              />
+              <PrioritySelectField
                 value={operationTypeFilter}
-                onChange={(event) => setOperationTypeFilter(event.target.value)}
+                onValueChange={setOperationTypeFilter}
+                placeholder="Operacion"
+                options={operationOptions}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setQuery("")
+                  setServiceTypeFilter("all")
+                  setOperationTypeFilter("all")
+                }}
               >
-                <option value="all">Todas las operaciones</option>
-                {operationTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+                Limpiar
+              </Button>
+            </PriorityToolbar>
           </div>
 
           {loading ? (
-            <p className="text-sm text-[#6B7280]">Cargando conceptos contables...</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">
-              No hay conceptos contables registrados todavia.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Concepto</th>
-                    <th className="px-4 py-3">Servicio</th>
-                    <th className="px-4 py-3">Operacion</th>
-                    <th className="px-4 py-3">IVA</th>
-                    <th className="px-4 py-3">Clave SAT</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-medium text-[#111827]">{item.concept}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.service_type}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.operation_type}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.vat_rate}%</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.sat_code}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingId(item.id)
-                              setFormValues({
-                                concept: item.concept,
-                                serviceType: item.service_type,
-                                operationType: item.operation_type,
-                                vatRate: String(item.vat_rate),
-                                satCode: item.sat_code,
-                              })
-                              setShowModal(true)
-                            }}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id)}
-                            disabled={deletingId === item.id}
-                            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingId === item.id ? "Eliminando..." : "Eliminar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
             </div>
+          ) : (
+            <PriorityDataTable
+              columns={columns}
+              data={items}
+              emptyTitle="No hay conceptos contables registrados"
+              emptyDescription="Crea el primer concepto para normalizar servicios, operaciones, IVA y referencias SAT."
+            />
           )}
         </section>
       </div>
@@ -325,83 +402,118 @@ export function SalesAccountingConceptManager() {
             resetForm()
           }}
         >
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                placeholder="Concepto"
-                value={formValues.concept}
-                onChange={(event) =>
-                  setFormValues((current) => ({ ...current, concept: event.target.value }))
-                }
-              />
-              <input
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                placeholder="Clave SAT"
-                value={formValues.satCode}
-                onChange={(event) =>
-                  setFormValues((current) => ({ ...current, satCode: event.target.value }))
-                }
-              />
-              <select
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                value={formValues.serviceType}
-                onChange={(event) =>
-                  setFormValues((current) => ({ ...current, serviceType: event.target.value }))
-                }
-              >
-                {serviceTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                value={formValues.operationType}
-                onChange={(event) =>
-                  setFormValues((current) => ({ ...current, operationType: event.target.value }))
-                }
-              >
-                {operationTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                placeholder="IVA"
-                value={formValues.vatRate}
-                onChange={(event) =>
-                  setFormValues((current) => ({ ...current, vatRate: event.target.value }))
-                }
-              />
-            </div>
+          <div className="space-y-5">
+            <PriorityFormSection
+              title="Identidad contable"
+              description="Define el concepto y la referencia SAT que utilizará el equipo comercial."
+            >
+              <PriorityFormGrid className="xl:grid-cols-2">
+                <PriorityFormField label="Concepto">
+                  <PriorityInput
+                    placeholder="Concepto"
+                    value={formValues.concept}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, concept: event.target.value }))
+                    }
+                  />
+                </PriorityFormField>
+                <PriorityFormField label="Clave SAT">
+                  <PriorityInput
+                    placeholder="Clave SAT"
+                    value={formValues.satCode}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, satCode: event.target.value }))
+                    }
+                  />
+                </PriorityFormField>
+              </PriorityFormGrid>
+            </PriorityFormSection>
 
-            <div className="flex justify-end gap-2">
-              <button
+            <PriorityFormSection
+              title="Aplicacion operativa"
+              description="Selecciona donde aplica el concepto y el IVA asociado."
+            >
+              <PriorityFormGrid>
+                <PriorityFormField label="Tipo de servicio">
+                  <PrioritySelectField
+                    value={formValues.serviceType}
+                    onValueChange={(value) =>
+                      setFormValues((current) => ({ ...current, serviceType: value }))
+                    }
+                    placeholder="Tipo de servicio"
+                    options={serviceTypeOptions.map((option) => ({ value: option, label: option }))}
+                  />
+                </PriorityFormField>
+                <PriorityFormField label="Operacion">
+                  <PrioritySelectField
+                    value={formValues.operationType}
+                    onValueChange={(value) =>
+                      setFormValues((current) => ({ ...current, operationType: value }))
+                    }
+                    placeholder="Operacion"
+                    options={operationTypeOptions.map((option) => ({ value: option, label: option }))}
+                  />
+                </PriorityFormField>
+                <PriorityFormField label="IVA (%)">
+                  <PriorityInput
+                    placeholder="IVA"
+                    inputMode="decimal"
+                    value={formValues.vatRate}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, vatRate: event.target.value }))
+                    }
+                  />
+                </PriorityFormField>
+              </PriorityFormGrid>
+              <div className="mt-4">
+                <PriorityInfoField
+                  label="Uso esperado"
+                  value="Ventas, pricing y conciliacion comercial con catalogo SAT."
+                />
+              </div>
+            </PriorityFormSection>
+
+            <PrioritySubmitBar>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
               >
                 Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
-              >
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>
+                {saving ? <Spinner className="text-current" /> : null}
                 {saving ? "Guardando..." : editingId ? "Actualizar" : "Guardar"}
-              </button>
-            </div>
+              </Button>
+            </PrioritySubmitBar>
           </div>
         </Modal>
       ) : null}
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,246,249,0.96)_100%)] p-0 text-[var(--brand-navy)] shadow-[0_36px_80px_-36px_rgba(3,10,24,0.55)]">
+          <AlertDialogHeader className="px-6 pt-6 text-left sm:place-items-start sm:text-left">
+            <AlertDialogMedia className="bg-[rgba(179,58,91,0.08)] text-[var(--brand-burgundy)]">
+              <ShieldAlertIcon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Eliminar concepto contable</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `Vas a eliminar "${pendingDelete.concept}". Asegurate de que no sea un concepto activo en workflows comerciales o reportes.`
+                : "Confirma la eliminacion del concepto contable."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="rounded-b-[28px] border-t border-[var(--border-subtle)] bg-[rgba(11,31,59,0.03)] px-6 py-4">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void handleDeleteConfirm()}>
+              Eliminar concepto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   )
 }

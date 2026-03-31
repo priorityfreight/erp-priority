@@ -10,6 +10,7 @@ import {
   type QuotationCargoLine,
   type QuotationSummary,
 } from "@/lib/db"
+import { brandAssets, brandIdentity } from "@/lib/brand"
 
 type PricingRequestState = {
   quotation: QuotationSummary
@@ -120,8 +121,8 @@ export default function QuotationPricingRequestPage() {
             <div className="flex items-start gap-5">
               <div className="rounded-2xl bg-white/8 p-3 ring-1 ring-white/10">
                 <Image
-                  src="/assets/logo-horizontal-dark-transparent.png"
-                  alt="Priority Freight Intelligence"
+                  src={brandAssets.documents.providerPricingRequest}
+                  alt={brandIdentity.companyName}
                   width={520}
                   height={150}
                   className="h-auto w-full max-w-[20rem] object-contain"

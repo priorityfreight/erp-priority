@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-03-31T18:36:20.405Z",
+  "generatedAtLocal": "2026-03-31, 12:36:20 p.m.",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "git": {
+    "commit": "7256931",
+    "branch": "main"
+  },
+  "decision": "READY_FOR_REPO",
+  "preconditions": {
+    "uiCredentials": true,
+    "chromeExecutable": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/node_modules/playwright-core/.local-browsers/chromium-1208/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+    "externalBrowserServer": {
+      "wsEndpoint": "ws://localhost:51311/1327631ff8058ae3c84658cbcfb96e5b",
+      "launchedAt": "2026-03-31T18:33:49.145Z",
+      "headed": true,
+      "browser": "chromium",
+      "pid": 38479
+    },
+    "headed": true
+  },
+  "storybookReview": {
+    "ok": true,
+    "message": "Required Storybook review stories are present.",
+    "foundTitles": [
+      "Priority/Review Workbench",
+      "Priority/Data Entry",
+      "Priority/Foundations",
+      "Priority/Tables And States"
+    ],
+    "missingTitles": []
+  },
+  "artifacts": {
+    "playwrightReport": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/playwright-report (1 files)",
+    "playwrightResults": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.playwright/test-results (19 files)",
+    "storybookStatic": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/storybook-static (82 files)"
+  },
+  "steps": [
+    {
+      "step": "lint",
+      "ok": true,
+      "command": "npm run lint",
+      "message": "Frontend lint passed.",
+      "startedAt": "2026-03-31T18:34:37.410Z",
+      "finishedAt": "2026-03-31T18:34:46.533Z"
+    },
+    {
+      "step": "build",
+      "ok": true,
+      "command": "npm run build",
+      "message": "Next.js production build passed.",
+      "startedAt": "2026-03-31T18:34:46.533Z",
+      "finishedAt": "2026-03-31T18:35:02.388Z"
+    },
+    {
+      "step": "build-storybook",
+      "ok": true,
+      "command": "npm run build-storybook",
+      "message": "Storybook static build passed.",
+      "startedAt": "2026-03-31T18:35:02.388Z",
+      "finishedAt": "2026-03-31T18:35:22.949Z"
+    },
+    {
+      "step": "storybook-review",
+      "ok": true,
+      "command": null,
+      "message": "Required Storybook review stories are present.",
+      "startedAt": null,
+      "finishedAt": null
+    },
+    {
+      "step": "browser-preconditions",
+      "ok": true,
+      "command": null,
+      "message": "Browser preconditions satisfied via external Playwright browser server.",
+      "startedAt": null,
+      "finishedAt": null
+    },
+    {
+      "step": "e2e-critical",
+      "ok": true,
+      "command": "npm run test:e2e:critical -- --headed",
+      "message": "Critical authenticated workspace suite passed.",
+      "startedAt": "2026-03-31T18:35:22.951Z",
+      "finishedAt": "2026-03-31T18:35:54.723Z"
+    },
+    {
+      "step": "e2e-full",
+      "ok": true,
+      "command": "npm run test:e2e -- --headed",
+      "message": "Full browser suite passed.",
+      "startedAt": "2026-03-31T18:35:54.723Z",
+      "finishedAt": "2026-03-31T18:36:20.401Z"
+    }
+  ],
+  "findings": []
+}

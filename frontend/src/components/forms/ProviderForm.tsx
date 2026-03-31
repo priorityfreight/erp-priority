@@ -1,6 +1,22 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  PriorityFormHeader,
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+  PriorityTextarea,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
 import { UnlocodeLookupField } from "./UnlocodeLookupField"
 
 export type ProviderFormValues = {
@@ -33,26 +49,6 @@ type ProviderFormProps = {
   showStatus?: boolean
 }
 
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#334155]">{title}</h3>
-        {description ? <p className="mt-1 text-sm text-[#64748B]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
 const providerTypeOptions = [
   "Paqueteria",
   "Coloader",
@@ -76,110 +72,129 @@ export function ProviderForm({
   showStatus = true,
 }: ProviderFormProps) {
   const [locationQuery, setLocationQuery] = useState("")
+  const creditEnabled = values.creditActive === "si"
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion de la empresa"
         description="Datos base del proveedor y su estatus comercial."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Nombre *"
-            value={values.name}
-            onChange={(event) => onChange("name", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="RFC"
-            value={values.taxId}
-            onChange={(event) => onChange("taxId", event.target.value)}
-            disabled={disabled}
-          />
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.providerType}
-            onChange={(event) => onChange("providerType", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Tipo de proveedor</option>
-            {providerTypeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {showStatus ? (
-            <select
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              value={values.status}
-              onChange={(event) => onChange("status", event.target.value)}
+        <PriorityFormGrid className="xl:grid-cols-3">
+          <PriorityFormField label="Nombre comercial">
+            <PriorityInput
+              placeholder="Nombre *"
+              value={values.name}
+              onChange={(event) => onChange("name", event.target.value)}
               disabled={disabled}
-            >
-              <option value="en_proceso_de_alta">En proceso de alta</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-            </select>
+            />
+          </PriorityFormField>
+          <PriorityFormField label="RFC">
+            <PriorityInput
+              placeholder="RFC"
+              value={values.taxId}
+              onChange={(event) => onChange("taxId", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Tipo de proveedor">
+            <PrioritySelectField
+              value={values.providerType}
+              onValueChange={(value) => onChange("providerType", value)}
+              placeholder="Tipo de proveedor"
+              disabled={disabled}
+              options={providerTypeOptions.map((option) => ({ value: option, label: option }))}
+            />
+          </PriorityFormField>
+          {showStatus ? (
+            <PriorityFormField label="Estatus comercial" className="md:col-span-2 xl:col-span-3">
+              <div className="space-y-3">
+                <ToggleGroup
+                  type="single"
+                  value={values.status}
+                  onValueChange={(value) => {
+                    if (value) {
+                      onChange("status", value)
+                    }
+                  }}
+                  className="w-full flex-wrap justify-start"
+                >
+                  <ToggleGroupItem value="en_proceso_de_alta" className="min-w-[170px]">
+                    En proceso de alta
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="activo" className="min-w-[120px]">
+                    Activo
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="inactivo" className="min-w-[120px]">
+                    Inactivo
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <PriorityTypography variant="caption">
+                  El estatus debe reflejar si el proveedor ya puede operar o si sigue en validacion interna.
+                </PriorityTypography>
+              </div>
+            </PriorityFormField>
           ) : null}
-        </div>
-      </FormSection>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion de contacto"
         description="Canales corporativos principales del proveedor."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Telefono corporativo"
-            value={values.corporatePhone}
-            onChange={(event) => onChange("corporatePhone", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Correo de la empresa"
-            value={values.companyEmail}
-            onChange={(event) => onChange("companyEmail", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Pagina web"
-            value={values.website}
-            onChange={(event) => onChange("website", event.target.value)}
-            disabled={disabled}
-          />
-        </div>
-      </FormSection>
+        <PriorityFormGrid className="xl:grid-cols-3">
+          <PriorityFormField label="Telefono corporativo">
+            <PriorityInput
+              placeholder="Telefono corporativo"
+              value={values.corporatePhone}
+              onChange={(event) => onChange("corporatePhone", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Correo de la empresa">
+            <PriorityInput
+              placeholder="Correo de la empresa"
+              value={values.companyEmail}
+              onChange={(event) => onChange("companyEmail", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Pagina web">
+            <PriorityInput
+              placeholder="Pagina web"
+              value={values.website}
+              onChange={(event) => onChange("website", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Ubicacion de la empresa"
         description="Selecciona el UN/LOCODE para estandarizar ciudad y pais."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <textarea
-            className="min-h-[92px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] md:col-span-2 xl:col-span-2"
-            placeholder="Direccion"
-            value={values.fullAddress}
-            onChange={(event) => onChange("fullAddress", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Codigo postal"
-            value={values.postalCode}
-            onChange={(event) => onChange("postalCode", event.target.value)}
-            disabled={disabled}
-          />
-          <div className="space-y-2 md:col-span-2 xl:col-span-3">
+        <PriorityFormGrid className="xl:grid-cols-3">
+          <PriorityFormField label="Direccion completa" className="md:col-span-2 xl:col-span-2">
+            <PriorityTextarea
+              className="min-h-[96px]"
+              placeholder="Direccion"
+              value={values.fullAddress}
+              onChange={(event) => onChange("fullAddress", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Codigo postal">
+            <PriorityInput
+              placeholder="Codigo postal"
+              value={values.postalCode}
+              onChange={(event) => onChange("postalCode", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <div className="space-y-3 md:col-span-2 xl:col-span-3">
             <UnlocodeLookupField
               label="UN/LOCODE"
               query={locationQuery}
@@ -203,74 +218,77 @@ export function ProviderForm({
               }}
             />
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Ciudad calculada
-                </div>
-                <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {values.city || "Selecciona un UN/LOCODE"}
-                </div>
-              </div>
-              <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Pais calculado
-                </div>
-                <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {values.country || "Selecciona un UN/LOCODE"}
-                </div>
-              </div>
+              <PriorityInfoField label="Ciudad calculada" value={values.city || "Selecciona un UN/LOCODE"} />
+              <PriorityInfoField label="Pais calculado" value={values.country || "Selecciona un UN/LOCODE"} />
             </div>
             {values.cityUnlocode ? (
-              <div className="text-xs font-medium uppercase tracking-wide text-[#2563EB]">
+              <PrioritySectionAlert title="Ubicacion normalizada" variant="info">
                 UN/LOCODE seleccionado: {values.cityUnlocode}
-              </div>
+              </PrioritySectionAlert>
             ) : null}
           </div>
-        </div>
-      </FormSection>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Credito y cobranza"
         description="Condiciones comerciales de credito autorizadas por el proveedor."
       >
-        <div className="grid gap-3 md:grid-cols-3">
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.creditActive}
-            onChange={(event) => onChange("creditActive", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="no">Credito activo: No</option>
-            <option value="si">Credito activo: Si</option>
-          </select>
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Monto de credito"
-            value={values.creditAmount}
-            onChange={(event) => onChange("creditAmount", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Dias de credito"
-            value={values.creditDays}
-            onChange={(event) => onChange("creditDays", event.target.value)}
-            disabled={disabled}
-          />
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-[rgba(144,158,174,0.18)] bg-[rgba(11,31,59,0.04)] px-4 py-4">
+            <div className="space-y-1">
+              <PriorityTypography variant="fieldLabel">Credito activo</PriorityTypography>
+              <PriorityTypography variant="bodyMuted">
+                Activa esta opcion solo cuando el proveedor ya tenga linea de credito aprobada.
+              </PriorityTypography>
+            </div>
+            <div className="flex items-center gap-3">
+              <PriorityTypography variant="caption">{creditEnabled ? "Si" : "No"}</PriorityTypography>
+              <Switch
+                checked={creditEnabled}
+                onCheckedChange={(checked) => onChange("creditActive", checked ? "si" : "no")}
+                disabled={disabled}
+                aria-label="Credito activo"
+              />
+            </div>
+          </div>
+          <PriorityFormGrid className="md:grid-cols-2 xl:grid-cols-2">
+            <PriorityFormField label="Monto de credito">
+              <PriorityInput
+                placeholder="Monto de credito"
+                value={values.creditAmount}
+                onChange={(event) => onChange("creditAmount", event.target.value)}
+                disabled={disabled || !creditEnabled}
+              />
+            </PriorityFormField>
+            <PriorityFormField label="Dias de credito">
+              <PriorityInput
+                placeholder="Dias de credito"
+                value={values.creditDays}
+                onChange={(event) => onChange("creditDays", event.target.value)}
+                disabled={disabled || !creditEnabled}
+              />
+            </PriorityFormField>
+          </PriorityFormGrid>
         </div>
-      </FormSection>
+      </PriorityFormSection>
+
+      {creditEnabled ? (
+        <PrioritySectionAlert title="Credito habilitado" variant="success">
+          Revisa que monto y dias de credito coincidan con la aprobacion comercial vigente.
+        </PrioritySectionAlert>
+      ) : null}
 
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={disabled || loading}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Working..." : submitLabel}
-          </button>
-        </div>
+            {loading ? "Guardando..." : submitLabel}
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

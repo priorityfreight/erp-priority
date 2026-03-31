@@ -21,6 +21,7 @@ import {
   getVisibleCustomerOptionSummaries,
   priorityPalette,
 } from "@/lib/quotations/customerDocument"
+import { brandAssets, brandIdentity } from "@/lib/brand"
 
 type DocumentState = {
   quotation: QuotationSummary
@@ -147,8 +148,8 @@ export default function QuotationDocumentPage() {
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
                 <div className="rounded-2xl bg-white/95 p-4 shadow-[0_18px_40px_rgba(11,31,59,0.18)]">
                   <Image
-                    src="/assets/logo-horizontal-transparent.png"
-                    alt="Priority Freight Intelligence"
+                    src={brandAssets.documents.customerQuotation}
+                    alt={brandIdentity.companyName}
                     width={520}
                     height={150}
                     className="h-auto w-full object-contain"
@@ -158,7 +159,7 @@ export default function QuotationDocumentPage() {
                 </div>
                 <div className="mt-6 max-w-3xl space-y-3">
                   <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
-                    Priority Freight Intelligence
+                    {brandIdentity.companyName}
                   </div>
                   <h1 className="text-4xl font-semibold tracking-tight text-white">
                     Cotizacion Comercial

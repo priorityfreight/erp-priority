@@ -19,20 +19,22 @@ AI agents should read documents in this order:
 1. AI_CONTEXT.md
 2. AI_SYSTEM_MAP.md
 3. AI_CURRENT_PROJECT_MAP.md
-4. AI_MASTER_DATA.md when working on shared catalogs or external datasets
-5. AI_DATABASE_MAP.md
-6. AI_DATABASE_RELATION_GRAPH.md
-7. AI_TABLE_DICTIONARY.md
-8. AI_QUERY_GUIDE.md
-9. AI_QUERY_LIBRARY.md
-10. AI_DEV_RULES.md
-11. AI_BACKEND_SYNC_RULES.md
-12. AI_MODULE_BUILDER.md
-13. AI_UI_BUILDER.md
-14. AI_DESIGN_SYSTEM.md
-15. AI_COMPONENT_LIBRARY.md
-16. AI_AUTOMATION_RULES.md
-17. AI_SYSTEM_AUDIT.md when validating governance quality
+4. AI_BLACKBOOK.md before structural work, hardening, releases, or new module patterns
+5. AI_MASTER_DATA.md when working on shared catalogs or external datasets
+6. AI_DATABASE_MAP.md
+7. AI_DATABASE_RELATION_GRAPH.md
+8. AI_TABLE_DICTIONARY.md
+9. AI_QUERY_GUIDE.md
+10. AI_QUERY_LIBRARY.md
+11. AI_DEV_RULES.md
+12. AI_BACKEND_SYNC_RULES.md
+13. AI_MODULE_BUILDER.md
+14. AI_UI_BUILDER.md
+15. AI_DESIGN_SYSTEM.md
+16. AI_COMPONENT_LIBRARY.md
+17. AI_PRIORITY_UI_REGISTRY.md
+18. AI_AUTOMATION_RULES.md
+19. AI_SYSTEM_AUDIT.md when validating governance quality
 
 
 --------------------------------------------------
@@ -48,6 +50,11 @@ AI_CURRENT_PROJECT_MAP.md
 
 Purpose:
 Describes what currently exists in the repository, including live routes, query modules, and structural risks.
+
+AI_BLACKBOOK.md
+
+Purpose:
+Captures real failure patterns, hardening lessons, approved fixes, and prevention rules learned through execution.
 
 AI_MASTER_DATA.md
 
@@ -108,6 +115,11 @@ AI_COMPONENT_LIBRARY.md
 
 Purpose:
 Defines shared UI building blocks and target reusable components.
+
+AI_PRIORITY_UI_REGISTRY.md
+
+Purpose:
+Defines the approved ERP-facing Priority UI catalog, its public surface, and the technical base behind each wrapper.
 
 AI_AUTOMATION_RULES.md
 
@@ -200,6 +212,7 @@ Governance truth:
 
 AI_CONTEXT.md
 → AI_SYSTEM_MAP.md
+→ AI_BLACKBOOK.md
 → specialized rule documents
 
 
@@ -267,6 +280,33 @@ The AI must never:
 3. create schema changes without updating aligned AI database docs
 4. assume empty or missing documentation means a feature exists
 5. reference stale repository paths that are not in the live codebase
+6. mix this repository with a different business system or external project unless the user explicitly authorizes it
+7. treat TRAIN as production or recommend writes/tests against PROD
+
+
+--------------------------------------------------
+ENVIRONMENT GOVERNANCE
+--------------------------------------------------
+
+Official environment model for the current stage:
+
+- `LOCAL` = developer application/runtime workspace
+- `TRAIN` = current remote backend used for controlled development validation, smoke tests, hardening, and supervised business rehearsal
+- `LIVE` = deployed application surface
+- `PROD` = clean production backend for real operation
+
+Architecture rule:
+
+- `LOCAL` may work against `TRAIN`
+- `LIVE` must work against `PROD`
+- `TRAIN` and `PROD` must remain separate Supabase projects
+- AI should optimize for this 2-database topology unless the user explicitly requests a more complex environment strategy
+
+Promotion rule:
+
+- move approved structure from TRAIN to PROD through canonical migrations, seeds, and documented config
+- do not promote incidental TRAIN data into PROD
+- while TRAIN is in hardening phase, prefer stability-only work and do not add new live modules unless the user explicitly re-prioritizes
 
 
 --------------------------------------------------

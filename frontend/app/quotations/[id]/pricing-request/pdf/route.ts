@@ -4,6 +4,7 @@ import path from "node:path"
 import { NextResponse } from "next/server"
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer"
 import { ProviderPricingRequestPdf } from "@/components/quotations/ProviderPricingRequestPdf"
+import { brandAssets, normalizePublicAssetPath } from "@/lib/brand"
 import { mapQuotationCargoLine, mapQuotationSummary } from "@/lib/db/mappers"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
@@ -13,8 +14,7 @@ async function getLogoDataUri() {
   const assetPath = path.join(
     process.cwd(),
     "public",
-    "assets",
-    "logo-horizontal-dark-transparent.png"
+    normalizePublicAssetPath(brandAssets.documents.providerPricingRequest)
   )
   const file = await readFile(assetPath)
   return `data:image/png;base64,${file.toString("base64")}`

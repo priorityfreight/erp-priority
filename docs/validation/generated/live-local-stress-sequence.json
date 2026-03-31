@@ -1,0 +1,219 @@
+{
+  "generatedAt": "2026-03-28T08:30:01.366Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "results": [
+    {
+      "step": "validation:rollback",
+      "ok": true,
+      "startedAt": "2026-03-28T08:25:40.960Z",
+      "finishedAt": "2026-03-28T08:25:41.117Z",
+      "stdout": "Rollback metadata written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/rollback-metadata.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:baseline",
+      "ok": true,
+      "startedAt": "2026-03-28T08:25:41.117Z",
+      "finishedAt": "2026-03-28T08:25:45.528Z",
+      "stdout": "Row-count baseline written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/row-count-baseline-2026-03-28T08-25-45-523Z.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:smoke",
+      "ok": true,
+      "startedAt": "2026-03-28T08:25:45.528Z",
+      "finishedAt": "2026-03-28T08:25:46.697Z",
+      "stdout": "Read-only smoke completed with 0 failures.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:bootstrap-sessions:break",
+      "ok": true,
+      "startedAt": "2026-03-28T08:25:46.697Z",
+      "finishedAt": "2026-03-28T08:25:56.693Z",
+      "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:access-matrix",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:01.695Z",
+      "finishedAt": "2026-03-28T08:26:04.504Z",
+      "stdout": "Access matrix completed with 0 failures.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:field-masking",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:09.507Z",
+      "finishedAt": "2026-03-28T08:26:17.629Z",
+      "stdout": "Field masking completed with 0 failures.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:break",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:22.631Z",
+      "finishedAt": "2026-03-28T08:26:39.269Z",
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "step": "validation:cleanup:post-break",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:39.269Z",
+      "finishedAt": "2026-03-28T08:26:50.592Z",
+      "stdout": "Cleanup completed.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:clean-state:post-break",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:50.592Z",
+      "finishedAt": "2026-03-28T08:26:50.906Z",
+      "stdout": "Clean-state validation completed. Residue tables: 0.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:bootstrap-sessions:light:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:50.906Z",
+      "finishedAt": "2026-03-28T08:26:52.958Z",
+      "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:stress:light:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:26:57.960Z",
+      "finishedAt": "2026-03-28T08:27:03.412Z",
+      "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+      "stderr": ""
+    },
+    {
+      "step": "validation:cleanup:light:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:03.412Z",
+      "finishedAt": "2026-03-28T08:27:06.861Z",
+      "stdout": "Cleanup completed.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:clean-state:light:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:06.861Z",
+      "finishedAt": "2026-03-28T08:27:07.162Z",
+      "stdout": "Clean-state validation completed. Residue tables: 0.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:bootstrap-sessions:medium:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:07.162Z",
+      "finishedAt": "2026-03-28T08:27:13.984Z",
+      "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:stress:medium:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:23.987Z",
+      "finishedAt": "2026-03-28T08:27:37.331Z",
+      "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+      "stderr": ""
+    },
+    {
+      "step": "validation:cleanup:medium:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:37.331Z",
+      "finishedAt": "2026-03-28T08:27:44.066Z",
+      "stdout": "Cleanup completed.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:clean-state:medium:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:44.066Z",
+      "finishedAt": "2026-03-28T08:27:44.368Z",
+      "stdout": "Clean-state validation completed. Residue tables: 0.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:bootstrap-sessions:heavy:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:27:44.368Z",
+      "finishedAt": "2026-03-28T08:27:53.992Z",
+      "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:stress:heavy:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:28:08.993Z",
+      "finishedAt": "2026-03-28T08:28:34.680Z",
+      "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+      "stderr": ""
+    },
+    {
+      "step": "validation:cleanup:heavy:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:28:34.680Z",
+      "finishedAt": "2026-03-28T08:28:45.140Z",
+      "stdout": "Cleanup completed.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:clean-state:heavy:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:28:45.140Z",
+      "finishedAt": "2026-03-28T08:28:45.476Z",
+      "stdout": "Clean-state validation completed. Residue tables: 0.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:bootstrap-sessions:stress:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:28:45.476Z",
+      "finishedAt": "2026-03-28T08:28:55.277Z",
+      "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+      "stderr": ""
+    },
+    {
+      "step": "validation:stress:stress:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:29:20.279Z",
+      "finishedAt": "2026-03-28T08:29:49.033Z",
+      "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+      "stderr": ""
+    },
+    {
+      "step": "validation:cleanup:stress:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:29:49.033Z",
+      "finishedAt": "2026-03-28T08:30:01.047Z",
+      "stdout": "Cleanup completed.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:clean-state:stress:attempt-1",
+      "ok": true,
+      "startedAt": "2026-03-28T08:30:01.047Z",
+      "finishedAt": "2026-03-28T08:30:01.366Z",
+      "stdout": "Clean-state validation completed. Residue tables: 0.",
+      "stderr": ""
+    },
+    {
+      "step": "validation:report",
+      "ok": true,
+      "startedAt": "2026-03-28T08:30:01.369Z",
+      "finishedAt": "2026-03-28T08:30:01.438Z",
+      "stdout": "Final report generated.",
+      "stderr": ""
+    }
+  ],
+  "completed": true
+}

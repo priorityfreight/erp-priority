@@ -1,0 +1,33 @@
+import { Meta } from "@storybook/addon-docs/blocks"
+
+<Meta title="Priority/Review Workbench" />
+
+# Priority Review Workbench
+
+Este Storybook queda como la segunda capa oficial de revisión visual del frontend.
+
+## Para qué sirve
+
+- revisar contraste, legibilidad y densidad de `Priority UI`
+- inspeccionar wrappers antes de tocar pantallas live
+- detectar deriva visual entre formularios, tablas y estados vacíos
+- preparar auditorías puntuales con evidencia más clara
+
+## Cómo usarlo
+
+1. Abre `npm run storybook`
+2. Revisa primero:
+   - `Priority/Foundations`
+   - `Priority/Data Entry`
+   - `Priority/Tables And States`
+3. Si algo se ve mal aquí, corrígelo en el wrapper base antes de ir a una pantalla live
+4. Usa Playwright para validar el flujo real y Storybook para aislar el problema visual
+
+## Regla técnica
+
+Storybook no reemplaza Playwright.
+
+- `Playwright` valida rutas, auth, navegación y evidencia real del ERP
+- `Storybook` acelera inspección visual fina y homogenización del sistema de componentes
+
+Juntas, ambas herramientas nos dejan revisar el frontend de forma mucho más profesional y mantenible.

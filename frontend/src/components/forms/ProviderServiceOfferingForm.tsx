@@ -1,7 +1,17 @@
 "use client"
 
-import type { ReactNode } from "react"
 import type { ServiceTransportType } from "@/lib/db"
+import { Button } from "@/components/ui/button"
+import {
+  PriorityFormHeader,
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PrioritySelectField,
+  PrioritySubmitBar,
+  PriorityTextarea,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
 
 export type ProviderServiceOfferingFormValues = {
   serviceType: string
@@ -19,26 +29,6 @@ type ProviderServiceOfferingFormProps = {
   submitLabel?: string
   loading?: boolean
   disabled?: boolean
-}
-
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#334155]">{title}</h3>
-        {description ? <p className="mt-1 text-sm text-[#64748B]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
 }
 
 export function ProviderServiceOfferingForm({
@@ -61,73 +51,78 @@ export function ProviderServiceOfferingForm({
   )
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
-      <FormSection
+      <PriorityFormSection
         title="Tipo de servicio y transporte"
         description="Selecciona una combinacion valida desde Master Data."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.serviceType}
-            onChange={(event) => {
-              onChange("serviceType", event.target.value)
-              onChange("serviceTransportTypeId", "")
-            }}
-            disabled={disabled}
-          >
-            <option value="">Tipo de servicio</option>
-            {uniqueServiceTypes.map((serviceType) => (
-              <option key={serviceType} value={serviceType}>
-                {serviceType}
-              </option>
-            ))}
-          </select>
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.serviceTransportTypeId}
-            onChange={(event) => onChange("serviceTransportTypeId", event.target.value)}
-            disabled={disabled || !values.serviceType}
-          >
-            <option value="">Tipo de transporte</option>
-            {filteredTransportTypes.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.transport_type}
-              </option>
-            ))}
-          </select>
-        </div>
-      </FormSection>
+        <PriorityFormGrid>
+          <PriorityFormField label="Tipo de servicio">
+            <PrioritySelectField
+              value={values.serviceType}
+              onValueChange={(value) => {
+                onChange("serviceType", value)
+                onChange("serviceTransportTypeId", "")
+              }}
+              placeholder="Tipo de servicio"
+              disabled={disabled}
+              options={uniqueServiceTypes.map((serviceType) => ({
+                value: serviceType,
+                label: serviceType,
+              }))}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Tipo de transporte">
+            <PrioritySelectField
+              value={values.serviceTransportTypeId}
+              onValueChange={(value) => onChange("serviceTransportTypeId", value)}
+              placeholder="Tipo de transporte"
+              disabled={disabled || !values.serviceType}
+              options={filteredTransportTypes.map((item) => ({
+                value: item.id,
+                label: item.transport_type,
+              }))}
+            />
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Terminos y condiciones"
         description="Informacion comercial especifica para ese servicio."
       >
-        <textarea
-          className="min-h-[140px] w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-          placeholder="Terminos y condiciones de la cotizacion"
-          value={values.termsAndConditions}
-          onChange={(event) => onChange("termsAndConditions", event.target.value)}
-          disabled={disabled}
-        />
-      </FormSection>
+        <PriorityFormField
+          label="Terminos y condiciones"
+          description="Usa este bloque para restricciones, tarifas especiales y condiciones de aprobacion."
+        >
+          <PriorityTextarea
+            className="min-h-[140px]"
+            placeholder="Terminos y condiciones de la cotizacion"
+            value={values.termsAndConditions}
+            onChange={(event) => onChange("termsAndConditions", event.target.value)}
+            disabled={disabled}
+          />
+        </PriorityFormField>
+      </PriorityFormSection>
+
+      {!values.serviceTransportTypeId ? (
+        <PrioritySectionAlert title="Seleccion requerida" variant="warning">
+          Selecciona una combinacion valida de servicio y transporte antes de guardar esta oferta.
+        </PrioritySectionAlert>
+      ) : null}
 
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={disabled || loading || !values.serviceTransportTypeId}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Working..." : submitLabel}
-          </button>
-        </div>
+            {loading ? "Guardando..." : submitLabel}
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

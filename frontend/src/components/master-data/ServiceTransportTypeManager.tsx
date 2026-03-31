@@ -1,18 +1,17 @@
 "use client"
 
+import { type ColumnDef } from "@tanstack/react-table"
 import { useEffect, useMemo, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
 import { getServiceTransportTypes, type ServiceTransportType } from "@/lib/db"
-
-function EmptyState({ hasQuery }: { hasQuery: boolean }) {
-  return (
-    <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-6 py-10 text-center text-sm text-[#64748B]">
-      {hasQuery
-        ? "No hay registros que coincidan con la busqueda actual."
-        : "No hay tipos de servicio disponibles."}
-    </div>
-  )
-}
 
 const LOCKED_SERVICE_TYPES = ["AIR", "FCL", "LCL", "FTL", "LTL", "COURIER"] as const
 
@@ -53,6 +52,43 @@ export function ServiceTransportTypeManager() {
     [items]
   )
 
+  const serviceOptions = useMemo(
+    () => [{ value: "all", label: "Todos los servicios" }].concat(
+      LOCKED_SERVICE_TYPES.map((option) => ({ value: option, label: option }))
+    ),
+    []
+  )
+
+  const columns = useMemo<ColumnDef<ServiceTransportType>[]>(
+    () => [
+      {
+        accessorKey: "service_type",
+        header: "Tipo de servicio",
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <div className="font-medium text-[var(--brand-navy)]">{row.original.service_type}</div>
+            <Badge variant="secondary">Catalogo bloqueado</Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "transport_type",
+        header: "Tipo de transporte",
+      },
+      {
+        id: "updated",
+        header: "Ultima actualizacion",
+        cell: ({ row }) =>
+          row.original.updated_at
+            ? new Date(row.original.updated_at).toLocaleString()
+            : row.original.created_at
+              ? new Date(row.original.created_at).toLocaleString()
+              : "Sin fecha",
+      },
+    ],
+    []
+  )
+
   return (
     <PageContainer
       title="Tipos de servicio"
@@ -88,86 +124,62 @@ export function ServiceTransportTypeManager() {
         </section>
 
         <section className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Regla del sistema</h2>
-          <p className="mt-1 text-sm text-[#6B7280]">
+          <PrioritySectionAlert title="Regla del sistema" variant="warning">
             Este catálogo ya no se edita desde la aplicación. Los tipos de servicio válidos
             son únicamente AIR, FCL, LCL, FTL, LTL y COURIER. Cualquier cambio futuro debe
             hacerse mediante migraciones controladas.
-          </p>
+          </PrioritySectionAlert>
         </section>
 
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Catalogo actual</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+              <PriorityCardTitle>Catalogo actual</PriorityCardTitle>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 Consulta los tipos de servicio y sus tipos de transporte relacionados.
-              </p>
+              </PriorityTypography>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(220px,1fr)_auto]">
+              <PriorityInput
                 placeholder="Buscar"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={serviceTypeFilter}
-                onChange={(event) => setServiceTypeFilter(event.target.value)}
+                onValueChange={setServiceTypeFilter}
+                placeholder="Servicio"
+                options={serviceOptions}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setQuery("")
+                  setServiceTypeFilter("all")
+                }}
               >
-                <option value="all">Todos los servicios</option>
-                {LOCKED_SERVICE_TYPES.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+                Limpiar
+              </Button>
+            </PriorityToolbar>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
-            {loading ? (
-              <div className="px-6 py-10 text-sm text-[#6B7280]">Cargando catálogo...</div>
-            ) : items.length === 0 ? (
-              <div className="p-6">
-                <EmptyState hasQuery={Boolean(query.trim())} />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                  <thead className="bg-[#F8FAFC]">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-[#475467]">
-                        Tipo de servicio
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-[#475467]">
-                        Tipo de transporte
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-[#475467]">
-                        Ultima actualizacion
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
-                    {items.map((item) => (
-                      <tr key={item.id} className="hover:bg-[#F8FAFC]">
-                        <td className="px-4 py-3 font-medium text-[#111827]">{item.service_type}</td>
-                        <td className="px-4 py-3 text-[#475467]">{item.transport_type}</td>
-                        <td className="px-4 py-3 text-[#475467]">
-                          {item.updated_at
-                            ? new Date(item.updated_at).toLocaleString()
-                            : item.created_at
-                              ? new Date(item.created_at).toLocaleString()
-                              : "Sin fecha"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
+            </div>
+          ) : (
+            <PriorityDataTable
+              columns={columns}
+              data={items}
+              emptyTitle={
+                query.trim() ? "No hay registros que coincidan con la busqueda actual" : "No hay tipos de servicio disponibles"
+              }
+              emptyDescription="Consulta el catalogo canonico bloqueado. Cualquier cambio debe hacerse por migracion controlada."
+            />
+          )}
         </section>
       </div>
     </PageContainer>

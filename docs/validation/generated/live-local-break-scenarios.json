@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-03-28T08:26:22.991Z",
+  "runPrefix": "STRESS_BREAK_1774686382991_",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm"
+  },
+  "scenarios": [
+    {
+      "label": "double-request-pricing",
+      "ok": true,
+      "durationMs": 512,
+      "details": {
+        "rpcErrors": 0,
+        "status": "pendiente"
+      }
+    },
+    {
+      "label": "double-take-pricing",
+      "ok": true,
+      "durationMs": 470,
+      "details": {
+        "rpcErrors": 0,
+        "status": "cotizando"
+      }
+    },
+    {
+      "label": "concurrent-purchase-option-save",
+      "ok": true,
+      "durationMs": 618,
+      "details": {
+        "createdOptions": 2
+      }
+    },
+    {
+      "label": "concurrent-sales-amount-update",
+      "ok": true,
+      "durationMs": 744,
+      "details": {
+        "updatedLines": 1
+      }
+    },
+    {
+      "label": "delete-client-with-relations",
+      "ok": true,
+      "durationMs": 1091,
+      "details": {
+        "clientId": "eac0f13c-35a7-49b7-9ef9-1a54bd2dd906"
+      }
+    },
+    {
+      "label": "refresh-during-mutation",
+      "ok": true,
+      "durationMs": 152,
+      "details": {
+        "status": "cotizando"
+      }
+    },
+    {
+      "label": "read-burst-during-exchange-rate-writes",
+      "ok": true,
+      "durationMs": 701,
+      "details": {
+        "ok": true
+      }
+    },
+    {
+      "label": "pagination-and-search-burst",
+      "ok": true,
+      "durationMs": 1608,
+      "details": {
+        "burstRequests": 12
+      }
+    },
+    {
+      "label": "authenticated-route-checks",
+      "ok": true,
+      "durationMs": 3327,
+      "details": {
+        "checkedUsers": 6,
+        "configuredUsers": 30
+      }
+    }
+  ],
+  "findings": [],
+  "error": null
+}

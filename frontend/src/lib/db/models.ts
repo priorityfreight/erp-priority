@@ -520,7 +520,7 @@ export type UnlocodeSearchResult = {
   total: number
   page: number
   pageSize: number
-  mode: "canonical" | "snapshot"
+  mode: "canonical"
   availableCountries: string[]
   countrySummaries: UnlocodeCountrySummary[]
 }

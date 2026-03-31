@@ -24,6 +24,74 @@ Components must follow the design system defined in:
 
 AI_DESIGN_SYSTEM.md
 
+Approved foundation
+
+- `frontend/src/components/ui/` contains the approved `shadcn/ui` primitives
+- `frontend/src/components/priority/` contains the official ERP wrappers and compositions
+- when an approved Priority wrapper exists, new UI must use it instead of rebuilding or bypassing the pattern
+- do not introduce a second primitive library into the frontend foundation
+- `frontend/src/stories/priority/` is the official Storybook visual workbench for isolated review of Priority UI before touching live ERP screens
+
+Current Priority UI baseline
+
+- PriorityDialog
+- PrioritySheet
+- PrioritySearchCombobox
+- PriorityRowActions
+- PriorityToolbar
+- PriorityDateField
+- PriorityHoverPreview
+- PriorityFormSection
+- PriorityFormField
+- PriorityInput
+- PriorityTextarea
+- PrioritySelectField
+- PriorityInfoField
+- PrioritySubmitBar
+- PriorityEmptyState
+- PriorityDataTable
+- PriorityUserAvatar
+- PrioritySectionAlert
+- PriorityTypography
+
+Current administrative workspace pattern
+
+- summary metric cards at the top
+- toolbar with `PriorityInput` and `PrioritySelectField`
+- `PriorityDataTable` for the main grid
+- `PriorityRowActions` for dense row action menus instead of piling multiple buttons in each row
+- `PrioritySectionAlert` for inline success, warning, and failure states
+- `AlertDialog` for destructive confirmation
+- modal content built from `PriorityFormSection` and `PrioritySubmitBar`
+- use `DropdownMenu`-backed `PriorityRowActions` for secondary row actions instead of stacking small action buttons with low contrast
+- keep this pattern as the default for new master data modules unless a workflow clearly needs a denser custom workspace
+- current approved list workspaces using this pattern: users, exchange rates, service transport types, sales accounting concepts, quotation rejection reasons, clients, contacts, opportunities, quotations, and pricing quotations
+- destructive actions must route through the shared `usePriorityConfirm` hook instead of `window.confirm`
+- blocking `alert()` is deprecated in live frontend code; use `notifyWarning`, `notifyError`, `notifySuccess`, or `notifyInfo`
+- use `Switch` for real boolean state toggles in admin/workspace surfaces when immediate on/off intent is clearer than a button label
+- when the official `shadcn` `Empty` primitive is present, `PriorityEmptyState` must wrap that primitive instead of using isolated custom markup
+
+Composition rule
+
+- use primitives as infrastructure and Priority wrappers as the ERP-facing contract
+- when an official `shadcn` primitive or pattern exists and fits the ERP need, use it as the technical base and keep `Priority` as the branded wrapper
+- current canonical internal bases: `ui/empty.tsx` for empty states, `ui/combobox.tsx` for official combobox composition, and `ui/data-table.tsx` for the shared TanStack/shadcn table shell
+- current approved examples: `PriorityEmptyState` wraps official `Empty`; `PrioritySearchCombobox` stays the ERP-facing contract while delegating to the shared `ui/combobox.tsx` pattern; `PriorityDataTable` remains the ERP-facing table contract on top of the shared `ui/data-table.tsx` + TanStack/shadcn pattern
+- `PriorityDataTable` is approved to expose optional row selection and a column-visibility menu when a workspace benefits from denser operator controls
+- dense record workspaces should prefer tabs, section cards, drawers, dialogs, and sticky submit rails over long unstructured vertical pages
+- date picking should be composed through the shared `PriorityDateField` wrapper on top of `calendar + popover + button`, not raw `input type="date"` in live workspaces
+- contextual record previews should prefer `PriorityHoverPreview` when they reduce navigation friction without adding modal weight
+- use `ButtonGroup` to cluster related secondary actions in dense workspaces instead of scattering standalone buttons
+- use `ResizablePanelGroup` only in genuinely dense workspaces where side-by-side context improves speed, not as decoration
+- list workspaces should prefer toolbar + table + filters + empty state
+- current approved tabbed workspaces: client detail, provider detail, quotation detail, and roles & permissions
+- long CRM and pricing forms should use `PriorityFormSection`, `PriorityFormField`, `PriorityInfoField`, and `PrioritySubmitBar` instead of raw inputs and ad hoc footer buttons
+- forms that open in dialogs, sheets, or premium cards should start with `PriorityFormHeader` and keep a stable two-column default grid unless a third column is clearly justified
+- boolean states should prefer `Switch` when the intent is immediate on/off, and 2-5 mutually exclusive choices should prefer `ToggleGroup`
+- validation and sync warnings inside forms should use `PrioritySectionAlert` instead of custom inline boxes
+- spreadsheet-style capture forms may keep a tabular grid for speed, but they must still use shared headers, alerts, info cards, and submit bars instead of custom legacy shells
+- typography must be semantically composed through `PriorityTypography` or approved semantic wrappers, not rebuilt ad hoc with random `text-*` and `tracking-*` combinations in every page
+
 
 
 --------------------------------------------------
@@ -59,6 +127,7 @@ Corporate implementation:
 - shared Priority lockup
 - translucent topbar
 - bright premium content card
+- the shell, login screen, and constrained header states must render branding through a single shared Brand component backed by canonical brand asset constants
 
 
 
@@ -104,6 +173,9 @@ Must support:
 
 - shared brand lockup
 - real company logo asset instead of recreated typography
+- canonical SVG mark/wordmark from the shared branding module
+- prefer official synced SVG lockups from `frontend/public/assets/` when they exist
+- current approved shell lockup: `frontend/public/assets/logo_vSVG.svg`
 - grouped module sections
 - accordion module cards
 - permission-aware route visibility
@@ -127,6 +199,21 @@ Must support:
 - compact brand lockup on constrained layouts
 - corporate eyebrow + page title
 - user identity cluster
+
+
+Brand
+
+Shared logo/lockup component for shell, auth, and constrained layouts.
+
+Must support:
+
+- compact mark-only state
+- expanded wordmark state
+- light and dark lockups from canonical runtime assets
+- optional tagline support for login/auth surfaces
+- no hardcoded asset paths outside the shared branding module
+- official synced lockups override prototype brand assets once approved by the user
+- if asset rendering is unstable, the shared Brand component may temporarily render a code-based fallback lockup to keep the shell functional
 
 
 

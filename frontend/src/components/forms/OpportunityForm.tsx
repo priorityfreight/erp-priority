@@ -1,12 +1,27 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import type {
   Client,
   Incoterm,
   ServiceTransportType,
   User,
 } from "@/lib/db"
+import { Button } from "@/components/ui/button"
+import {
+  PriorityFormHeader,
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+  PriorityTextarea,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { UnlocodeLookupField } from "./UnlocodeLookupField"
 
 export type OpportunityFormValues = {
@@ -41,26 +56,6 @@ type OpportunityFormProps = {
   submitLabel?: string
   loading?: boolean
   disabled?: boolean
-}
-
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#334155]">{title}</h3>
-        {description ? <p className="mt-1 text-sm text-[#64748B]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
 }
 
 function formatDate(value?: string | null) {
@@ -126,97 +121,98 @@ export function OpportunityForm({
       : 0
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion de la oportunidad"
         description="Relaciona cliente, servicio, transporte y la ruta estandarizada."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.clientId}
-            onChange={(event) => onChange("clientId", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Cliente</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.company_name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.salespersonId}
-            onChange={(event) => onChange("salespersonId", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Usuario responsable</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {[user.first_name, user.last_name].filter(Boolean).join(" ") || user.email}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.serviceType}
-            onChange={(event) => onChange("serviceType", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Tipo de servicio</option>
-            {availableServiceTypes.map((serviceType) => (
-              <option key={serviceType} value={serviceType}>
-                {serviceType}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#F3F4F6]"
-            value={values.transportType}
-            onChange={(event) => onChange("transportType", event.target.value)}
-            disabled={disabled || !values.serviceType}
-          >
-            <option value="">Tipo de transporte</option>
-            {availableTransportTypes.map((transportType) => (
-              <option key={transportType} value={transportType}>
-                {transportType}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.operationType}
-            onChange={(event) => onChange("operationType", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Tipo de operacion</option>
-            <option value="Import">Import</option>
-            <option value="Export">Export</option>
-          </select>
-
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.incotermId}
-            onChange={(event) => onChange("incotermId", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="">Incoterm</option>
-            {incoterms.map((incoterm) => (
-              <option key={incoterm.id} value={incoterm.id}>
-                {incoterm.code}
-              </option>
-            ))}
-          </select>
+        <PriorityFormGrid>
+          <PriorityFormField label="Cliente">
+            <PrioritySelectField
+              value={values.clientId}
+              onValueChange={(value) => onChange("clientId", value)}
+              placeholder="Selecciona un cliente"
+              disabled={disabled}
+              options={clients.map((client) => ({
+                value: client.id,
+                label: client.company_name,
+              }))}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Usuario responsable">
+            <PrioritySelectField
+              value={values.salespersonId}
+              onValueChange={(value) => onChange("salespersonId", value)}
+              placeholder="Selecciona un responsable"
+              disabled={disabled}
+              options={users.map((user) => ({
+                value: user.id,
+                label: [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email,
+              }))}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Tipo de servicio">
+            <PrioritySelectField
+              value={values.serviceType}
+              onValueChange={(value) => onChange("serviceType", value)}
+              placeholder="Selecciona un tipo de servicio"
+              disabled={disabled}
+              options={availableServiceTypes.map((serviceType) => ({
+                value: serviceType,
+                label: serviceType,
+              }))}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Tipo de transporte">
+            <PrioritySelectField
+              value={values.transportType}
+              onValueChange={(value) => onChange("transportType", value)}
+              placeholder="Selecciona un tipo de transporte"
+              disabled={disabled || !values.serviceType}
+              options={availableTransportTypes.map((transportType) => ({
+                value: transportType,
+                label: transportType,
+              }))}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Tipo de operacion">
+            <div className="space-y-3">
+              <ToggleGroup
+                type="single"
+                value={values.operationType}
+                onValueChange={(value) => {
+                  if (value) {
+                    onChange("operationType", value)
+                  }
+                }}
+                className="w-full justify-start"
+              >
+                <ToggleGroupItem value="Import" className="min-w-[120px]">
+                  Import
+                </ToggleGroupItem>
+                <ToggleGroupItem value="Export" className="min-w-[120px]">
+                  Export
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <PriorityTypography variant="caption">
+                Define si la oportunidad nace como importacion o exportacion.
+              </PriorityTypography>
+            </div>
+          </PriorityFormField>
+          <PriorityFormField label="Incoterm">
+            <PrioritySelectField
+              value={values.incotermId}
+              onValueChange={(value) => onChange("incotermId", value)}
+              placeholder="Selecciona un incoterm"
+              disabled={disabled}
+              options={incoterms.map((incoterm) => ({
+                value: incoterm.id,
+                label: incoterm.code,
+              }))}
+            />
+          </PriorityFormField>
 
           <div className="md:col-span-2 xl:col-span-3 grid gap-3 lg:grid-cols-2">
             <UnlocodeLookupField
@@ -262,94 +258,87 @@ export function OpportunityForm({
               }}
             />
           </div>
-        </div>
-      </FormSection>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Desglose de oportunidad"
         description="Captura la expectativa económica y el volumen mensual estimado."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Profit esperado (USD)"
-            value={values.expectedProfitUsd}
-            onChange={(event) => onChange("expectedProfitUsd", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Cantidad mensual aproximada"
-            value={values.serviceQuantity}
-            onChange={(event) => onChange("serviceQuantity", event.target.value)}
-            disabled={disabled}
-          />
-          <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Estimated value
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {Number.isFinite(estimatedValue)
+        <PriorityFormGrid>
+          <PriorityFormField label="Profit esperado (USD)">
+            <PriorityInput
+              placeholder="Profit esperado (USD)"
+              value={values.expectedProfitUsd}
+              onChange={(event) => onChange("expectedProfitUsd", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Cantidad mensual aproximada">
+            <PriorityInput
+              placeholder="Cantidad mensual aproximada"
+              value={values.serviceQuantity}
+              onChange={(event) => onChange("serviceQuantity", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityInfoField
+            label="Valor estimado"
+            value={
+              Number.isFinite(estimatedValue)
                 ? `$${estimatedValue.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}`
-                : "No disponible"}
-            </div>
-          </div>
-          <textarea
-            className="min-h-[96px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] md:col-span-2 xl:col-span-3"
-            placeholder="Notas internas de la oportunidad"
-            value={values.description}
-            onChange={(event) => onChange("description", event.target.value)}
-            disabled={disabled}
+                : "No disponible"
+            }
           />
-        </div>
-      </FormSection>
+          <PriorityFormField
+            label="Notas internas"
+            description="Resumen comercial y operativo para el equipo interno."
+            className="md:col-span-2 xl:col-span-3"
+          >
+            <PriorityTextarea
+              placeholder="Notas internas de la oportunidad"
+              value={values.description}
+              onChange={(event) => onChange("description", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PrioritySectionAlert title="Valor calculado" variant="info">
+        El valor estimado se calcula como profit esperado por cantidad mensual aproximada y sirve como referencia comercial inicial.
+      </PrioritySectionAlert>
+
+      {values.originUnlocode && values.destinationUnlocode ? (
+        <PrioritySectionAlert title="Ruta normalizada" variant="success">
+          La oportunidad ya tiene origen y destino estandarizados por UN/LOCODE, lo que reduce errores operativos posteriores.
+        </PrioritySectionAlert>
+      ) : null}
+
+      <PriorityFormSection
         title="Fechas"
         description="Estas fechas se calculan y controlan desde el backend canónico."
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Fecha creada
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {formatDate(createdAt)}
-            </div>
-          </div>
-          <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Fecha de inicio
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {formatDate(startDate)}
-            </div>
-          </div>
-          <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Fecha de vencimiento
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {formatDate(expirationDate)}
-            </div>
-          </div>
+          <PriorityInfoField label="Fecha creada" value={formatDate(createdAt)} />
+          <PriorityInfoField label="Fecha de inicio" value={formatDate(startDate)} />
+          <PriorityInfoField label="Fecha de vencimiento" value={formatDate(expirationDate)} />
         </div>
-      </FormSection>
+      </PriorityFormSection>
 
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={disabled || loading}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Working..." : submitLabel}
-          </button>
-        </div>
+            {loading ? "Guardando..." : submitLabel}
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

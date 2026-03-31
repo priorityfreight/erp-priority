@@ -45,6 +45,7 @@ Current AI governance files:
 - AI_CONTEXT.md
 - AI_SYSTEM_MAP.md
 - AI_CURRENT_PROJECT_MAP.md
+- AI_BLACKBOOK.md
 - AI_MASTER_DATA.md
 - AI_DATABASE_MAP.md
 - AI_DATABASE_RELATION_GRAPH.md
@@ -57,21 +58,24 @@ Current AI governance files:
 - AI_UI_BUILDER.md
 - AI_DESIGN_SYSTEM.md
 - AI_COMPONENT_LIBRARY.md
+- AI_PRIORITY_UI_REGISTRY.md
 - AI_AUTOMATION_RULES.md
 - AI_SYSTEM_AUDIT.md
 
 Status summary:
 
 - context and database governance documents are now aligned to the canonical schema
+- AI_BLACKBOOK.md now records proven hardening lessons, recurring failure modes, and approved prevention patterns
 - master data governance now covers external public datasets
 - the linked Supabase cloud project is already migrated to the canonical backend
-- legacy compatibility remains in code only as temporary rollback safety, but it is no longer the active backend mode
+- live frontend query modules now assume the canonical backend as a hard requirement
 - route access is now protected by login before homepage
 - current auth implementation uses Supabase Auth sessions plus public.users active-profile validation
 - route and sidebar access are now also permission-aware through the metadata-driven permissions registry
 - AI_QUERY_LIBRARY.md documents the current frontend query layer
 - AI_BACKEND_SYNC_RULES.md defines how SQL, types, query modules, and fallback safety must remain synchronized
 - UI/design/component documents still contain target-state guidance beyond the current implementation
+- the Priority UI layer now also has a formal registry document plus a typed in-repo registry for reusable component ownership
 
 
 --------------------------------------------------
@@ -175,6 +179,19 @@ Current shared CRM/UI components:
 - frontend/src/components/master-data/RolesPermissionsManager.tsx
 - frontend/src/components/master-data/ExchangeRateManager.tsx
 - UsersManager now includes admin-only table actions for edit, activate/inactivate, and delete
+- frontend/src/components/priority/index.ts now acts as the public export surface for the approved Priority UI layer
+- frontend/src/components/priority/registry.ts now acts as the typed in-repo registry for approved wrappers and hooks
+
+Current frontend visual validation stack:
+
+- frontend/playwright.config.ts
+- frontend/tests/e2e/
+- frontend/.storybook/
+- frontend/src/stories/priority/
+- frontend/vitest.config.ts
+- docs/frontend-visual-validation-setup-2026-03-31.md
+- Playwright is the real-app validation layer
+- Storybook is the isolated visual workbench for Priority UI
 
 Current query layer:
 
@@ -245,10 +262,10 @@ Pricing module status:
 
 Current data-layer behavior:
 
-- backendMode.ts still auto-detects canonical vs fallback environments
-- the linked cloud backend now resolves as canonical
-- fallback code remains only as temporary rollback safety for local recovery or alternate environments
-- no new module should depend on fallback-only behavior
+- backendMode.ts now acts as a canonical-only guardrail
+- the linked cloud backend must expose the canonical CRM and master-data objects for the live app to operate
+- legacy direct writes are retired from the live CRM query layer
+- historical snapshot assets may remain in-repo for recovery work, but they are not part of the live data path
 
 Clients module status:
 
@@ -312,10 +329,11 @@ clients.ts
 - search_clients()
 - get_client_full()
 - create_client_with_contacts()
+- update_client_record()
+- delete_client_record()
 - add_client_logistics_party()
 - delete_client_logistics_party()
-- soft_delete_client()
-- clients table for simple reads and updates
+- clients table for simple reads
 - clients.account_owner_id is the canonical CRM owner field
 - client_logistics_parties are returned through get_client_full() for the client detail related-data tabs
 
@@ -323,7 +341,9 @@ contacts.ts
 
 - client_contacts_view
 - add_contact_to_client()
-- contacts table for simple reads and updates
+- update_contact_record()
+- delete_contact_record()
+- contacts table for simple reads
 - contacts.status is the canonical lifecycle field for contact availability
 - contacts.phone is treated as direct phone for call and WhatsApp links
 
@@ -331,7 +351,9 @@ opportunities.ts
 
 - open_opportunities_view
 - create_opportunity()
-- opportunities table for simple reads and updates
+- update_opportunity_record()
+- delete_opportunity_record()
+- opportunities table for simple reads
 - update_opportunity_status()
 - create_opportunity() inherits salesperson_id from the client owner when omitted
 - opportunity detail target pattern is:
@@ -347,7 +369,6 @@ masterData.ts
 
 - unlocode_lookup_view
 - search_unlocodes()
-- local snapshot fallback through /api/master-data/unlocodes remains only as temporary rollback safety
 - the canonical UN/LOCODE contract for all modules is:
   unlocodes + unlocode_lookup_view + search_unlocodes()
 - service_transport_type_lookup_view

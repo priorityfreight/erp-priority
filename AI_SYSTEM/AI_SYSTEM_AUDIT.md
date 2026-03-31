@@ -19,6 +19,7 @@ This audit covers the active AI governance files in AI_SYSTEM/:
 - AI_CONTEXT.md
 - AI_SYSTEM_MAP.md
 - AI_CURRENT_PROJECT_MAP.md
+- AI_BLACKBOOK.md
 - AI_MASTER_DATA.md
 - AI_DATABASE_MAP.md
 - AI_DATABASE_RELATION_GRAPH.md
@@ -56,6 +57,10 @@ Latest stabilization note:
 - customer quotation PDFs are generated in memory and downloaded directly; they are not persisted in cloud storage
 - the customer quotation preview remains a separate web reference surface and must stay synchronized with the real PDF
 - customer quotation layout now treats route, load information, and per-option commercial presentation as governed UX areas
+- repository-identity policy is now explicit: this repo is only for Priority Logistics ERP and must not be mixed with other business systems unless the user explicitly requests it
+- environment policy is now explicit: the current linked backend is treated as TRAIN and the future production cutover must use a separate clean PROD backend
+- hardening-phase policy is now explicit: TRAIN is allowed to run destructive validation only with prefixed ephemeral data, ledger tracking, cleanup, and clean-state verification
+- AI governance now includes a formal black book so proven hardening lessons and recurring failure patterns are preserved for future module work instead of rediscovered ad hoc
 
 What is now aligned:
 
@@ -67,6 +72,14 @@ What is now aligned:
 - live quotation cargo capture behavior and the AI documents that describe it
 - provider-facing pricing-request now has both a web preview and a real internal PDF route
 - "/" now redirects to the canonical "/dashboard" entry point
+- AI governance now explicitly defines project-boundary rules and a simplified TRAIN/PROD environment model
+- the governance layer now includes a reusable operational-memory file for hardening lessons, approved fixes, and prevention rules
+- the live CRM and master-data query layer now operate in canonical-only mode; fallback branches were retired from the active path on 2026-03-27
+- the Priority UI layer now has a formal registry, typed export surface, and isolated Storybook workbench for visual review
+- browser-level frontend validation now has a formal Playwright setup for screenshots, traces, and critical-route coverage
+- repository closeout now also has a single local gate script intended to produce a final `READY_FOR_REPO` or `NOT_READY_FOR_REPO` decision artifact
+- the visual-validation stack now includes an external Playwright browser-server fallback so local macOS launcher failures do not block frontend automation entirely
+- the validation stack now also includes an automatic repo-gate wrapper that can bootstrap the external browser server, run the handoff gate, and clean temporary metadata in one command
 
 What still has residual drift:
 
@@ -74,7 +87,9 @@ What still has residual drift:
 - generated Supabase types can drift again if future schema changes do not explicitly clean legacy RPC signatures
 - some planned ERP modules exist only at the database layer
 - the quotation domain has historically changed faster than its migration cleanup discipline
-- backendMode.ts remains as rollback safety even though the linked cloud environment is now canonical
+- remaining fallback assets are now recovery-only and no longer part of the live query path
+- local browser execution for Playwright remains environment-dependent; Codex sandbox cannot be treated as the final browser-proof source of truth
+- direct browser launch can fail under Codex-hosted macOS execution even when the app is healthy; the sanctioned fallback is to connect to an externally started Playwright browser server from a normal local terminal
 
 
 --------------------------------------------------
@@ -95,6 +110,11 @@ AI_CURRENT_PROJECT_MAP.md
 
 Status:
 Aligned to the current repository inventory.
+
+AI_BLACKBOOK.md
+
+Status:
+New operational-memory document capturing real failure modes, validated fixes, and prevention rules.
 
 Operational note:
 The linked Supabase cloud backend was migrated to the canonical schema and master data contract on 2026-03-22.
@@ -130,10 +150,11 @@ Useful for new module creation, but must be read with the current project map so
 AI_UI_BUILDER.md
 AI_DESIGN_SYSTEM.md
 AI_COMPONENT_LIBRARY.md
+AI_PRIORITY_UI_REGISTRY.md
 
 Status:
-Target-state guidance.
-These are not reliable descriptions of the current UI by themselves.
+Materially improved.
+They now describe the approved foundation, wrapper registry, and visual-review workflow more accurately, but should still be read together with the current project map and live routes.
 
 AI_AUTOMATION_RULES.md
 
@@ -154,7 +175,7 @@ continue in future migrations.
 
 3. UI governance docs still describe a richer shell and component system than the current app implements.
 
-4. backendMode.ts still remains as temporary rollback safety even though the linked cloud environment is now canonical.
+4. generated Supabase types still require disciplined regeneration when new RPCs are added to the canonical backend.
 
 5. Quotation process changes must now be treated as a governed area:
    - one canonical RPC contract per action
@@ -170,16 +191,15 @@ RELEASE-READINESS CLEANUP BACKLOG
 
 Current version is materially improved and close to release-ready, but these cleanup items should be treated as the next controlled hardening pass:
 
-1. Keep backendMode.ts only as temporary rollback safety; remove fallback branches once the next stabilization cycle passes.
+1. Continue tightening shared quotation document tokens so the preview pages and downloadable PDFs cannot drift visually.
 
-2. Continue tightening shared quotation document tokens so the preview pages and downloadable PDFs cannot drift visually.
-
-3. Add a small release smoke suite for:
+2. Add a small release smoke suite for:
    - opportunity → quotation
    - pricing option capture
    - customer option selection
    - PDF download
    - accepted quotation → booking
+3. Keep Storybook stories aligned with live Priority wrappers whenever the wrapper contract changes.
 
 
 --------------------------------------------------

@@ -1,6 +1,15 @@
 "use client"
 
 import { useMemo } from "react"
+import { PriorityDateField } from "@/components/priority/PriorityDateField"
+import { Button } from "@/components/ui/button"
+import {
+  PriorityFormHeader,
+  PriorityInfoField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
 import type { Provider, SalesAccountingConcept } from "@/lib/db"
 
 export type QuotationChargeLineFormValues = {
@@ -129,11 +138,8 @@ export function QuotationChargeLineForm({
   }, [rows])
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
       <div className="overflow-x-auto rounded-xl border border-[#D1D5DB] bg-white pb-3">
         <div className="min-w-[1480px] pr-3">
@@ -226,15 +232,15 @@ export function QuotationChargeLineForm({
                 <option value="EUR">EUR</option>
               </select>
 
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none focus:bg-[#F8FAFC]"
-                type="date"
-                value={row.purchaseValidUntil}
-                disabled={disabled}
-                onChange={(event) =>
-                  onChangeRow(row.draftId, "purchaseValidUntil", event.target.value)
-                }
-              />
+              <div className="border-r border-[#E5E7EB] px-3 py-2">
+                <PriorityDateField
+                  value={row.purchaseValidUntil}
+                  disabled={disabled}
+                  placeholder="Vigencia"
+                  className="h-10 rounded-[14px] px-3 text-sm"
+                  onChange={(value) => onChangeRow(row.draftId, "purchaseValidUntil", value)}
+                />
+              </div>
 
               <input
                 className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
@@ -246,22 +252,23 @@ export function QuotationChargeLineForm({
 
               <div className="flex items-center justify-center px-2 py-2">
                 {row.existingChargeId ? (
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
                     Base
-                  </span>
+                  </PriorityTypography>
                 ) : rows.length > 1 ? (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => onRemoveRow(row.draftId)}
                     disabled={disabled}
-                    className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-2 py-1 text-xs font-semibold text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
+                    variant="outline"
+                    className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
                   >
                     Quitar
-                  </button>
+                  </Button>
                 ) : (
-                  <span className="text-xs font-semibold uppercase tracking-wide text-transparent">
+                  <PriorityTypography variant="fieldLabel" className="text-transparent">
                     ---
-                  </span>
+                  </PriorityTypography>
                 )}
               </div>
             </div>
@@ -270,81 +277,62 @@ export function QuotationChargeLineForm({
       </div>
 
       <div className="flex justify-start">
-        <button
+        <Button
           type="button"
           onClick={onAddRow}
           disabled={disabled}
-          className="rounded-md border border-[#CBD5E1] bg-white px-4 py-2 text-sm font-medium text-[#1E3A8A] shadow-sm hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+          variant="outline"
+          className="border-[#CBD5E1] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
         >
           Anadir otro concepto
-        </button>
+        </Button>
       </div>
 
       <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-        <div className="text-sm font-semibold text-[#111827]">Acumulado de la opcion</div>
-        <div className="mt-1 text-sm text-[#64748B]">
+        <PriorityTypography variant="cardTitle">Acumulado de la opcion</PriorityTypography>
+        <PriorityTypography variant="bodyMuted" className="mt-1">
           La suma considera todos los conceptos capturados dentro de esta misma opcion de compra.
-        </div>
+        </PriorityTypography>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Conceptos en captura
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">{summary.rowCount}</div>
-          </div>
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Compra acumulada
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {formatGroupedTotals(summary.purchaseByCurrency)}
-            </div>
-          </div>
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Total con IVA
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {formatGroupedTotals(summary.totalWithVatByCurrency)}
-            </div>
-          </div>
+          <PriorityInfoField label="Conceptos en captura" value={String(summary.rowCount)} />
+          <PriorityInfoField label="Compra acumulada" value={formatGroupedTotals(summary.purchaseByCurrency)} />
+          <PriorityInfoField label="Total con IVA" value={formatGroupedTotals(summary.totalWithVatByCurrency)} />
         </div>
-        <div className="mt-3 rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-            Vigencia detectada
-          </div>
-          <div className="mt-1 text-sm font-medium text-[#111827]">
-            {summary.validitySummary}
-          </div>
+        <div className="mt-3">
+          <PriorityInfoField label="Vigencia detectada" value={summary.validitySummary} />
         </div>
       </div>
 
       {disabledReason ? (
-        <div className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-3 py-3 text-sm text-[#92400E]">
+        <PrioritySectionAlert title="Captura bloqueada" variant="warning">
           {disabledReason}
-        </div>
+        </PrioritySectionAlert>
       ) : null}
 
+      <PrioritySectionAlert title="Captura tabular" variant="info">
+        Este bloque privilegia velocidad operativa. Agrega un renglon por concepto real de compra y revisa la vigencia antes de guardar.
+      </PrioritySectionAlert>
+
       {onSubmit ? (
-        <div className="flex justify-end gap-3">
+        <PrioritySubmitBar className="justify-between">
           {onCancel ? (
-            <button
+            <Button
               type="button"
               onClick={onCancel}
-              className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] shadow-sm hover:bg-[#F8FAFC]"
+              variant="outline"
+              className="border-[#D1D5DB] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
             >
               Cancelar
-            </button>
+            </Button>
           ) : null}
-          <button
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={loading || disabled}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Guardando..." : submitLabel}
-          </button>
-        </div>
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

@@ -6,8 +6,17 @@ import type {
   UnlocodeCountrySummary,
   UnlocodeRecord,
   UnlocodeSearchParams,
-  UnlocodeSearchResult,
 } from "@/lib/db/models"
+
+type SnapshotUnlocodeSearchResult = {
+  items: UnlocodeRecord[]
+  total: number
+  page: number
+  pageSize: number
+  mode: "snapshot"
+  availableCountries: string[]
+  countrySummaries: UnlocodeCountrySummary[]
+}
 
 type SnapshotCache = {
   records: UnlocodeRecord[]
@@ -132,7 +141,7 @@ async function getSnapshot(): Promise<SnapshotCache> {
 
 export async function queryUnlocodeSnapshot(
   params: UnlocodeSearchParams = {}
-): Promise<UnlocodeSearchResult> {
+): Promise<SnapshotUnlocodeSearchResult> {
   const snapshot = await getSnapshot()
   const pageSize = Math.min(Math.max(params.pageSize ?? 25, 1), 100)
   const page = Math.max(params.page ?? 1, 1)

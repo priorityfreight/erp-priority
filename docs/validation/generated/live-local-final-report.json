@@ -1,0 +1,1153 @@
+{
+  "generatedAt": "2026-03-28T08:30:08.710Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "scores": {
+    "maturity": 81,
+    "stability": 80,
+    "performance": 76,
+    "scalability": 74
+  },
+  "rootCauses": [],
+  "dynamicFindings": [],
+  "cleanState": {
+    "generatedAt": "2026-03-28T08:30:01.358Z",
+    "target": {
+      "kind": "train",
+      "projectRef": "chnxpajsawbfevuakhsm",
+      "protected": true
+    },
+    "prefixes": [
+      "TEST_",
+      "LOADTEST_",
+      "QA_",
+      "STRESS_"
+    ],
+    "scans": [
+      {
+        "table": "clients",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "contacts",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "client_logistics_parties",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "opportunities",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "providers",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "provider_contacts",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "quotation_options",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "quotation_costs",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "quotation_cargo_lines",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "sales_accounting_concepts",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "quotation_rejection_reasons",
+        "ok": true,
+        "count": 0
+      },
+      {
+        "table": "exchange_rates",
+        "ok": true,
+        "count": 0
+      }
+    ],
+    "clean": true
+  },
+  "readonlySmoke": {
+    "generatedAt": "2026-03-28T08:25:46.689Z",
+    "target": {
+      "kind": "train",
+      "projectRef": "chnxpajsawbfevuakhsm",
+      "protected": true
+    },
+    "checks": [
+      {
+        "label": "client_overview_view",
+        "ok": true,
+        "durationMs": 237,
+        "details": {
+          "rows": 0
+        }
+      },
+      {
+        "label": "client_contacts_view",
+        "ok": true,
+        "durationMs": 222,
+        "details": {
+          "rows": 0
+        }
+      },
+      {
+        "label": "open_opportunities_view",
+        "ok": true,
+        "durationMs": 242,
+        "details": {
+          "rows": 0
+        }
+      },
+      {
+        "label": "quotation_summary_view",
+        "ok": true,
+        "durationMs": 260,
+        "details": {
+          "rows": 0
+        }
+      },
+      {
+        "label": "quotation_cost_line_secure_view",
+        "ok": true,
+        "durationMs": 266,
+        "details": {
+          "rows": 0
+        }
+      },
+      {
+        "label": "provider_overview_view",
+        "ok": true,
+        "durationMs": 261,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "provider_contacts_view",
+        "ok": true,
+        "durationMs": 244,
+        "details": {
+          "rows": 3
+        }
+      },
+      {
+        "label": "provider_service_offering_view",
+        "ok": true,
+        "durationMs": 261,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "service_transport_type_lookup_view",
+        "ok": true,
+        "durationMs": 289,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "sales_accounting_concept_lookup_view",
+        "ok": true,
+        "durationMs": 209,
+        "details": {
+          "rows": 2
+        }
+      },
+      {
+        "label": "quotation_rejection_reason_lookup_view",
+        "ok": true,
+        "durationMs": 225,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "exchange_rates",
+        "ok": true,
+        "durationMs": 230,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "unlocode_lookup_view",
+        "ok": true,
+        "durationMs": 245,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "permission_resource_catalog_view",
+        "ok": true,
+        "durationMs": 276,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "role_resource_permission_matrix_view",
+        "ok": true,
+        "durationMs": 296,
+        "details": {
+          "rows": 5
+        }
+      },
+      {
+        "label": "search_unlocodes()",
+        "ok": true,
+        "durationMs": 1089,
+        "details": {
+          "rows": 5
+        }
+      }
+    ]
+  },
+  "accessMatrix": {
+    "generatedAt": "2026-03-28T08:26:04.500Z",
+    "target": {
+      "kind": "train",
+      "projectRef": "chnxpajsawbfevuakhsm",
+      "protected": true
+    },
+    "checks": [
+      {
+        "persona": "sales",
+        "ok": true,
+        "durationMs": 1141,
+        "details": {
+          "persona": "sales",
+          "roleName": "Ventas",
+          "active": true,
+          "allowedRoute": "/quotations",
+          "deniedRoutesChecked": [
+            {
+              "routePath": "/pricing/quotations",
+              "accessAllowed": false,
+              "presentInNavigation": false
+            },
+            {
+              "routePath": "/master-data/users/roles",
+              "accessAllowed": false,
+              "presentInNavigation": false
+            }
+          ],
+          "navigationCount": 5
+        }
+      },
+      {
+        "persona": "pricing",
+        "ok": true,
+        "durationMs": 908,
+        "details": {
+          "persona": "pricing",
+          "roleName": "Pricing",
+          "active": true,
+          "allowedRoute": "/pricing/quotations",
+          "deniedRoutesChecked": [
+            {
+              "routePath": "/master-data/users/roles",
+              "accessAllowed": false,
+              "presentInNavigation": false
+            }
+          ],
+          "navigationCount": 3
+        }
+      },
+      {
+        "persona": "admin",
+        "ok": true,
+        "durationMs": 690,
+        "details": {
+          "persona": "admin",
+          "roleName": "Admin",
+          "active": true,
+          "allowedRoute": "/master-data/users/roles",
+          "deniedRoutesChecked": [],
+          "navigationCount": 15
+        }
+      }
+    ]
+  },
+  "fieldMasking": {
+    "generatedAt": "2026-03-28T08:26:17.625Z",
+    "target": {
+      "kind": "train",
+      "projectRef": "chnxpajsawbfevuakhsm",
+      "protected": true
+    },
+    "checks": [
+      {
+        "persona": "sales",
+        "ok": true,
+        "durationMs": 4920,
+        "details": {
+          "persona": "sales",
+          "roleName": "Ventas",
+          "checkedCases": 6,
+          "deniedCases": 4,
+          "cases": [
+            {
+              "resourceKey": "crm.quotations.record",
+              "fieldKey": "sale_price",
+              "actionCode": "view",
+              "allowed": true
+            },
+            {
+              "resourceKey": "crm.quotations.record",
+              "fieldKey": "sale_price",
+              "actionCode": "edit",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "purchase_amount",
+              "actionCode": "view",
+              "allowed": false
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "purchase_amount",
+              "actionCode": "edit",
+              "allowed": false
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "profit_amount",
+              "actionCode": "view",
+              "allowed": false
+            },
+            {
+              "resourceKey": "pricing.quotations.workspace",
+              "fieldKey": "incoterm",
+              "actionCode": "view",
+              "allowed": false
+            }
+          ]
+        }
+      },
+      {
+        "persona": "pricing",
+        "ok": true,
+        "durationMs": 2019,
+        "details": {
+          "persona": "pricing",
+          "roleName": "Pricing",
+          "checkedCases": 6,
+          "deniedCases": 3,
+          "cases": [
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "purchase_amount",
+              "actionCode": "view",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "purchase_amount",
+              "actionCode": "edit",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "sale_amount",
+              "actionCode": "view",
+              "allowed": false
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "profit_amount",
+              "actionCode": "view",
+              "allowed": false
+            },
+            {
+              "resourceKey": "crm.quotations.record",
+              "fieldKey": "sale_price",
+              "actionCode": "view",
+              "allowed": false
+            },
+            {
+              "resourceKey": "pricing.quotations.workspace",
+              "fieldKey": "incoterm",
+              "actionCode": "view",
+              "allowed": true
+            }
+          ]
+        }
+      },
+      {
+        "persona": "admin",
+        "ok": true,
+        "durationMs": 1125,
+        "details": {
+          "persona": "admin",
+          "roleName": "Admin",
+          "checkedCases": 6,
+          "deniedCases": 0,
+          "cases": [
+            {
+              "resourceKey": "crm.quotations.record",
+              "fieldKey": "sale_price",
+              "actionCode": "view",
+              "allowed": true
+            },
+            {
+              "resourceKey": "crm.quotations.record",
+              "fieldKey": "cost",
+              "actionCode": "view",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "purchase_amount",
+              "actionCode": "view",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "sale_amount",
+              "actionCode": "edit",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.cost_section",
+              "fieldKey": "profit_amount",
+              "actionCode": "view",
+              "allowed": true
+            },
+            {
+              "resourceKey": "pricing.quotations.workspace",
+              "fieldKey": "incoterm",
+              "actionCode": "edit",
+              "allowed": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "stressSummary": {
+    "generatedAt": "2026-03-28T08:29:35.142Z",
+    "loadLevel": "stress",
+    "runPrefix": "LOADTEST_1774686575142_",
+    "completed": 48,
+    "skipped": [],
+    "errors": [],
+    "scenarios": [
+      {
+        "label": "sales-flow-1",
+        "ok": true,
+        "durationMs": 9669,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-2",
+        "ok": true,
+        "durationMs": 8623,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-3",
+        "ok": true,
+        "durationMs": 9357,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-4",
+        "ok": true,
+        "durationMs": 7455,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-5",
+        "ok": true,
+        "durationMs": 7523,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-6",
+        "ok": true,
+        "durationMs": 8417,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-7",
+        "ok": true,
+        "durationMs": 7834,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-8",
+        "ok": true,
+        "durationMs": 7632,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-9",
+        "ok": true,
+        "durationMs": 8590,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-10",
+        "ok": true,
+        "durationMs": 7988,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-11",
+        "ok": true,
+        "durationMs": 7426,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-12",
+        "ok": true,
+        "durationMs": 9630,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-13",
+        "ok": true,
+        "durationMs": 8794,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-14",
+        "ok": true,
+        "durationMs": 6505,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-15",
+        "ok": true,
+        "durationMs": 7411,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-16",
+        "ok": true,
+        "durationMs": 7259,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-17",
+        "ok": true,
+        "durationMs": 9502,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-18",
+        "ok": true,
+        "durationMs": 9601,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-19",
+        "ok": true,
+        "durationMs": 8618,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "sales-flow-20",
+        "ok": true,
+        "durationMs": 7024,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-1",
+        "ok": true,
+        "durationMs": 12315,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-2",
+        "ok": true,
+        "durationMs": 11355,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-3",
+        "ok": true,
+        "durationMs": 11730,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-4",
+        "ok": true,
+        "durationMs": 10981,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-5",
+        "ok": true,
+        "durationMs": 11055,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-6",
+        "ok": true,
+        "durationMs": 11304,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-7",
+        "ok": true,
+        "durationMs": 12285,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-8",
+        "ok": true,
+        "durationMs": 12291,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-9",
+        "ok": true,
+        "durationMs": 12067,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-10",
+        "ok": true,
+        "durationMs": 10930,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-11",
+        "ok": true,
+        "durationMs": 11603,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-12",
+        "ok": true,
+        "durationMs": 12365,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-13",
+        "ok": true,
+        "durationMs": 12372,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-14",
+        "ok": true,
+        "durationMs": 11653,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "pricing-flow-15",
+        "ok": true,
+        "durationMs": 11114,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-1",
+        "ok": true,
+        "durationMs": 2720,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-2",
+        "ok": true,
+        "durationMs": 7661,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-3",
+        "ok": true,
+        "durationMs": 2622,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-4",
+        "ok": true,
+        "durationMs": 6397,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-5",
+        "ok": true,
+        "durationMs": 8502,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-6",
+        "ok": true,
+        "durationMs": 8363,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-7",
+        "ok": true,
+        "durationMs": 7378,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-8",
+        "ok": true,
+        "durationMs": 5865,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-9",
+        "ok": true,
+        "durationMs": 5816,
+        "attemptsUsed": 1
+      },
+      {
+        "label": "admin-flow-10",
+        "ok": true,
+        "durationMs": 6374,
+        "attemptsUsed": 1
+      }
+    ],
+    "metrics": {
+      "averageMs": 8933,
+      "p95Ms": 12315,
+      "maxMs": 12372,
+      "minMs": 2622
+    },
+    "sessionPool": {
+      "maxUsers": 30,
+      "configuredLoadProfile": {
+        "sales": 20,
+        "pricing": 15,
+        "admin": 10,
+        "authenticated": 5
+      },
+      "requiredCounts": {
+        "sales": 18,
+        "pricing": 7,
+        "admin": 5,
+        "authenticated": 5
+      },
+      "signedInCounts": {
+        "sales": 18,
+        "pricing": 7,
+        "admin": 5
+      }
+    },
+    "authenticatedChecks": {
+      "mode": "post-peak-pooled-subset",
+      "desiredCount": 3,
+      "executedCount": 3,
+      "personasChecked": [
+        "sales",
+        "pricing",
+        "admin"
+      ],
+      "skipped": false,
+      "reason": null
+    },
+    "findings": []
+  },
+  "stressSequence": {
+    "generatedAt": "2026-03-28T08:30:01.366Z",
+    "target": {
+      "kind": "train",
+      "projectRef": "chnxpajsawbfevuakhsm",
+      "protected": true
+    },
+    "results": [
+      {
+        "step": "validation:rollback",
+        "ok": true,
+        "startedAt": "2026-03-28T08:25:40.960Z",
+        "finishedAt": "2026-03-28T08:25:41.117Z",
+        "stdout": "Rollback metadata written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/rollback-metadata.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:baseline",
+        "ok": true,
+        "startedAt": "2026-03-28T08:25:41.117Z",
+        "finishedAt": "2026-03-28T08:25:45.528Z",
+        "stdout": "Row-count baseline written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/row-count-baseline-2026-03-28T08-25-45-523Z.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:smoke",
+        "ok": true,
+        "startedAt": "2026-03-28T08:25:45.528Z",
+        "finishedAt": "2026-03-28T08:25:46.697Z",
+        "stdout": "Read-only smoke completed with 0 failures.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:bootstrap-sessions:break",
+        "ok": true,
+        "startedAt": "2026-03-28T08:25:46.697Z",
+        "finishedAt": "2026-03-28T08:25:56.693Z",
+        "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:access-matrix",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:01.695Z",
+        "finishedAt": "2026-03-28T08:26:04.504Z",
+        "stdout": "Access matrix completed with 0 failures.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:field-masking",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:09.507Z",
+        "finishedAt": "2026-03-28T08:26:17.629Z",
+        "stdout": "Field masking completed with 0 failures.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:break",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:22.631Z",
+        "finishedAt": "2026-03-28T08:26:39.269Z",
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "step": "validation:cleanup:post-break",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:39.269Z",
+        "finishedAt": "2026-03-28T08:26:50.592Z",
+        "stdout": "Cleanup completed.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:clean-state:post-break",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:50.592Z",
+        "finishedAt": "2026-03-28T08:26:50.906Z",
+        "stdout": "Clean-state validation completed. Residue tables: 0.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:bootstrap-sessions:light:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:50.906Z",
+        "finishedAt": "2026-03-28T08:26:52.958Z",
+        "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:stress:light:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:26:57.960Z",
+        "finishedAt": "2026-03-28T08:27:03.412Z",
+        "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+        "stderr": ""
+      },
+      {
+        "step": "validation:cleanup:light:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:03.412Z",
+        "finishedAt": "2026-03-28T08:27:06.861Z",
+        "stdout": "Cleanup completed.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:clean-state:light:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:06.861Z",
+        "finishedAt": "2026-03-28T08:27:07.162Z",
+        "stdout": "Clean-state validation completed. Residue tables: 0.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:bootstrap-sessions:medium:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:07.162Z",
+        "finishedAt": "2026-03-28T08:27:13.984Z",
+        "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:stress:medium:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:23.987Z",
+        "finishedAt": "2026-03-28T08:27:37.331Z",
+        "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+        "stderr": ""
+      },
+      {
+        "step": "validation:cleanup:medium:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:37.331Z",
+        "finishedAt": "2026-03-28T08:27:44.066Z",
+        "stdout": "Cleanup completed.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:clean-state:medium:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:44.066Z",
+        "finishedAt": "2026-03-28T08:27:44.368Z",
+        "stdout": "Clean-state validation completed. Residue tables: 0.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:bootstrap-sessions:heavy:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:27:44.368Z",
+        "finishedAt": "2026-03-28T08:27:53.992Z",
+        "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:stress:heavy:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:28:08.993Z",
+        "finishedAt": "2026-03-28T08:28:34.680Z",
+        "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+        "stderr": ""
+      },
+      {
+        "step": "validation:cleanup:heavy:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:28:34.680Z",
+        "finishedAt": "2026-03-28T08:28:45.140Z",
+        "stdout": "Cleanup completed.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:clean-state:heavy:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:28:45.140Z",
+        "finishedAt": "2026-03-28T08:28:45.476Z",
+        "stdout": "Clean-state validation completed. Residue tables: 0.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:bootstrap-sessions:stress:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:28:45.476Z",
+        "finishedAt": "2026-03-28T08:28:55.277Z",
+        "stdout": "Validation session users generated at /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/.validation/session-users.generated.json",
+        "stderr": ""
+      },
+      {
+        "step": "validation:stress:stress:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:29:20.279Z",
+        "finishedAt": "2026-03-28T08:29:49.033Z",
+        "stdout": "Stress summary written to /Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/docs/validation/live-local-stress-summary.md",
+        "stderr": ""
+      },
+      {
+        "step": "validation:cleanup:stress:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:29:49.033Z",
+        "finishedAt": "2026-03-28T08:30:01.047Z",
+        "stdout": "Cleanup completed.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:clean-state:stress:attempt-1",
+        "ok": true,
+        "startedAt": "2026-03-28T08:30:01.047Z",
+        "finishedAt": "2026-03-28T08:30:01.366Z",
+        "stdout": "Clean-state validation completed. Residue tables: 0.",
+        "stderr": ""
+      },
+      {
+        "step": "validation:report",
+        "ok": true,
+        "startedAt": "2026-03-28T08:30:01.369Z",
+        "finishedAt": "2026-03-28T08:30:01.438Z",
+        "stdout": "Final report generated.",
+        "stderr": ""
+      }
+    ],
+    "completed": true
+  },
+  "breakSummary": {
+    "generatedAt": "2026-03-28T08:26:22.991Z",
+    "runPrefix": "STRESS_BREAK_1774686382991_",
+    "target": {
+      "kind": "train",
+      "projectRef": "chnxpajsawbfevuakhsm"
+    },
+    "scenarios": [
+      {
+        "label": "double-request-pricing",
+        "ok": true,
+        "durationMs": 512,
+        "details": {
+          "rpcErrors": 0,
+          "status": "pendiente"
+        }
+      },
+      {
+        "label": "double-take-pricing",
+        "ok": true,
+        "durationMs": 470,
+        "details": {
+          "rpcErrors": 0,
+          "status": "cotizando"
+        }
+      },
+      {
+        "label": "concurrent-purchase-option-save",
+        "ok": true,
+        "durationMs": 618,
+        "details": {
+          "createdOptions": 2
+        }
+      },
+      {
+        "label": "concurrent-sales-amount-update",
+        "ok": true,
+        "durationMs": 744,
+        "details": {
+          "updatedLines": 1
+        }
+      },
+      {
+        "label": "delete-client-with-relations",
+        "ok": true,
+        "durationMs": 1091,
+        "details": {
+          "clientId": "eac0f13c-35a7-49b7-9ef9-1a54bd2dd906"
+        }
+      },
+      {
+        "label": "refresh-during-mutation",
+        "ok": true,
+        "durationMs": 152,
+        "details": {
+          "status": "cotizando"
+        }
+      },
+      {
+        "label": "read-burst-during-exchange-rate-writes",
+        "ok": true,
+        "durationMs": 701,
+        "details": {
+          "ok": true
+        }
+      },
+      {
+        "label": "pagination-and-search-burst",
+        "ok": true,
+        "durationMs": 1608,
+        "details": {
+          "burstRequests": 12
+        }
+      },
+      {
+        "label": "authenticated-route-checks",
+        "ok": true,
+        "durationMs": 3327,
+        "details": {
+          "checkedUsers": 6,
+          "configuredUsers": 30
+        }
+      }
+    ],
+    "findings": [],
+    "error": null
+  },
+  "findings": [
+    {
+      "severity": "low",
+      "title": "Workflow controller still dense",
+      "message": "Quotation detail controller is still moderately dense at 572 lines (frontend/src/features/quotations/detail/useQuotationDetailController.ts)."
+    },
+    {
+      "severity": "low",
+      "title": "Workflow controller still dense",
+      "message": "Pricing quotations controller is still moderately dense at 426 lines (frontend/src/features/pricing/quotations/usePricingQuotationsController.ts)."
+    },
+    {
+      "severity": "low",
+      "title": "Workflow controller still dense",
+      "message": "Roles permissions workspace is still moderately dense at 491 lines (frontend/src/components/master-data/RolesPermissionsManager.tsx)."
+    }
+  ],
+  "architecture": {
+    "findings": [
+      {
+        "severity": "low",
+        "title": "Workflow controller still dense",
+        "message": "Quotation detail controller is still moderately dense at 572 lines (frontend/src/features/quotations/detail/useQuotationDetailController.ts)."
+      },
+      {
+        "severity": "low",
+        "title": "Workflow controller still dense",
+        "message": "Pricing quotations controller is still moderately dense at 426 lines (frontend/src/features/pricing/quotations/usePricingQuotationsController.ts)."
+      },
+      {
+        "severity": "low",
+        "title": "Workflow controller still dense",
+        "message": "Roles permissions workspace is still moderately dense at 491 lines (frontend/src/components/master-data/RolesPermissionsManager.tsx)."
+      }
+    ],
+    "routeMetrics": [
+      {
+        "path": "frontend/app/quotations/[id]/page.tsx",
+        "lines": 147
+      },
+      {
+        "path": "frontend/app/pricing/quotations/page.tsx",
+        "lines": 19
+      },
+      {
+        "path": "frontend/app/clients/[id]/page.tsx",
+        "lines": 110
+      },
+      {
+        "path": "frontend/app/pricing/providers/[id]/page.tsx",
+        "lines": 14
+      }
+    ],
+    "controllerMetrics": [
+      {
+        "path": "frontend/src/features/quotations/detail/useQuotationDetailController.ts",
+        "lines": 572
+      },
+      {
+        "path": "frontend/src/features/pricing/quotations/usePricingQuotationsController.ts",
+        "lines": 426
+      },
+      {
+        "path": "frontend/src/components/master-data/RolesPermissionsManager.tsx",
+        "lines": 491
+      }
+    ],
+    "directWriteFiles": [],
+    "fallbackFiles": [],
+    "resolvedSignals": [
+      "Audited live CRM, quotation, provider, and permission query modules currently avoid direct base-table writes.",
+      "Audited live CRM and master-data query paths are operating in canonical-only mode without fallback markers."
+    ]
+  }
+}

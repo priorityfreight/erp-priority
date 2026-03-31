@@ -4,6 +4,7 @@ import path from "node:path"
 import { NextResponse } from "next/server"
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer"
 import { CustomerQuotationPdf } from "@/components/quotations/CustomerQuotationPdf"
+import { brandAssets, normalizePublicAssetPath } from "@/lib/brand"
 import {
   mapContact,
   mapQuotationCargoLine,
@@ -18,8 +19,7 @@ async function getLogoDataUri() {
   const assetPath = path.join(
     process.cwd(),
     "public",
-    "assets",
-    "logo-horizontal-transparent.png"
+    normalizePublicAssetPath(brandAssets.documents.customerQuotation)
   )
   const file = await readFile(assetPath)
   return `data:image/png;base64,${file.toString("base64")}`

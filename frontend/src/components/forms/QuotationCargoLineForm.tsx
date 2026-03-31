@@ -1,6 +1,14 @@
 "use client"
 
 import { useMemo } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  PriorityFormHeader,
+  PriorityInfoField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
 import {
   calculateCbm,
   calculateVolumetricWeightKg,
@@ -171,11 +179,8 @@ export function QuotationCargoLineForm({
   const labels = getComputedLabels(serviceType)
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
       <div className="overflow-x-auto rounded-xl border border-[#D1D5DB] bg-white">
         <div className="min-w-[1120px]">
@@ -251,21 +256,22 @@ export function QuotationCargoLineForm({
               />
               <div className="flex items-center justify-center px-2 py-2">
                 {row.existingCargoId ? (
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
                     Base
-                  </span>
+                  </PriorityTypography>
                 ) : rows.length > 1 ? (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => onRemoveRow(row.draftId)}
-                    className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-2 py-1 text-xs font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]"
+                    variant="outline"
+                    className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
                   >
                     Quitar
-                  </button>
+                  </Button>
                 ) : (
-                  <span className="text-xs font-semibold uppercase tracking-wide text-transparent">
+                  <PriorityTypography variant="fieldLabel" className="text-transparent">
                     ---
-                  </span>
+                  </PriorityTypography>
                 )}
               </div>
             </div>
@@ -274,83 +280,66 @@ export function QuotationCargoLineForm({
       </div>
 
       <div className="flex justify-start">
-        <button
+        <Button
           type="button"
           onClick={onAddRow}
-          className="rounded-md border border-[#CBD5E1] bg-white px-4 py-2 text-sm font-medium text-[#1E3A8A] shadow-sm hover:bg-[#F8FAFC]"
+          variant="outline"
+          className="border-[#CBD5E1] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
         >
           Anadir otro tipo de carga
-        </button>
+        </Button>
       </div>
 
       <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-        <div className="text-sm font-semibold text-[#111827]">{labels.helperTitle}</div>
-        <div className="mt-1 text-sm text-[#64748B]">
+        <PriorityTypography variant="cardTitle">{labels.helperTitle}</PriorityTypography>
+        <PriorityTypography variant="bodyMuted" className="mt-1">
           {labels.helperDescription} El acumulado considera todos los renglones de la consolidacion.
-        </div>
+        </PriorityTypography>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              CBM
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {aggregateComputed.totalCbm != null
-                ? aggregateComputed.totalCbm.toFixed(3)
-                : "No disponible"}
-            </div>
-          </div>
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              KG / VOL
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {aggregateComputed.totalVolumetricWeightKg != null
+          <PriorityInfoField
+            label="CBM"
+            value={aggregateComputed.totalCbm != null ? aggregateComputed.totalCbm.toFixed(3) : "No disponible"}
+          />
+          <PriorityInfoField
+            label="KG / VOL"
+            value={
+              aggregateComputed.totalVolumetricWeightKg != null
                 ? aggregateComputed.totalVolumetricWeightKg.toFixed(2)
-                : "No disponible"}
-            </div>
-          </div>
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Clase estimada
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {aggregateComputed.estimatedClass || "No disponible"}
-            </div>
-          </div>
+                : "No disponible"
+            }
+          />
+          <PriorityInfoField label="Clase estimada" value={aggregateComputed.estimatedClass || "No disponible"} />
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Cantidad total
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {aggregateComputed.totalPieceCount > 0 ? aggregateComputed.totalPieceCount : "No disponible"}
-            </div>
-          </div>
-          <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Peso total
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {aggregateComputed.totalWeightKg > 0
+          <PriorityInfoField
+            label="Cantidad total"
+            value={aggregateComputed.totalPieceCount > 0 ? String(aggregateComputed.totalPieceCount) : "No disponible"}
+          />
+          <PriorityInfoField
+            label="Peso total"
+            value={
+              aggregateComputed.totalWeightKg > 0
                 ? `${aggregateComputed.totalWeightKg.toFixed(2)} kg`
-                : "No disponible"}
-            </div>
-          </div>
+                : "No disponible"
+            }
+          />
         </div>
       </div>
 
+      <PrioritySectionAlert title="Captura tabular" variant="info">
+        Este formulario prioriza velocidad de captura. Usa un renglon por tipo de carga y agrega otro solo cuando la consolidacion lo requiera.
+      </PrioritySectionAlert>
+
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={loading}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Guardando..." : submitLabel}
-          </button>
-        </div>
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

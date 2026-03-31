@@ -2,6 +2,10 @@
 
 This checklist is the minimum release gate before pushing a major ERP version to production-facing environments.
 
+For the clean production backend bootstrap, also follow:
+
+- [`PROD_BOOTSTRAP_CHECKLIST.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/PROD_BOOTSTRAP_CHECKLIST.md)
+
 
 --------------------------------------------------
 SCOPE
@@ -87,6 +91,15 @@ Run:
 cd frontend
 npm run lint
 npm run build
+npm run build-storybook
+npm run validation:repo-gate
+```
+
+Preferred one-command option when browser automation is needed locally:
+
+```bash
+cd frontend
+npm run validation:repo-gate:auto:headed
 ```
 
 Also run:
@@ -105,6 +118,12 @@ Auth
 - valid login works
 - inactive user is blocked
 - route visibility matches role
+- named-persona access matrix passes
+- named-persona field masking passes
+- Playwright critical workspace suite passes locally
+- if direct browser launch is blocked on macOS, use the approved external browser-server fallback before re-running the Playwright critical suite
+- Storybook workbench builds and the Priority stories render correctly
+- final local repo gate returns `READY_FOR_REPO`
 
 Users / Permissions
 

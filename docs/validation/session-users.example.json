@@ -1,0 +1,20 @@
+[
+  {
+    "persona": "sales",
+    "email": "sales@example.com",
+    "password": "replace-me",
+    "routePath": "/quotations"
+  },
+  {
+    "persona": "pricing",
+    "email": "pricing@example.com",
+    "password": "replace-me",
+    "routePath": "/pricing/quotations"
+  },
+  {
+    "persona": "admin",
+    "email": "admin@example.com",
+    "password": "replace-me",
+    "routePath": "/master-data/users/roles"
+  }
+]

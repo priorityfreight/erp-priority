@@ -802,6 +802,10 @@ returns trigger
 language plpgsql
 as $$
 begin
+  if current_setting('app.allow_test_hard_delete', true) = 'on' then
+    return old;
+  end if;
+
   raise exception 'Hard delete not allowed. Use the soft_delete_client() function.';
   return old;
 end;

@@ -11,6 +11,25 @@ Read this file first, then follow:
 
 
 --------------------------------------------------
+REPOSITORY IDENTITY AND PROJECT BOUNDARY
+--------------------------------------------------
+
+This repository is exclusively for Priority Logistics ERP.
+
+Hard boundary:
+
+- this codebase, schema, AI governance layer, and deployment pipeline belong only to Priority Logistics ERP
+- other businesses, other products, and other domains must never be merged into this repository unless the user explicitly approves a controlled consolidation
+- if another project exists for the same owner, AI must treat it as a separate system with separate context, separate architecture, and separate rules
+- if user instructions from another project appear here, AI must not apply them blindly; first confirm whether they are truly intended for Priority Logistics ERP
+
+Current explicit separation rule:
+
+- Priority Logistics ERP and the separate window-washing / WhatsApp-operated business system are different projects
+- they must not be mixed in architecture, workflows, entities, modules, prompts, or recommendations unless the user explicitly asks for that crossover
+
+
+--------------------------------------------------
 SYSTEM PURPOSE
 --------------------------------------------------
 
@@ -94,6 +113,75 @@ AI governance:
 
 
 --------------------------------------------------
+ENVIRONMENT TOPOLOGY
+--------------------------------------------------
+
+Current recommended topology for this stage of the project:
+
+1. LOCAL application
+2. TRAIN database environment (current linked backend under active validation)
+3. LIVE application deployment
+4. PROD database environment (new clean production backend with no inherited test data)
+
+Operational interpretation:
+
+- the current Supabase backend should now be treated as TRAIN, not as final production
+- the future production cutover should use a new clean PROD database
+- LIVE must point only to PROD
+- LOCAL may point to TRAIN during active development and validation
+
+Decision rule for now:
+
+- use 2 database environments only: TRAIN and PROD
+- do not add a third remote database environment unless a concrete business or release need appears
+- keep infrastructure simple and low-cost until the ERP proves stable under controlled training usage
+
+Promotion rule:
+
+- promote structure, not working data
+- schema, migrations, functions, views, triggers, policies, controlled seeds, and approved configuration may move from TRAIN to PROD
+- ad hoc operational records, test records, and incidental working data must not be copied from TRAIN into PROD
+
+Safety rule:
+
+- no stress, load, or ephemeral validation writes may run against PROD
+- TRAIN is the only remote environment allowed for destructive validation and temporary audit data
+
+Current hardening phase rule:
+
+- until TRAIN passes hardening exit criteria, the project is in stability-only mode
+- stability-only mode prioritizes fixes, refactors, cleanup, validation, and observability over new module construction
+- destructive validation on TRAIN must always use explicit test prefixes, ledger tracking, cleanup routines, and post-cleanup clean-state verification
+- when destructive validation needs authenticated personas, it may bootstrap ephemeral validation users only in TRAIN or an approved writable clone
+- those validation users must be clearly identifiable, stored only in runtime artifacts, and removed from both `public.users` and `auth.users` during cleanup
+- stress validation should prefer reusable authenticated session pools over repeated sign-in bursts, especially at heavy and stress load levels
+- authenticated route checks should run after the main concurrency peak or against a controlled subset so they do not distort the load signal
+- named-persona access-matrix validation must run before destructive break and stress tiers whenever session users are bootstrapped for TRAIN
+- named-persona field-masking validation must run before destructive break and stress tiers whenever sensitive quotation or pricing fields are in scope
+- stress artifacts must record the configured pool counts, the signed-in pool counts actually used, and the authenticated post-peak check count so every destructive run remains auditable
+
+Frontend foundation rule:
+
+- `shadcn/ui` is the only approved primitive UI foundation for this repository
+- `frontend/src/components/priority/` is the ERP-facing wrapper layer and should remain the stable public interface for live modules
+- if an official `shadcn` primitive or pattern is adopted after a custom wrapper already exists, rebase the wrapper internally instead of bypassing `Priority UI`
+- current canonical internal bases for the approved wrapper layer include `frontend/src/components/ui/combobox.tsx`, `frontend/src/components/ui/data-table.tsx`, and `frontend/src/components/ui/empty.tsx`
+- semantic typography is part of the frontend foundation and must be applied through shared roles, not improvised per page
+- live forms must use the shared Priority form layer (`PriorityFormHeader`, `PriorityFormSection`, `PriorityFormField`, `PriorityInfoField`, `PrioritySubmitBar`) instead of raw input/button markup
+- `ToggleGroup` is the preferred control for short mutually exclusive choices; `Switch` is the preferred control for true on/off states
+- the approved Priority UI catalog is documented in `AI_PRIORITY_UI_REGISTRY.md` and mirrored in `frontend/src/components/priority/registry.ts`
+- frontend visual validation is now a two-layer system:
+  - `Playwright` for real route/auth/browser validation under `frontend/tests/e2e/`
+  - `Storybook` for isolated visual review of Priority UI under `frontend/src/stories/priority/`
+- Storybook does not replace route-level validation; it exists to inspect typography, actions, forms, tables, and empty states before or alongside live-screen audits
+- when macOS prevents direct Playwright browser launch under Codex or another non-terminal host runtime, the approved fallback is an external Playwright browser server started from a normal local terminal via `npm run test:e2e:server`
+- when `.playwright/browser-server.json` exists, Playwright config and `validation:repo-gate` may connect through that websocket instead of launching a browser process directly
+- `npm run validation:repo-gate:auto` and `npm run validation:repo-gate:auto:headed` are the preferred operational wrappers for repository handoff because they can bootstrap that browser server automatically and clean it afterward
+- the official local handoff gate for repository closeout is `npm run validation:repo-gate`
+- `READY_FOR_REPO` or `NOT_READY_FOR_REPO` must come from that reproducible gate artifact, not from subjective review alone
+
+
+--------------------------------------------------
 REPOSITORY ARCHITECTURE
 --------------------------------------------------
 
@@ -147,7 +235,20 @@ Current shared layout components:
 Current brand assets:
 
 - root source of truth: ASSETS/
-- runtime asset copies: frontend/public/assets/
+- official shell, login, topbar, and sidebar lockup: frontend/public/assets/logo_vSVG.svg
+- document and PDF runtime assets: frontend/public/assets/
+- canonical asset registry and metadata source: frontend/src/lib/brand.ts
+- live routes, layout components, and PDF routes must not hardcode logo paths directly
+- custom prototype assets under frontend/public/brand/ are optional references only and must not override the approved synced shell lockup
+
+Current UI foundation:
+
+- `shadcn/ui` with `radix` is the only approved primitive foundation for the frontend
+- primitives live under `frontend/src/components/ui/`
+- branded ERP wrappers and compositions live under `frontend/src/components/priority/`
+- new UI work must prefer the Priority wrapper layer over ad hoc raw primitive usage when wrappers already exist
+- the global navigation model remains sidebar + topbar
+- tabs are approved only as internal organization inside dense workspaces, not as a replacement for shell navigation
 
 Current database modules:
 
@@ -472,7 +573,7 @@ Master Data
 - the canonical UN/LOCODE contract for all modules is:
   unlocodes + unlocode_lookup_view + search_unlocodes()
 - clients, providers, and opportunities now persist gradual strong references to UN/LOCODE rows while keeping compatible text codes
-- UN/LOCODE snapshot fallback remains only as temporary rollback safety and must not be extended as a permanent product path
+- live master-data reads now run in canonical-only mode; UN/LOCODE snapshot assets may remain in-repo for recovery work, but they are no longer part of the live query path
 - no module should use free-text origin, destination, or city fields as the source of truth when a UN/LOCODE selection exists
 - the next backend optimization for UN/LOCODE must preserve the same frontend contract while improving indexing and ranking
 - the linked Supabase dev backend already contains the imported UN/LOCODE dataset

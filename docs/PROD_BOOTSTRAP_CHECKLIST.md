@@ -1,0 +1,199 @@
+# PROD Bootstrap Checklist
+
+This checklist defines the controlled bootstrap path for the clean `PROD` backend and the `LIVE` deployment.
+
+Use it only after `TRAIN` passes the current hardening gate.
+
+
+--------------------------------------------------
+PRINCIPLES
+--------------------------------------------------
+
+- `PROD` starts clean.
+- Promote structure from `TRAIN`, never incidental working data.
+- Only controlled seeds and approved configuration may enter `PROD`.
+- `LIVE` must point only to `PROD`.
+- No validation prefixes or temporary users may exist in `PROD`.
+
+
+--------------------------------------------------
+ENTRY GATE
+--------------------------------------------------
+
+Before creating `PROD`, confirm all of the following:
+
+- latest [`live-local-final-report.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/validation/live-local-final-report.md) has no `critical` or `high` findings
+- latest [`live-local-stress-sequence.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/validation/live-local-stress-sequence.md) completed end to end
+- latest [`live-local-clean-state.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/validation/live-local-clean-state.md) reports `0` residue
+- branding assets are synchronized and approved
+- access matrix passes
+- field-masking gate passes
+- rollback branch/reference is recorded for the exact release SHA
+
+
+--------------------------------------------------
+SUPABASE PROD CREATION
+--------------------------------------------------
+
+1. Create a new Supabase project for `PROD`
+
+- do not clone `TRAIN` data
+- record the new project ref
+- record region, plan tier, and owner
+
+2. Configure secrets and environment inventory
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- cron secrets if used
+- admin API secrets if used
+
+3. Capture clean bootstrap evidence
+
+- empty-table baseline
+- project ref
+- creation timestamp
+- responsible release SHA
+
+
+--------------------------------------------------
+SCHEMA PROMOTION
+--------------------------------------------------
+
+1. Dry-run the current backend state
+
+```bash
+supabase db push --dry-run
+```
+
+2. Apply canonical migrations only
+
+```bash
+supabase db push
+```
+
+3. Verify structure was promoted
+
+- tables
+- views
+- functions
+- triggers
+- RLS policies
+- grants
+
+4. If backend contracts changed before release:
+
+```bash
+cd frontend
+npm run types
+```
+
+
+--------------------------------------------------
+CONTROLLED SEEDS ONLY
+--------------------------------------------------
+
+Allowed in `PROD`:
+
+- roles
+- permission actions
+- permission conditions
+- permission resources
+- permission fields
+- service transport types if managed canonically
+- accounting concepts if managed canonically
+- quotation rejection reasons if managed canonically
+- required branch bootstrap records only if the business needs them to operate day one
+
+Not allowed from `TRAIN`:
+
+- clients
+- contacts
+- opportunities
+- quotations
+- providers created during hardening
+- validation users
+- exchange-rate test rows
+- any `TEST_`, `LOADTEST_`, `QA_`, `STRESS_` data
+
+
+--------------------------------------------------
+INITIAL ACCESS BOOTSTRAP
+--------------------------------------------------
+
+1. Create the first real Auth admin user in Supabase Auth
+2. Create or activate the matching `public.users` record
+3. Assign the correct admin role
+4. Confirm login works in `LIVE`
+5. Confirm inactive-user blocking still works
+
+
+--------------------------------------------------
+LIVE DEPLOYMENT CONFIGURATION
+--------------------------------------------------
+
+Before pointing `LIVE` to `PROD`, verify in Vercel:
+
+- production env vars point to the new `PROD` project
+- preview/dev env vars do not point to `PROD`
+- no `TRAIN` write credentials are present in production
+- PDF/document routes use the same approved branding assets
+
+
+--------------------------------------------------
+POST-BOOTSTRAP VALIDATION ON PROD
+--------------------------------------------------
+
+Run the safe subset first:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+npm run validation:smoke
+```
+
+Then run manual smoke against `PROD`:
+
+- login with the initial admin
+- dashboard load
+- master data shell load
+- users/roles workspace load
+- access matrix sanity check by role
+- field-masking sanity check by role
+- customer document preview/PDF branding check
+- pricing request preview/PDF branding check
+
+Do not run destructive stress or ephemeral validation writes on `PROD`.
+
+
+--------------------------------------------------
+CUTOVER RULE
+--------------------------------------------------
+
+`LIVE` may point to `PROD` only when:
+
+- schema promotion is complete
+- controlled seeds are complete
+- first admin bootstrap is complete
+- read-only and manual smoke pass
+- branding is approved
+- no open blocker remains in the release gate
+
+
+--------------------------------------------------
+FINAL SIGN-OFF RECORD
+--------------------------------------------------
+
+Record all of the following in the release note:
+
+- release SHA
+- `TRAIN` validation report timestamp
+- `PROD` project ref
+- migration batch applied
+- seeds applied
+- first admin bootstrap completed
+- `LIVE` env vars switched
+- smoke completed
+- approval owner

@@ -16,7 +16,7 @@ CURRENT BACKEND STATE
 
 - the linked Supabase cloud project is the canonical backend
 - the active frontend must target the canonical backend first
-- legacy and snapshot fallback code remains only as temporary rollback safety
+- the live frontend query layer now runs in canonical-only mode for CRM and master data
 - no new product capability may depend on fallback-only behavior
 
 
@@ -109,14 +109,13 @@ Fallback code is allowed only for temporary rollback safety.
 
 Approved temporary fallback categories:
 
-- canonical vs legacy backend detection during transition periods
-- local UN/LOCODE snapshot contingency when canonical master data is unavailable
-- browser overlay storage for non-canonical client profile compatibility
+- offline or recovery-oriented utilities that are not part of the live query path
+- imported reference snapshots stored in-repo for reproducible recovery work
 
 Fallback code must:
 
 1. be clearly labeled as temporary rollback safety
-2. live behind the canonical path, never replace it as default behavior
+2. stay outside the live query path unless the user explicitly approves rollback-oriented compatibility work
 3. avoid introducing new product behavior unavailable in the canonical backend
 4. be removed once validation confirms the canonical path is stable
 

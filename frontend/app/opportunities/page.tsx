@@ -1,7 +1,8 @@
 "use client"
 
+import { type ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
-import { useDeferredValue, useEffect, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import {
   createOpportunity,
   deleteOpportunity,
@@ -16,10 +17,16 @@ import {
   type ServiceTransportType,
   type User,
 } from "@/lib/db"
+import { getErrorMessage, notifyError, notifyWarning } from "@/lib/feedback"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { Modal } from "@/components/data/Modal"
 import { OpportunityForm, type OpportunityFormValues } from "@/components/forms/OpportunityForm"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const statusOptions = [
   "investigando",
@@ -60,6 +67,7 @@ export default function OpportunitiesPage() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { confirm, confirmDialog } = usePriorityConfirm()
 
   async function loadReferenceData() {
     try {
@@ -75,6 +83,7 @@ export default function OpportunitiesPage() {
       setIncoterms(incotermData)
     } catch (error) {
       console.error(error)
+      notifyError("No se pudo cargar la referencia comercial", getErrorMessage(error, "Intenta nuevamente."))
     }
   }
 
@@ -92,6 +101,7 @@ export default function OpportunitiesPage() {
       setOpportunities(opportunitiesData)
     } catch (error) {
       console.error(error)
+      notifyError("No se pudieron cargar las oportunidades", getErrorMessage(error, "Intenta nuevamente."))
     } finally {
       setLoading(false)
     }
@@ -115,32 +125,32 @@ export default function OpportunitiesPage() {
 
   async function handleCreateOpportunity() {
     if (!formValues.clientId) {
-      alert("Selecciona un cliente")
+      notifyWarning("Selecciona un cliente")
       return
     }
 
     if (!formValues.serviceType) {
-      alert("Selecciona un tipo de servicio")
+      notifyWarning("Selecciona un tipo de servicio")
       return
     }
 
     if (!formValues.transportType) {
-      alert("Selecciona un tipo de transporte")
+      notifyWarning("Selecciona un tipo de transporte")
       return
     }
 
     if (!formValues.operationType) {
-      alert("Selecciona el tipo de operacion")
+      notifyWarning("Selecciona el tipo de operacion")
       return
     }
 
     if (!formValues.incotermId) {
-      alert("Selecciona el incoterm")
+      notifyWarning("Selecciona el incoterm")
       return
     }
 
     if (!formValues.originUnlocode || !formValues.destinationUnlocode) {
-      alert("Selecciona origen y destino desde UN/LOCODE")
+      notifyWarning("Selecciona origen y destino desde UN/LOCODE")
       return
     }
 
@@ -167,14 +177,19 @@ export default function OpportunitiesPage() {
       await loadOpportunityList(search, statusFilter)
     } catch (error) {
       console.error(error)
-      alert("Error creating opportunity")
+      notifyError("Error creating opportunity", getErrorMessage(error, "The opportunity could not be saved."))
     } finally {
       setCreating(false)
     }
   }
 
-  async function handleDeleteOpportunity(id: string) {
-    const confirmed = window.confirm("Delete this opportunity?")
+  const handleDeleteOpportunity = useCallback(async (id: string, title: string) => {
+    const confirmed = await confirm({
+      title: "Eliminar oportunidad",
+      description: `Se eliminara ${title} y se perdera el seguimiento comercial relacionado.`,
+      actionLabel: "Eliminar oportunidad",
+      variant: "destructive",
+    })
 
     if (!confirmed) {
       return
@@ -186,17 +201,96 @@ export default function OpportunitiesPage() {
       await loadOpportunityList(search, statusFilter)
     } catch (error) {
       console.error(error)
-      alert("Error deleting opportunity")
+      notifyError("Error deleting opportunity", getErrorMessage(error, "The opportunity could not be deleted."))
     } finally {
       setDeletingId(null)
     }
-  }
+  }, [confirm, search, statusFilter])
 
-  const filteredOpportunities = opportunities
-
-  const totalPipeline = filteredOpportunities.reduce(
+  const totalPipeline = opportunities.reduce(
     (sum, opportunity) => sum + (opportunity.estimated_value ?? 0),
     0
+  )
+
+  const opportunityColumns = useMemo<ColumnDef<OpportunitySummary>[]>(
+    () => [
+      {
+        accessorKey: "title",
+        header: "Oportunidad",
+        cell: ({ row }) => (
+          <Link
+            href={`/opportunities/${row.original.id}`}
+            className="font-medium text-[var(--brand-navy)] hover:text-[var(--brand-burgundy)]"
+          >
+            {row.original.title || "Oportunidad"}
+          </Link>
+        ),
+      },
+      {
+        accessorKey: "client_name",
+        header: "Cliente",
+        cell: ({ row }) => row.original.client_name || "No client",
+      },
+      {
+        id: "service",
+        header: "Servicio",
+        cell: ({ row }) =>
+          [row.original.service_type, row.original.transport_type].filter(Boolean).join(" / ") ||
+          "No definido",
+      },
+      {
+        id: "lane",
+        header: "Lane",
+        cell: ({ row }) =>
+          row.original.origin && row.original.destination
+            ? `${row.original.origin} -> ${row.original.destination}`
+            : "No definido",
+      },
+      {
+        accessorKey: "salesperson_name",
+        header: "Usuario",
+        cell: ({ row }) => row.original.salesperson_name || "No asignado",
+      },
+      {
+        accessorKey: "status",
+        header: "Estatus",
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: "estimated_value",
+        header: "Estimated value",
+        cell: ({ row }) =>
+          row.original.estimated_value != null
+            ? `$${row.original.estimated_value.toLocaleString()}`
+            : "No value",
+      },
+      {
+        accessorKey: "expiration_date",
+        header: "Vencimiento",
+        cell: ({ row }) => row.original.expiration_date || "No definida",
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-2">
+            <Button asChild type="button" variant="outline" size="sm">
+              <Link href={`/opportunities/${row.original.id}`}>Ver</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => void handleDeleteOpportunity(row.original.id, row.original.title || "esta oportunidad")}
+              disabled={deletingId === row.original.id}
+            >
+              {deletingId === row.original.id ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [deletingId, handleDeleteOpportunity]
   )
 
   return (
@@ -204,13 +298,9 @@ export default function OpportunitiesPage() {
       title="Opportunities"
       description="Seguimiento comercial de oportunidades con servicio, transporte, lane y vencimiento."
       actions={
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-        >
+        <Button type="button" size="lg" onClick={() => setShowCreateModal(true)}>
           Anadir oportunidad
-        </button>
+        </Button>
       }
     >
       <div className="space-y-8">
@@ -219,9 +309,7 @@ export default function OpportunitiesPage() {
             <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
               Oportunidades
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {filteredOpportunities.length}
-            </div>
+            <div className="mt-2 text-2xl font-semibold text-[#111827]">{opportunities.length}</div>
           </div>
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
@@ -236,7 +324,7 @@ export default function OpportunitiesPage() {
               Investigando
             </div>
             <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {filteredOpportunities.filter((item) => item.status === "investigando").length}
+              {opportunities.filter((item) => item.status === "investigando").length}
             </div>
           </div>
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
@@ -244,126 +332,57 @@ export default function OpportunitiesPage() {
               Cotizando
             </div>
             <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {filteredOpportunities.filter((item) => item.status === "cotizando").length}
+              {opportunities.filter((item) => item.status === "cotizando").length}
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="space-y-4 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.95)] p-5 shadow-[0_28px_60px_-46px_rgba(3,10,24,0.45)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Lista de oportunidades</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+              <h2 className="text-lg font-semibold text-[var(--brand-navy)]">Lista de oportunidades</h2>
+              <p className="mt-1 text-sm text-[#5B6A7D]">
                 Vista comercial con cliente, servicio, lane, owner y fechas clave.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PriorityInput
                 placeholder="Buscar oportunidad"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                <option value="all">Todos los estatus</option>
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setStatusFilter}
+                placeholder="Filtra por estatus"
+                options={[
+                  { value: "all", label: "Todos los estatus" },
+                  ...statusOptions.map((status) => ({
+                    value: status,
+                    label: status,
+                  })),
+                ]}
+              />
             </div>
           </div>
 
           {loading ? (
-            <p className="text-sm text-[#6B7280]">Cargando oportunidades...</p>
-          ) : filteredOpportunities.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">
-              {!deferredSearch.trim() && statusFilter === "all"
-                ? "No opportunities yet. Create the first one from the popup."
-                : "No opportunities match the current filters."}
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Oportunidad</th>
-                    <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3">Servicio</th>
-                    <th className="px-4 py-3">Lane</th>
-                    <th className="px-4 py-3">Usuario</th>
-                    <th className="px-4 py-3">Estatus</th>
-                    <th className="px-4 py-3">Estimated value</th>
-                    <th className="px-4 py-3">Vencimiento</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {filteredOpportunities.map((opportunity) => (
-                    <tr key={opportunity.id}>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/opportunities/${opportunity.id}`}
-                          className="font-medium text-[#111827] hover:text-[#1D4ED8]"
-                        >
-                          {opportunity.title || "Oportunidad"}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {opportunity.client_name || "No client"}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {[opportunity.service_type, opportunity.transport_type]
-                          .filter(Boolean)
-                          .join(" / ") || "No definido"}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {opportunity.origin && opportunity.destination
-                          ? `${opportunity.origin} -> ${opportunity.destination}`
-                          : "No definido"}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {opportunity.salesperson_name || "No asignado"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={opportunity.status} />
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {opportunity.estimated_value != null
-                          ? `$${opportunity.estimated_value.toLocaleString()}`
-                          : "No value"}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {opportunity.expiration_date || "No definida"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/opportunities/${opportunity.id}`}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                          >
-                            Ver
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteOpportunity(opportunity.id)}
-                            disabled={deletingId === opportunity.id}
-                            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingId === opportunity.id ? "Deleting..." : "Delete"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <Skeleton className="h-12 rounded-[20px]" />
+              <Skeleton className="h-12 rounded-[20px]" />
+              <Skeleton className="h-12 rounded-[20px]" />
             </div>
+          ) : (
+            <PriorityDataTable
+              columns={opportunityColumns}
+              data={opportunities}
+              emptyTitle={!deferredSearch.trim() && statusFilter === "all" ? "Sin oportunidades" : "Sin resultados"}
+              emptyDescription={
+                !deferredSearch.trim() && statusFilter === "all"
+                  ? "Todavia no hay oportunidades. Crea la primera desde este popup."
+                  : "No encontramos oportunidades con los filtros actuales."
+              }
+            />
           )}
         </section>
       </div>
@@ -408,6 +427,8 @@ export default function OpportunitiesPage() {
           />
         </Modal>
       ) : null}
+
+      {confirmDialog}
     </PageContainer>
   )
 }

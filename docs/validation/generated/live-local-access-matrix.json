@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-03-28T08:26:04.500Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "checks": [
+    {
+      "persona": "sales",
+      "ok": true,
+      "durationMs": 1141,
+      "details": {
+        "persona": "sales",
+        "roleName": "Ventas",
+        "active": true,
+        "allowedRoute": "/quotations",
+        "deniedRoutesChecked": [
+          {
+            "routePath": "/pricing/quotations",
+            "accessAllowed": false,
+            "presentInNavigation": false
+          },
+          {
+            "routePath": "/master-data/users/roles",
+            "accessAllowed": false,
+            "presentInNavigation": false
+          }
+        ],
+        "navigationCount": 5
+      }
+    },
+    {
+      "persona": "pricing",
+      "ok": true,
+      "durationMs": 908,
+      "details": {
+        "persona": "pricing",
+        "roleName": "Pricing",
+        "active": true,
+        "allowedRoute": "/pricing/quotations",
+        "deniedRoutesChecked": [
+          {
+            "routePath": "/master-data/users/roles",
+            "accessAllowed": false,
+            "presentInNavigation": false
+          }
+        ],
+        "navigationCount": 3
+      }
+    },
+    {
+      "persona": "admin",
+      "ok": true,
+      "durationMs": 690,
+      "details": {
+        "persona": "admin",
+        "roleName": "Admin",
+        "active": true,
+        "allowedRoute": "/master-data/users/roles",
+        "deniedRoutesChecked": [],
+        "navigationCount": 15
+      }
+    }
+  ]
+}

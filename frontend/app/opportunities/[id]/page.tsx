@@ -19,11 +19,13 @@ import {
   updateOpportunity,
   updateOpportunityStatus,
 } from "@/lib/db"
+import { getErrorMessage, notifyError, notifyWarning } from "@/lib/feedback"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { Modal } from "@/components/data/Modal"
 import { OpportunityForm, type OpportunityFormValues } from "@/components/forms/OpportunityForm"
 import { QuotationForm, type QuotationFormValues } from "@/components/forms/QuotationForm"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
 
 const statusOptions = [
   { value: "investigando", label: "Investigando" },
@@ -155,6 +157,7 @@ export default function OpportunityDetailPage() {
     requiredQuoteDate: "",
   })
   const [status, setStatus] = useState("investigando")
+  const { confirm, confirmDialog } = usePriorityConfirm()
 
   function syncForm(opportunity: OpportunityWithClient) {
     setFormValues({
@@ -244,27 +247,27 @@ export default function OpportunityDetailPage() {
     }
 
     if (!formValues.clientId) {
-      alert("Selecciona un cliente")
+      notifyWarning("Selecciona un cliente")
       return
     }
 
     if (!formValues.serviceType || !formValues.transportType) {
-      alert("Selecciona servicio y transporte")
+      notifyWarning("Selecciona servicio y transporte")
       return
     }
 
     if (!formValues.operationType) {
-      alert("Selecciona el tipo de operacion")
+      notifyWarning("Selecciona el tipo de operacion")
       return
     }
 
     if (!formValues.incotermId) {
-      alert("Selecciona el incoterm")
+      notifyWarning("Selecciona el incoterm")
       return
     }
 
     if (!formValues.originUnlocode || !formValues.destinationUnlocode) {
-      alert("Selecciona origen y destino desde UN/LOCODE")
+      notifyWarning("Selecciona origen y destino desde UN/LOCODE")
       return
     }
 
@@ -289,7 +292,7 @@ export default function OpportunityDetailPage() {
       setShowEditModal(false)
     } catch (error) {
       console.error(error)
-      alert("Error saving opportunity")
+      notifyError("Error saving opportunity", getErrorMessage(error, "The opportunity could not be saved."))
     } finally {
       setSaving(false)
     }
@@ -310,7 +313,7 @@ export default function OpportunityDetailPage() {
     } catch (error) {
       console.error(error)
       setStatus(previousStatus)
-      alert("Error updating opportunity status")
+      notifyError("Error updating opportunity status", getErrorMessage(error, "Status could not be updated."))
     } finally {
       setSavingStatus(false)
     }
@@ -321,7 +324,12 @@ export default function OpportunityDetailPage() {
       return
     }
 
-    const confirmed = window.confirm("Delete this opportunity?")
+    const confirmed = await confirm({
+      title: "Eliminar oportunidad",
+      description: "La oportunidad se eliminara y ya no podra convertirse en cotizacion.",
+      actionLabel: "Eliminar oportunidad",
+      variant: "destructive",
+    })
     if (!confirmed) {
       return
     }
@@ -332,7 +340,7 @@ export default function OpportunityDetailPage() {
       router.push("/opportunities")
     } catch (error) {
       console.error(error)
-      alert("Error deleting opportunity")
+      notifyError("Error deleting opportunity", getErrorMessage(error, "The opportunity could not be deleted."))
       setDeleting(false)
     }
   }
@@ -344,7 +352,7 @@ export default function OpportunityDetailPage() {
 
     const readinessIssues = getQuotationReadinessIssues(details.opportunity)
     if (readinessIssues.length > 0) {
-      alert(
+      notifyWarning(
         `La oportunidad debe completar estos campos antes de cotizar: ${readinessIssues.join(", ")}`
       )
       return
@@ -368,7 +376,7 @@ export default function OpportunityDetailPage() {
       router.push(`/quotations/${quotationId}`)
     } catch (error) {
       console.error(error)
-      alert("No se pudo crear la cotizacion")
+      notifyError("No se pudo crear la cotizacion", getErrorMessage(error, "Intenta nuevamente."))
     } finally {
       setCreatingQuote(false)
     }
@@ -637,6 +645,8 @@ export default function OpportunityDetailPage() {
           )}
         </Modal>
       ) : null}
+
+      {confirmDialog}
     </PageContainer>
   )
 }

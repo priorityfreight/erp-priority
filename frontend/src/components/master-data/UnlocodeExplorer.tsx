@@ -2,17 +2,26 @@
 
 import { useEffect, useState } from "react"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
+import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
+import { Button } from "@/components/ui/button"
 import { searchUnlocodes, type UnlocodeCountrySummary, type UnlocodeRecord, type UnlocodeSearchResult } from "@/lib/db"
 
 const pageSize = 25
 
 function EmptyState({ hasQuery }: { hasQuery: boolean }) {
   return (
-    <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-6 py-10 text-center text-sm text-[#64748B]">
-      {hasQuery
-        ? "No UN/LOCODE rows match the current search."
-        : "No UN/LOCODE data is available for the current filter."}
-    </div>
+    <PriorityEmptyState
+      title={hasQuery ? "Sin coincidencias UN/LOCODE" : "Sin datos UN/LOCODE"}
+      description={
+        hasQuery
+          ? "No UN/LOCODE rows match the current search."
+          : "No UN/LOCODE data is available for the current filter."
+      }
+      variant={hasQuery ? "search" : "default"}
+    />
   )
 }
 
@@ -112,14 +121,13 @@ export function UnlocodeExplorer() {
         <section className="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Lookup Explorer</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+              <PriorityCardTitle>Lookup Explorer</PriorityCardTitle>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 Search by UN/LOCODE, location name, subdivision, IATA, or coordinates.
-              </p>
+              </PriorityTypography>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="w-full rounded-md border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+            <PriorityToolbar className="flex flex-col gap-3 sm:flex-row">
+              <PriorityInput
                 placeholder="Search code or location"
                 value={query}
                 onChange={(event) => {
@@ -128,23 +136,20 @@ export function UnlocodeExplorer() {
                   setQuery(event.target.value)
                 }}
               />
-              <select
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={countryCode}
-                onChange={(event) => {
+                onValueChange={(value) => {
                   setLoading(true)
                   setPage(1)
-                  setCountryCode(event.target.value)
+                  setCountryCode(value)
                 }}
-              >
-                <option value="all">All Countries</option>
-                {countryOptions.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </select>
-            </div>
+                placeholder="Country"
+                options={[
+                  { value: "all", label: "All Countries" },
+                  ...countryOptions.map((code) => ({ value: code, label: code })),
+                ]}
+              />
+            </PriorityToolbar>
           </div>
 
           <div className="flex flex-wrap gap-2 text-xs">
@@ -217,32 +222,32 @@ export function UnlocodeExplorer() {
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-xs font-medium uppercase tracking-wide text-[#6B7280]">
+            <PriorityTypography variant="caption" className="uppercase tracking-[0.14em]">
               Page {page} of {totalPages}
-            </div>
+            </PriorityTypography>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
                 onClick={() => {
                   setLoading(true)
                   setPage((current) => Math.max(1, current - 1))
                 }}
+                type="button"
+                variant="outline"
                 disabled={page <= 1}
-                className="rounded-md border border-[#E5E7EB] px-3 py-2 text-sm font-medium text-[#374151] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 onClick={() => {
                   setLoading(true)
                   setPage((current) => Math.min(totalPages, current + 1))
                 }}
+                type="button"
+                variant="outline"
                 disabled={page >= totalPages}
-                className="rounded-md border border-[#E5E7EB] px-3 py-2 text-sm font-medium text-[#374151] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         </section>

@@ -1,0 +1,2661 @@
+{
+  "generatedAt": "2026-03-27T18:30:21.048Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "modules": [
+    {
+      "id": "login-access",
+      "label": "Login y control de acceso",
+      "routes": [
+        "/login"
+      ],
+      "entryFiles": [
+        "frontend/app/login/page.tsx",
+        "frontend/src/components/auth/LoginScreen.tsx",
+        "frontend/proxy.ts"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/auth.ts",
+        "frontend/src/lib/permissions/server.ts",
+        "frontend/src/lib/db/permissions.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Gate global via proxy + erp_can_access_route().",
+        "Perfil actual via get_current_erp_user()."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/login/page.tsx",
+          "lines": 14,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/auth/LoginScreen.tsx",
+          "lines": 186,
+          "useStateCount": 3,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        },
+        {
+          "path": "frontend/proxy.ts",
+          "lines": 95,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/auth.ts",
+          "rpcCalls": [
+            "get_current_erp_user",
+            "link_current_auth_user",
+            "resolve_login_identity"
+          ],
+          "relationReads": [],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/permissions/server.ts",
+          "rpcCalls": [
+            "erp_can_access_route",
+            "get_current_erp_user"
+          ],
+          "relationReads": [],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/permissions.ts",
+          "rpcCalls": [
+            "erp_can_access_route",
+            "get_current_navigation_items"
+          ],
+          "relationReads": [
+            "permission_actions",
+            "permission_conditions",
+            "permission_field_catalog_view",
+            "permission_resource_catalog_view",
+            "role_field_permission_matrix_view",
+            "role_field_permissions",
+            "role_resource_permission_matrix_view",
+            "role_resource_permissions"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "erp_can_access_route",
+          "get_current_erp_user",
+          "get_current_navigation_items",
+          "link_current_auth_user",
+          "resolve_login_identity"
+        ],
+        "relations": [
+          "permission_actions",
+          "permission_conditions",
+          "permission_field_catalog_view",
+          "permission_resource_catalog_view",
+          "role_field_permission_matrix_view",
+          "role_field_permissions",
+          "role_resource_permission_matrix_view",
+          "role_resource_permissions"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "dashboard",
+      "label": "Dashboard",
+      "routes": [
+        "/dashboard"
+      ],
+      "entryFiles": [
+        "frontend/app/dashboard/page.tsx",
+        "frontend/src/components/crm/CrmOverview.tsx"
+      ],
+      "queryFiles": [],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso de ruta resuelto por proxy."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/dashboard/page.tsx",
+          "lines": 6,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/crm/CrmOverview.tsx",
+          "lines": 254,
+          "useStateCount": 1,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [],
+      "backendContracts": {
+        "rpcs": [],
+        "relations": [],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "master-data-users",
+      "label": "Master Data / Users",
+      "routes": [
+        "/master-data/users"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/users/page.tsx",
+        "frontend/src/components/master-data/UsersManager.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/users.ts",
+        "frontend/src/lib/permissions/server.ts"
+      ],
+      "apiFiles": [
+        "frontend/app/api/admin/users/route.ts"
+      ],
+      "permissionNotes": [
+        "Server gate via ensureRouteAccessOrRedirect('/master-data/users').",
+        "Mutaciones sensibles pasan por /api/admin/users."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/users/page.tsx",
+          "lines": 15,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/UsersManager.tsx",
+          "lines": 533,
+          "useStateCount": 4,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/users.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "roles",
+            "users"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/permissions/server.ts",
+          "rpcCalls": [
+            "erp_can_access_route",
+            "get_current_erp_user"
+          ],
+          "relationReads": [],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "erp_can_access_route",
+          "get_current_erp_user"
+        ],
+        "relations": [
+          "roles",
+          "users"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "roles-permissions",
+      "label": "Roles y permisos",
+      "routes": [
+        "/master-data/users/roles"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/users/roles/page.tsx",
+        "frontend/src/components/master-data/RolesPermissionsManager.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/permissions.ts",
+        "frontend/src/lib/permissions/server.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Server gate via ensureRouteAccessOrRedirect('/master-data/users/roles').",
+        "Masking y acceso dependen de role_resource_permissions / role_field_permissions."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/users/roles/page.tsx",
+          "lines": 10,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/RolesPermissionsManager.tsx",
+          "lines": 898,
+          "useStateCount": 5,
+          "useEffectCount": 4,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/permissions.ts",
+          "rpcCalls": [
+            "erp_can_access_route",
+            "get_current_navigation_items"
+          ],
+          "relationReads": [
+            "permission_actions",
+            "permission_conditions",
+            "permission_field_catalog_view",
+            "permission_resource_catalog_view",
+            "role_field_permission_matrix_view",
+            "role_field_permissions",
+            "role_resource_permission_matrix_view",
+            "role_resource_permissions"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/permissions/server.ts",
+          "rpcCalls": [
+            "erp_can_access_route",
+            "get_current_erp_user"
+          ],
+          "relationReads": [],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "erp_can_access_route",
+          "get_current_erp_user",
+          "get_current_navigation_items"
+        ],
+        "relations": [
+          "permission_actions",
+          "permission_conditions",
+          "permission_field_catalog_view",
+          "permission_resource_catalog_view",
+          "role_field_permission_matrix_view",
+          "role_field_permissions",
+          "role_resource_permission_matrix_view",
+          "role_resource_permissions"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "clients",
+      "label": "Clients",
+      "routes": [
+        "/clients"
+      ],
+      "entryFiles": [
+        "frontend/app/clients/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/clients.ts",
+        "frontend/src/lib/db/users.ts",
+        "frontend/src/lib/db/backendMode.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + RLS de clients.",
+        "Owner visibility depende de reglas owner_only activadas en backend."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/clients/page.tsx",
+          "lines": 443,
+          "useStateCount": 17,
+          "useEffectCount": 3,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/clients.ts",
+          "rpcCalls": [
+            "add_client_logistics_party",
+            "create_client_with_contacts",
+            "delete_client_logistics_party",
+            "delete_client_record",
+            "get_client_full",
+            "search_clients",
+            "update_client_record"
+          ],
+          "relationReads": [
+            "client_logistics_parties",
+            "client_overview_view",
+            "clients",
+            "contacts",
+            "opportunities",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [
+            "delete:clients",
+            "delete:contacts",
+            "delete:opportunities",
+            "insert:clients",
+            "update:clients"
+          ],
+          "fallbackMentions": 5
+        },
+        {
+          "path": "frontend/src/lib/db/users.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "roles",
+            "users"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/backendMode.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "client_overview_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 6
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_client_logistics_party",
+          "create_client_with_contacts",
+          "delete_client_logistics_party",
+          "delete_client_record",
+          "get_client_full",
+          "search_clients",
+          "update_client_record"
+        ],
+        "relations": [
+          "client_logistics_parties",
+          "client_overview_view",
+          "clients",
+          "contacts",
+          "opportunities",
+          "roles",
+          "unlocode_lookup_view",
+          "users"
+        ],
+        "directMutations": [
+          "delete:clients",
+          "delete:contacts",
+          "delete:opportunities",
+          "insert:clients",
+          "update:clients"
+        ]
+      }
+    },
+    {
+      "id": "client-detail",
+      "label": "Client detail",
+      "routes": [
+        "/clients/[id]"
+      ],
+      "entryFiles": [
+        "frontend/app/clients/[id]/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/clients.ts",
+        "frontend/src/lib/db/contacts.ts",
+        "frontend/src/lib/db/opportunities.ts",
+        "frontend/src/lib/db/masterData.ts",
+        "frontend/src/lib/db/users.ts",
+        "frontend/src/lib/db/backendMode.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + RLS derivado del client.",
+        "Incluye logistics parties como subflujo live del detalle."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/clients/[id]/page.tsx",
+          "lines": 1101,
+          "useStateCount": 29,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/clients.ts",
+          "rpcCalls": [
+            "add_client_logistics_party",
+            "create_client_with_contacts",
+            "delete_client_logistics_party",
+            "delete_client_record",
+            "get_client_full",
+            "search_clients",
+            "update_client_record"
+          ],
+          "relationReads": [
+            "client_logistics_parties",
+            "client_overview_view",
+            "clients",
+            "contacts",
+            "opportunities",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [
+            "delete:clients",
+            "delete:contacts",
+            "delete:opportunities",
+            "insert:clients",
+            "update:clients"
+          ],
+          "fallbackMentions": 5
+        },
+        {
+          "path": "frontend/src/lib/db/contacts.ts",
+          "rpcCalls": [
+            "add_contact_to_client",
+            "delete_contact_record",
+            "update_contact_record"
+          ],
+          "relationReads": [
+            "client_contacts_view",
+            "clients",
+            "contacts"
+          ],
+          "directMutations": [
+            "insert:contacts"
+          ],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/opportunities.ts",
+          "rpcCalls": [
+            "create_opportunity",
+            "delete_opportunity_record",
+            "sync_expired_opportunities",
+            "update_opportunity_record",
+            "update_opportunity_status"
+          ],
+          "relationReads": [
+            "clients",
+            "incoterms",
+            "open_opportunities_view",
+            "opportunities",
+            "users"
+          ],
+          "directMutations": [
+            "insert:opportunities"
+          ],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        },
+        {
+          "path": "frontend/src/lib/db/users.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "roles",
+            "users"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/backendMode.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "client_overview_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 6
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_client_logistics_party",
+          "add_contact_to_client",
+          "create_client_with_contacts",
+          "create_exchange_rate",
+          "create_opportunity",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_client_logistics_party",
+          "delete_client_record",
+          "delete_contact_record",
+          "delete_exchange_rate",
+          "delete_opportunity_record",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "get_client_full",
+          "search_clients",
+          "search_unlocodes",
+          "sync_expired_opportunities",
+          "update_client_record",
+          "update_contact_record",
+          "update_exchange_rate",
+          "update_opportunity_record",
+          "update_opportunity_status",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "client_contacts_view",
+          "client_logistics_parties",
+          "client_overview_view",
+          "clients",
+          "contacts",
+          "exchange_rates",
+          "incoterms",
+          "open_opportunities_view",
+          "opportunities",
+          "quotation_rejection_reason_lookup_view",
+          "roles",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view",
+          "users"
+        ],
+        "directMutations": [
+          "delete:clients",
+          "delete:contacts",
+          "delete:opportunities",
+          "insert:clients",
+          "insert:contacts",
+          "insert:opportunities",
+          "update:clients"
+        ]
+      }
+    },
+    {
+      "id": "contacts",
+      "label": "Contacts",
+      "routes": [
+        "/contacts"
+      ],
+      "entryFiles": [
+        "frontend/app/contacts/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/contacts.ts",
+        "frontend/src/lib/db/clients.ts",
+        "frontend/src/lib/db/backendMode.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + RLS de contacts derivado del client."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/contacts/page.tsx",
+          "lines": 442,
+          "useStateCount": 6,
+          "useEffectCount": 2,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/contacts.ts",
+          "rpcCalls": [
+            "add_contact_to_client",
+            "delete_contact_record",
+            "update_contact_record"
+          ],
+          "relationReads": [
+            "client_contacts_view",
+            "clients",
+            "contacts"
+          ],
+          "directMutations": [
+            "insert:contacts"
+          ],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/clients.ts",
+          "rpcCalls": [
+            "add_client_logistics_party",
+            "create_client_with_contacts",
+            "delete_client_logistics_party",
+            "delete_client_record",
+            "get_client_full",
+            "search_clients",
+            "update_client_record"
+          ],
+          "relationReads": [
+            "client_logistics_parties",
+            "client_overview_view",
+            "clients",
+            "contacts",
+            "opportunities",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [
+            "delete:clients",
+            "delete:contacts",
+            "delete:opportunities",
+            "insert:clients",
+            "update:clients"
+          ],
+          "fallbackMentions": 5
+        },
+        {
+          "path": "frontend/src/lib/db/backendMode.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "client_overview_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 6
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_client_logistics_party",
+          "add_contact_to_client",
+          "create_client_with_contacts",
+          "delete_client_logistics_party",
+          "delete_client_record",
+          "delete_contact_record",
+          "get_client_full",
+          "search_clients",
+          "update_client_record",
+          "update_contact_record"
+        ],
+        "relations": [
+          "client_contacts_view",
+          "client_logistics_parties",
+          "client_overview_view",
+          "clients",
+          "contacts",
+          "opportunities",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": [
+          "delete:clients",
+          "delete:contacts",
+          "delete:opportunities",
+          "insert:clients",
+          "insert:contacts",
+          "update:clients"
+        ]
+      }
+    },
+    {
+      "id": "opportunities",
+      "label": "Opportunities",
+      "routes": [
+        "/opportunities"
+      ],
+      "entryFiles": [
+        "frontend/app/opportunities/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/opportunities.ts",
+        "frontend/src/lib/db/clients.ts",
+        "frontend/src/lib/db/masterData.ts",
+        "frontend/src/lib/db/users.ts",
+        "frontend/src/lib/db/backendMode.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + owner visibility sobre salesperson_id."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/opportunities/page.tsx",
+          "lines": 414,
+          "useStateCount": 5,
+          "useEffectCount": 3,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/opportunities.ts",
+          "rpcCalls": [
+            "create_opportunity",
+            "delete_opportunity_record",
+            "sync_expired_opportunities",
+            "update_opportunity_record",
+            "update_opportunity_status"
+          ],
+          "relationReads": [
+            "clients",
+            "incoterms",
+            "open_opportunities_view",
+            "opportunities",
+            "users"
+          ],
+          "directMutations": [
+            "insert:opportunities"
+          ],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/clients.ts",
+          "rpcCalls": [
+            "add_client_logistics_party",
+            "create_client_with_contacts",
+            "delete_client_logistics_party",
+            "delete_client_record",
+            "get_client_full",
+            "search_clients",
+            "update_client_record"
+          ],
+          "relationReads": [
+            "client_logistics_parties",
+            "client_overview_view",
+            "clients",
+            "contacts",
+            "opportunities",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [
+            "delete:clients",
+            "delete:contacts",
+            "delete:opportunities",
+            "insert:clients",
+            "update:clients"
+          ],
+          "fallbackMentions": 5
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        },
+        {
+          "path": "frontend/src/lib/db/users.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "roles",
+            "users"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/backendMode.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "client_overview_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 6
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_client_logistics_party",
+          "create_client_with_contacts",
+          "create_exchange_rate",
+          "create_opportunity",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_client_logistics_party",
+          "delete_client_record",
+          "delete_exchange_rate",
+          "delete_opportunity_record",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "get_client_full",
+          "search_clients",
+          "search_unlocodes",
+          "sync_expired_opportunities",
+          "update_client_record",
+          "update_exchange_rate",
+          "update_opportunity_record",
+          "update_opportunity_status",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "client_logistics_parties",
+          "client_overview_view",
+          "clients",
+          "contacts",
+          "exchange_rates",
+          "incoterms",
+          "open_opportunities_view",
+          "opportunities",
+          "quotation_rejection_reason_lookup_view",
+          "roles",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view",
+          "users"
+        ],
+        "directMutations": [
+          "delete:clients",
+          "delete:contacts",
+          "delete:opportunities",
+          "insert:clients",
+          "insert:opportunities",
+          "update:clients"
+        ]
+      }
+    },
+    {
+      "id": "opportunity-detail",
+      "label": "Opportunity detail",
+      "routes": [
+        "/opportunities/[id]"
+      ],
+      "entryFiles": [
+        "frontend/app/opportunities/[id]/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/opportunities.ts",
+        "frontend/src/lib/db/quotations.ts",
+        "frontend/src/lib/db/masterData.ts",
+        "frontend/src/lib/db/users.ts",
+        "frontend/src/lib/db/backendMode.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + owner visibility.",
+        "Create quotation usa create_quotation_from_opportunity()."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/opportunities/[id]/page.tsx",
+          "lines": 643,
+          "useStateCount": 8,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/opportunities.ts",
+          "rpcCalls": [
+            "create_opportunity",
+            "delete_opportunity_record",
+            "sync_expired_opportunities",
+            "update_opportunity_record",
+            "update_opportunity_status"
+          ],
+          "relationReads": [
+            "clients",
+            "incoterms",
+            "open_opportunities_view",
+            "opportunities",
+            "users"
+          ],
+          "directMutations": [
+            "insert:opportunities"
+          ],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/quotations.ts",
+          "rpcCalls": [
+            "create_booking_from_quotation",
+            "create_quotation_cargo_line",
+            "create_quotation_cost_line",
+            "create_quotation_from_opportunity",
+            "delete_quotation_cargo_line",
+            "delete_quotation_cost_line",
+            "request_quotation_pricing",
+            "save_quotation_purchase_option",
+            "search_quotations",
+            "set_quotation_option_customer_visibility",
+            "take_quotation_for_pricing",
+            "update_quotation_cargo_line",
+            "update_quotation_cost_line",
+            "update_quotation_option_sales_amounts",
+            "update_quotation_option_validity",
+            "update_quotation_record",
+            "update_quotation_status"
+          ],
+          "relationReads": [
+            "quotation_cargo_lines",
+            "quotation_cost_line_secure_view",
+            "quotation_summary_view",
+            "shipments"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        },
+        {
+          "path": "frontend/src/lib/db/users.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "roles",
+            "users"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/backendMode.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "client_overview_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 6
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_booking_from_quotation",
+          "create_exchange_rate",
+          "create_opportunity",
+          "create_quotation_cargo_line",
+          "create_quotation_cost_line",
+          "create_quotation_from_opportunity",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_opportunity_record",
+          "delete_quotation_cargo_line",
+          "delete_quotation_cost_line",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "request_quotation_pricing",
+          "save_quotation_purchase_option",
+          "search_quotations",
+          "search_unlocodes",
+          "set_quotation_option_customer_visibility",
+          "sync_expired_opportunities",
+          "take_quotation_for_pricing",
+          "update_exchange_rate",
+          "update_opportunity_record",
+          "update_opportunity_status",
+          "update_quotation_cargo_line",
+          "update_quotation_cost_line",
+          "update_quotation_option_sales_amounts",
+          "update_quotation_option_validity",
+          "update_quotation_record",
+          "update_quotation_rejection_reason",
+          "update_quotation_status",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "client_overview_view",
+          "clients",
+          "exchange_rates",
+          "incoterms",
+          "open_opportunities_view",
+          "opportunities",
+          "quotation_cargo_lines",
+          "quotation_cost_line_secure_view",
+          "quotation_rejection_reason_lookup_view",
+          "quotation_summary_view",
+          "roles",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "shipments",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view",
+          "users"
+        ],
+        "directMutations": [
+          "insert:opportunities"
+        ]
+      }
+    },
+    {
+      "id": "quotations",
+      "label": "Quotations",
+      "routes": [
+        "/quotations"
+      ],
+      "entryFiles": [
+        "frontend/app/quotations/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/quotations.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Listado usa search_quotations() y quotation_summary_view.",
+        "Masking economico depende de quotation_summary_view."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/quotations/page.tsx",
+          "lines": 244,
+          "useStateCount": 5,
+          "useEffectCount": 2,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/quotations.ts",
+          "rpcCalls": [
+            "create_booking_from_quotation",
+            "create_quotation_cargo_line",
+            "create_quotation_cost_line",
+            "create_quotation_from_opportunity",
+            "delete_quotation_cargo_line",
+            "delete_quotation_cost_line",
+            "request_quotation_pricing",
+            "save_quotation_purchase_option",
+            "search_quotations",
+            "set_quotation_option_customer_visibility",
+            "take_quotation_for_pricing",
+            "update_quotation_cargo_line",
+            "update_quotation_cost_line",
+            "update_quotation_option_sales_amounts",
+            "update_quotation_option_validity",
+            "update_quotation_record",
+            "update_quotation_status"
+          ],
+          "relationReads": [
+            "quotation_cargo_lines",
+            "quotation_cost_line_secure_view",
+            "quotation_summary_view",
+            "shipments"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_booking_from_quotation",
+          "create_quotation_cargo_line",
+          "create_quotation_cost_line",
+          "create_quotation_from_opportunity",
+          "delete_quotation_cargo_line",
+          "delete_quotation_cost_line",
+          "request_quotation_pricing",
+          "save_quotation_purchase_option",
+          "search_quotations",
+          "set_quotation_option_customer_visibility",
+          "take_quotation_for_pricing",
+          "update_quotation_cargo_line",
+          "update_quotation_cost_line",
+          "update_quotation_option_sales_amounts",
+          "update_quotation_option_validity",
+          "update_quotation_record",
+          "update_quotation_status"
+        ],
+        "relations": [
+          "quotation_cargo_lines",
+          "quotation_cost_line_secure_view",
+          "quotation_summary_view",
+          "shipments"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "quotation-detail",
+      "label": "Quotation detail",
+      "routes": [
+        "/quotations/[id]"
+      ],
+      "entryFiles": [
+        "frontend/app/quotations/[id]/page.tsx",
+        "frontend/src/components/forms/QuotationForm.tsx",
+        "frontend/src/components/forms/QuotationCargoLineForm.tsx",
+        "frontend/src/components/forms/QuotationChargeLineForm.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/quotations.ts",
+        "frontend/src/lib/db/masterData.ts",
+        "frontend/src/lib/auth.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + masking en quotation_summary_view / quotation_cost_line_secure_view.",
+        "Incluye create booking como subflujo live dependiente."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/quotations/[id]/page.tsx",
+          "lines": 1567,
+          "useStateCount": 13,
+          "useEffectCount": 3,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        },
+        {
+          "path": "frontend/src/components/forms/QuotationForm.tsx",
+          "lines": 154,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        },
+        {
+          "path": "frontend/src/components/forms/QuotationCargoLineForm.tsx",
+          "lines": 358,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        },
+        {
+          "path": "frontend/src/components/forms/QuotationChargeLineForm.tsx",
+          "lines": 352,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/quotations.ts",
+          "rpcCalls": [
+            "create_booking_from_quotation",
+            "create_quotation_cargo_line",
+            "create_quotation_cost_line",
+            "create_quotation_from_opportunity",
+            "delete_quotation_cargo_line",
+            "delete_quotation_cost_line",
+            "request_quotation_pricing",
+            "save_quotation_purchase_option",
+            "search_quotations",
+            "set_quotation_option_customer_visibility",
+            "take_quotation_for_pricing",
+            "update_quotation_cargo_line",
+            "update_quotation_cost_line",
+            "update_quotation_option_sales_amounts",
+            "update_quotation_option_validity",
+            "update_quotation_record",
+            "update_quotation_status"
+          ],
+          "relationReads": [
+            "quotation_cargo_lines",
+            "quotation_cost_line_secure_view",
+            "quotation_summary_view",
+            "shipments"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        },
+        {
+          "path": "frontend/src/lib/auth.ts",
+          "rpcCalls": [
+            "get_current_erp_user",
+            "link_current_auth_user",
+            "resolve_login_identity"
+          ],
+          "relationReads": [],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_booking_from_quotation",
+          "create_exchange_rate",
+          "create_quotation_cargo_line",
+          "create_quotation_cost_line",
+          "create_quotation_from_opportunity",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_quotation_cargo_line",
+          "delete_quotation_cost_line",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "get_current_erp_user",
+          "link_current_auth_user",
+          "request_quotation_pricing",
+          "resolve_login_identity",
+          "save_quotation_purchase_option",
+          "search_quotations",
+          "search_unlocodes",
+          "set_quotation_option_customer_visibility",
+          "take_quotation_for_pricing",
+          "update_exchange_rate",
+          "update_quotation_cargo_line",
+          "update_quotation_cost_line",
+          "update_quotation_option_sales_amounts",
+          "update_quotation_option_validity",
+          "update_quotation_record",
+          "update_quotation_rejection_reason",
+          "update_quotation_status",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "quotation_cargo_lines",
+          "quotation_cost_line_secure_view",
+          "quotation_rejection_reason_lookup_view",
+          "quotation_summary_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "shipments",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "customer-document",
+      "label": "Customer document preview y PDF",
+      "routes": [
+        "/quotations/[id]/document",
+        "/quotations/[id]/document/pdf"
+      ],
+      "entryFiles": [
+        "frontend/app/quotations/[id]/document/page.tsx",
+        "frontend/app/quotations/[id]/document/pdf/route.ts",
+        "frontend/src/components/quotations/CustomerQuotationPdf.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/quotations.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Debe permanecer sincronizado con quotation_summary_view y opciones customer-facing."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/quotations/[id]/document/page.tsx",
+          "lines": 447,
+          "useStateCount": 1,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        },
+        {
+          "path": "frontend/app/quotations/[id]/document/pdf/route.ts",
+          "lines": 117,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/quotations/CustomerQuotationPdf.tsx",
+          "lines": 555,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/quotations.ts",
+          "rpcCalls": [
+            "create_booking_from_quotation",
+            "create_quotation_cargo_line",
+            "create_quotation_cost_line",
+            "create_quotation_from_opportunity",
+            "delete_quotation_cargo_line",
+            "delete_quotation_cost_line",
+            "request_quotation_pricing",
+            "save_quotation_purchase_option",
+            "search_quotations",
+            "set_quotation_option_customer_visibility",
+            "take_quotation_for_pricing",
+            "update_quotation_cargo_line",
+            "update_quotation_cost_line",
+            "update_quotation_option_sales_amounts",
+            "update_quotation_option_validity",
+            "update_quotation_record",
+            "update_quotation_status"
+          ],
+          "relationReads": [
+            "quotation_cargo_lines",
+            "quotation_cost_line_secure_view",
+            "quotation_summary_view",
+            "shipments"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_booking_from_quotation",
+          "create_quotation_cargo_line",
+          "create_quotation_cost_line",
+          "create_quotation_from_opportunity",
+          "delete_quotation_cargo_line",
+          "delete_quotation_cost_line",
+          "request_quotation_pricing",
+          "save_quotation_purchase_option",
+          "search_quotations",
+          "set_quotation_option_customer_visibility",
+          "take_quotation_for_pricing",
+          "update_quotation_cargo_line",
+          "update_quotation_cost_line",
+          "update_quotation_option_sales_amounts",
+          "update_quotation_option_validity",
+          "update_quotation_record",
+          "update_quotation_status"
+        ],
+        "relations": [
+          "quotation_cargo_lines",
+          "quotation_cost_line_secure_view",
+          "quotation_summary_view",
+          "shipments"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "pricing-request",
+      "label": "Pricing request preview y PDF",
+      "routes": [
+        "/quotations/[id]/pricing-request",
+        "/quotations/[id]/pricing-request/pdf"
+      ],
+      "entryFiles": [
+        "frontend/app/quotations/[id]/pricing-request/page.tsx",
+        "frontend/app/quotations/[id]/pricing-request/pdf/route.ts",
+        "frontend/src/components/quotations/ProviderPricingRequestPdf.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/quotations.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Debe ocultar cliente y montos comerciales."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/quotations/[id]/pricing-request/page.tsx",
+          "lines": 300,
+          "useStateCount": 1,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        },
+        {
+          "path": "frontend/app/quotations/[id]/pricing-request/pdf/route.ts",
+          "lines": 82,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/quotations/ProviderPricingRequestPdf.tsx",
+          "lines": 378,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/quotations.ts",
+          "rpcCalls": [
+            "create_booking_from_quotation",
+            "create_quotation_cargo_line",
+            "create_quotation_cost_line",
+            "create_quotation_from_opportunity",
+            "delete_quotation_cargo_line",
+            "delete_quotation_cost_line",
+            "request_quotation_pricing",
+            "save_quotation_purchase_option",
+            "search_quotations",
+            "set_quotation_option_customer_visibility",
+            "take_quotation_for_pricing",
+            "update_quotation_cargo_line",
+            "update_quotation_cost_line",
+            "update_quotation_option_sales_amounts",
+            "update_quotation_option_validity",
+            "update_quotation_record",
+            "update_quotation_status"
+          ],
+          "relationReads": [
+            "quotation_cargo_lines",
+            "quotation_cost_line_secure_view",
+            "quotation_summary_view",
+            "shipments"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_booking_from_quotation",
+          "create_quotation_cargo_line",
+          "create_quotation_cost_line",
+          "create_quotation_from_opportunity",
+          "delete_quotation_cargo_line",
+          "delete_quotation_cost_line",
+          "request_quotation_pricing",
+          "save_quotation_purchase_option",
+          "search_quotations",
+          "set_quotation_option_customer_visibility",
+          "take_quotation_for_pricing",
+          "update_quotation_cargo_line",
+          "update_quotation_cost_line",
+          "update_quotation_option_sales_amounts",
+          "update_quotation_option_validity",
+          "update_quotation_record",
+          "update_quotation_status"
+        ],
+        "relations": [
+          "quotation_cargo_lines",
+          "quotation_cost_line_secure_view",
+          "quotation_summary_view",
+          "shipments"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "pricing-providers",
+      "label": "Pricing / Providers",
+      "routes": [
+        "/pricing/providers"
+      ],
+      "entryFiles": [
+        "frontend/app/pricing/providers/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/providers.ts",
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + RLS de providers."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/pricing/providers/page.tsx",
+          "lines": 349,
+          "useStateCount": 5,
+          "useEffectCount": 2,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/providers.ts",
+          "rpcCalls": [
+            "add_contact_to_provider",
+            "create_provider",
+            "create_provider_service_offering_record",
+            "delete_provider_contact_record",
+            "delete_provider_record",
+            "delete_provider_service_offering_record",
+            "get_provider_full",
+            "update_provider_contact_record",
+            "update_provider_record",
+            "update_provider_service_offering_record"
+          ],
+          "relationReads": [
+            "provider_contacts",
+            "provider_contacts_view",
+            "provider_overview_view",
+            "provider_service_offering_view",
+            "providers"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_contact_to_provider",
+          "create_exchange_rate",
+          "create_provider",
+          "create_provider_service_offering_record",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_provider_contact_record",
+          "delete_provider_record",
+          "delete_provider_service_offering_record",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "get_provider_full",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_provider_contact_record",
+          "update_provider_record",
+          "update_provider_service_offering_record",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "provider_contacts",
+          "provider_contacts_view",
+          "provider_overview_view",
+          "provider_service_offering_view",
+          "providers",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "pricing-provider-detail",
+      "label": "Pricing / Provider detail",
+      "routes": [
+        "/pricing/providers/[id]"
+      ],
+      "entryFiles": [
+        "frontend/app/pricing/providers/[id]/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/providers.ts",
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy + RLS de providers/provider_contacts/provider_service_offerings."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/pricing/providers/[id]/page.tsx",
+          "lines": 705,
+          "useStateCount": 10,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/providers.ts",
+          "rpcCalls": [
+            "add_contact_to_provider",
+            "create_provider",
+            "create_provider_service_offering_record",
+            "delete_provider_contact_record",
+            "delete_provider_record",
+            "delete_provider_service_offering_record",
+            "get_provider_full",
+            "update_provider_contact_record",
+            "update_provider_record",
+            "update_provider_service_offering_record"
+          ],
+          "relationReads": [
+            "provider_contacts",
+            "provider_contacts_view",
+            "provider_overview_view",
+            "provider_service_offering_view",
+            "providers"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_contact_to_provider",
+          "create_exchange_rate",
+          "create_provider",
+          "create_provider_service_offering_record",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_provider_contact_record",
+          "delete_provider_record",
+          "delete_provider_service_offering_record",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "get_provider_full",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_provider_contact_record",
+          "update_provider_record",
+          "update_provider_service_offering_record",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "provider_contacts",
+          "provider_contacts_view",
+          "provider_overview_view",
+          "provider_service_offering_view",
+          "providers",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "pricing-quotations",
+      "label": "Pricing / Quotations",
+      "routes": [
+        "/pricing/quotations"
+      ],
+      "entryFiles": [
+        "frontend/app/pricing/quotations/page.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/quotations.ts",
+        "frontend/src/lib/db/providers.ts",
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Usa take_quotation_for_pricing() y save_quotation_purchase_option().",
+        "Masking economico parcial por vistas seguras."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/pricing/quotations/page.tsx",
+          "lines": 1063,
+          "useStateCount": 11,
+          "useEffectCount": 2,
+          "useDeferredValueCount": 1,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/quotations.ts",
+          "rpcCalls": [
+            "create_booking_from_quotation",
+            "create_quotation_cargo_line",
+            "create_quotation_cost_line",
+            "create_quotation_from_opportunity",
+            "delete_quotation_cargo_line",
+            "delete_quotation_cost_line",
+            "request_quotation_pricing",
+            "save_quotation_purchase_option",
+            "search_quotations",
+            "set_quotation_option_customer_visibility",
+            "take_quotation_for_pricing",
+            "update_quotation_cargo_line",
+            "update_quotation_cost_line",
+            "update_quotation_option_sales_amounts",
+            "update_quotation_option_validity",
+            "update_quotation_record",
+            "update_quotation_status"
+          ],
+          "relationReads": [
+            "quotation_cargo_lines",
+            "quotation_cost_line_secure_view",
+            "quotation_summary_view",
+            "shipments"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/providers.ts",
+          "rpcCalls": [
+            "add_contact_to_provider",
+            "create_provider",
+            "create_provider_service_offering_record",
+            "delete_provider_contact_record",
+            "delete_provider_record",
+            "delete_provider_service_offering_record",
+            "get_provider_full",
+            "update_provider_contact_record",
+            "update_provider_record",
+            "update_provider_service_offering_record"
+          ],
+          "relationReads": [
+            "provider_contacts",
+            "provider_contacts_view",
+            "provider_overview_view",
+            "provider_service_offering_view",
+            "providers"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 0
+        },
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "add_contact_to_provider",
+          "create_booking_from_quotation",
+          "create_exchange_rate",
+          "create_provider",
+          "create_provider_service_offering_record",
+          "create_quotation_cargo_line",
+          "create_quotation_cost_line",
+          "create_quotation_from_opportunity",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_provider_contact_record",
+          "delete_provider_record",
+          "delete_provider_service_offering_record",
+          "delete_quotation_cargo_line",
+          "delete_quotation_cost_line",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "get_provider_full",
+          "request_quotation_pricing",
+          "save_quotation_purchase_option",
+          "search_quotations",
+          "search_unlocodes",
+          "set_quotation_option_customer_visibility",
+          "take_quotation_for_pricing",
+          "update_exchange_rate",
+          "update_provider_contact_record",
+          "update_provider_record",
+          "update_provider_service_offering_record",
+          "update_quotation_cargo_line",
+          "update_quotation_cost_line",
+          "update_quotation_option_sales_amounts",
+          "update_quotation_option_validity",
+          "update_quotation_record",
+          "update_quotation_rejection_reason",
+          "update_quotation_status",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "provider_contacts",
+          "provider_contacts_view",
+          "provider_overview_view",
+          "provider_service_offering_view",
+          "providers",
+          "quotation_cargo_lines",
+          "quotation_cost_line_secure_view",
+          "quotation_rejection_reason_lookup_view",
+          "quotation_summary_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "shipments",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "master-data-shell",
+      "label": "Master Data shell",
+      "routes": [
+        "/master-data"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/page.tsx",
+        "frontend/src/components/master-data/MasterDataOverview.tsx"
+      ],
+      "queryFiles": [],
+      "apiFiles": [],
+      "permissionNotes": [
+        "Acceso por proxy."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/page.tsx",
+          "lines": 6,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/MasterDataOverview.tsx",
+          "lines": 136,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        }
+      ],
+      "queryMetrics": [],
+      "backendContracts": {
+        "rpcs": [],
+        "relations": [],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "service-types",
+      "label": "Service transport types",
+      "routes": [
+        "/master-data/sales/service-types"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/sales/service-types/page.tsx",
+        "frontend/src/components/master-data/ServiceTransportTypeManager.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "CRUD via create/update/delete_service_transport_type()."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/sales/service-types/page.tsx",
+          "lines": 6,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/ServiceTransportTypeManager.tsx",
+          "lines": 176,
+          "useStateCount": 3,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_exchange_rate",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "accounting-concepts",
+      "label": "Sales accounting concepts",
+      "routes": [
+        "/master-data/sales/accounting-concepts"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/sales/accounting-concepts/page.tsx",
+        "frontend/src/components/master-data/SalesAccountingConceptManager.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "CRUD via create/update/delete_sales_accounting_concept()."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/sales/accounting-concepts/page.tsx",
+          "lines": 6,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/SalesAccountingConceptManager.tsx",
+          "lines": 408,
+          "useStateCount": 6,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_exchange_rate",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "quotation-rejection-reasons",
+      "label": "Quotation rejection reasons",
+      "routes": [
+        "/master-data/sales/quotation-rejection-reasons"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/sales/quotation-rejection-reasons/page.tsx",
+        "frontend/src/components/master-data/QuotationRejectionReasonManager.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [],
+      "permissionNotes": [
+        "CRUD via create/update/delete_quotation_rejection_reason()."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/sales/quotation-rejection-reasons/page.tsx",
+          "lines": 6,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/QuotationRejectionReasonManager.tsx",
+          "lines": 248,
+          "useStateCount": 5,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_exchange_rate",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "exchange-rates",
+      "label": "Exchange rates",
+      "routes": [
+        "/master-data/accounting/exchange-rates",
+        "/api/admin/exchange-rates/sync",
+        "/api/cron/exchange-rates"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/accounting/exchange-rates/page.tsx",
+        "frontend/src/components/master-data/ExchangeRateManager.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/masterData.ts"
+      ],
+      "apiFiles": [
+        "frontend/app/api/admin/exchange-rates/sync/route.ts",
+        "frontend/app/api/cron/exchange-rates/route.ts"
+      ],
+      "permissionNotes": [
+        "Server gate en ruta live + sync admin path protegido."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/accounting/exchange-rates/page.tsx",
+          "lines": 9,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/ExchangeRateManager.tsx",
+          "lines": 378,
+          "useStateCount": 6,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_exchange_rate",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "exchange_rates",
+          "incoterms",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    },
+    {
+      "id": "unlocode",
+      "label": "UN/LOCODE lookup",
+      "routes": [
+        "/master-data/unlocode",
+        "/api/master-data/unlocodes"
+      ],
+      "entryFiles": [
+        "frontend/app/master-data/unlocode/page.tsx",
+        "frontend/src/components/master-data/UnlocodeExplorer.tsx"
+      ],
+      "queryFiles": [
+        "frontend/src/lib/db/masterData.ts",
+        "frontend/src/lib/masterData/unlocodeSnapshot.ts",
+        "frontend/src/lib/db/backendMode.ts"
+      ],
+      "apiFiles": [
+        "frontend/app/api/master-data/unlocodes/route.ts"
+      ],
+      "permissionNotes": [
+        "Canonical contract via unlocode_lookup_view + search_unlocodes().",
+        "Snapshot fallback sigue presente como rollback safety."
+      ],
+      "entryMetrics": [
+        {
+          "path": "frontend/app/master-data/unlocode/page.tsx",
+          "lines": 6,
+          "useStateCount": 0,
+          "useEffectCount": 0,
+          "useDeferredValueCount": 0,
+          "clientComponent": false
+        },
+        {
+          "path": "frontend/src/components/master-data/UnlocodeExplorer.tsx",
+          "lines": 253,
+          "useStateCount": 4,
+          "useEffectCount": 1,
+          "useDeferredValueCount": 0,
+          "clientComponent": true
+        }
+      ],
+      "queryMetrics": [
+        {
+          "path": "frontend/src/lib/db/masterData.ts",
+          "rpcCalls": [
+            "create_exchange_rate",
+            "create_quotation_rejection_reason",
+            "create_sales_accounting_concept",
+            "create_service_transport_type",
+            "delete_exchange_rate",
+            "delete_quotation_rejection_reason",
+            "delete_sales_accounting_concept",
+            "delete_service_transport_type",
+            "search_unlocodes",
+            "update_exchange_rate",
+            "update_quotation_rejection_reason",
+            "update_sales_accounting_concept",
+            "update_service_transport_type"
+          ],
+          "relationReads": [
+            "exchange_rates",
+            "incoterms",
+            "quotation_rejection_reason_lookup_view",
+            "sales_accounting_concept_lookup_view",
+            "service_transport_type_lookup_view",
+            "unlocode_country_summary_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 1
+        },
+        {
+          "path": "frontend/src/lib/masterData/unlocodeSnapshot.ts",
+          "rpcCalls": [],
+          "relationReads": [],
+          "directMutations": [],
+          "fallbackMentions": 6
+        },
+        {
+          "path": "frontend/src/lib/db/backendMode.ts",
+          "rpcCalls": [],
+          "relationReads": [
+            "client_overview_view",
+            "unlocode_lookup_view"
+          ],
+          "directMutations": [],
+          "fallbackMentions": 6
+        }
+      ],
+      "backendContracts": {
+        "rpcs": [
+          "create_exchange_rate",
+          "create_quotation_rejection_reason",
+          "create_sales_accounting_concept",
+          "create_service_transport_type",
+          "delete_exchange_rate",
+          "delete_quotation_rejection_reason",
+          "delete_sales_accounting_concept",
+          "delete_service_transport_type",
+          "search_unlocodes",
+          "update_exchange_rate",
+          "update_quotation_rejection_reason",
+          "update_sales_accounting_concept",
+          "update_service_transport_type"
+        ],
+        "relations": [
+          "client_overview_view",
+          "exchange_rates",
+          "incoterms",
+          "quotation_rejection_reason_lookup_view",
+          "sales_accounting_concept_lookup_view",
+          "service_transport_type_lookup_view",
+          "unlocode_country_summary_view",
+          "unlocode_lookup_view"
+        ],
+        "directMutations": []
+      }
+    }
+  ],
+  "findings": [
+    {
+      "priority": "medium",
+      "title": "Large live route component (898 LOC)",
+      "body": "This route deserves targeted smoke and concurrency coverage because behavior is concentrated in one client-heavy file.",
+      "file": "frontend/src/components/master-data/RolesPermissionsManager.tsx"
+    },
+    {
+      "priority": "medium",
+      "title": "Mixed RPC workflows and direct table mutations",
+      "body": "This live query module mixes canonical RPC paths with direct writes, which increases drift and makes concurrency issues harder to reason about.",
+      "file": "frontend/src/lib/db/clients.ts"
+    },
+    {
+      "priority": "medium",
+      "title": "Fallback or legacy branches remain in live data access",
+      "body": "Temporary rollback-safety logic is still present in a live module, so canonical-vs-fallback behavior needs explicit regression coverage.",
+      "file": "frontend/src/lib/db/clients.ts"
+    },
+    {
+      "priority": "medium",
+      "title": "Fallback or legacy branches remain in live data access",
+      "body": "Temporary rollback-safety logic is still present in a live module, so canonical-vs-fallback behavior needs explicit regression coverage.",
+      "file": "frontend/src/lib/db/backendMode.ts"
+    },
+    {
+      "priority": "medium",
+      "title": "Large live route component (1101 LOC)",
+      "body": "This route deserves targeted smoke and concurrency coverage because behavior is concentrated in one client-heavy file.",
+      "file": "frontend/app/clients/[id]/page.tsx"
+    },
+    {
+      "priority": "medium",
+      "title": "High local state density (29 useState calls)",
+      "body": "The page manages enough local state to make stale UI, missed refreshes, or unnecessary rerenders more likely under heavy usage.",
+      "file": "frontend/app/clients/[id]/page.tsx"
+    },
+    {
+      "priority": "medium",
+      "title": "Mixed RPC workflows and direct table mutations",
+      "body": "This live query module mixes canonical RPC paths with direct writes, which increases drift and makes concurrency issues harder to reason about.",
+      "file": "frontend/src/lib/db/contacts.ts"
+    },
+    {
+      "priority": "medium",
+      "title": "Mixed RPC workflows and direct table mutations",
+      "body": "This live query module mixes canonical RPC paths with direct writes, which increases drift and makes concurrency issues harder to reason about.",
+      "file": "frontend/src/lib/db/opportunities.ts"
+    },
+    {
+      "priority": "medium",
+      "title": "Fallback or legacy branches remain in live data access",
+      "body": "Temporary rollback-safety logic is still present in a live module, so canonical-vs-fallback behavior needs explicit regression coverage.",
+      "file": "frontend/src/lib/db/masterData.ts"
+    },
+    {
+      "priority": "high",
+      "title": "Very large live route component (1567 LOC)",
+      "body": "This route is large enough to increase regressions, rerender cost, and validation surface during concurrent workflows.",
+      "file": "frontend/app/quotations/[id]/page.tsx"
+    },
+    {
+      "priority": "medium",
+      "title": "Large live route component (705 LOC)",
+      "body": "This route deserves targeted smoke and concurrency coverage because behavior is concentrated in one client-heavy file.",
+      "file": "frontend/app/pricing/providers/[id]/page.tsx"
+    },
+    {
+      "priority": "medium",
+      "title": "Large live route component (1063 LOC)",
+      "body": "This route deserves targeted smoke and concurrency coverage because behavior is concentrated in one client-heavy file.",
+      "file": "frontend/app/pricing/quotations/page.tsx"
+    },
+    {
+      "priority": "medium",
+      "title": "Fallback or legacy branches remain in live data access",
+      "body": "Temporary rollback-safety logic is still present in a live module, so canonical-vs-fallback behavior needs explicit regression coverage.",
+      "file": "frontend/src/lib/masterData/unlocodeSnapshot.ts"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-03-28T08:26:17.625Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "checks": [
+    {
+      "persona": "sales",
+      "ok": true,
+      "durationMs": 4920,
+      "details": {
+        "persona": "sales",
+        "roleName": "Ventas",
+        "checkedCases": 6,
+        "deniedCases": 4,
+        "cases": [
+          {
+            "resourceKey": "crm.quotations.record",
+            "fieldKey": "sale_price",
+            "actionCode": "view",
+            "allowed": true
+          },
+          {
+            "resourceKey": "crm.quotations.record",
+            "fieldKey": "sale_price",
+            "actionCode": "edit",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "purchase_amount",
+            "actionCode": "view",
+            "allowed": false
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "purchase_amount",
+            "actionCode": "edit",
+            "allowed": false
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "profit_amount",
+            "actionCode": "view",
+            "allowed": false
+          },
+          {
+            "resourceKey": "pricing.quotations.workspace",
+            "fieldKey": "incoterm",
+            "actionCode": "view",
+            "allowed": false
+          }
+        ]
+      }
+    },
+    {
+      "persona": "pricing",
+      "ok": true,
+      "durationMs": 2019,
+      "details": {
+        "persona": "pricing",
+        "roleName": "Pricing",
+        "checkedCases": 6,
+        "deniedCases": 3,
+        "cases": [
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "purchase_amount",
+            "actionCode": "view",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "purchase_amount",
+            "actionCode": "edit",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "sale_amount",
+            "actionCode": "view",
+            "allowed": false
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "profit_amount",
+            "actionCode": "view",
+            "allowed": false
+          },
+          {
+            "resourceKey": "crm.quotations.record",
+            "fieldKey": "sale_price",
+            "actionCode": "view",
+            "allowed": false
+          },
+          {
+            "resourceKey": "pricing.quotations.workspace",
+            "fieldKey": "incoterm",
+            "actionCode": "view",
+            "allowed": true
+          }
+        ]
+      }
+    },
+    {
+      "persona": "admin",
+      "ok": true,
+      "durationMs": 1125,
+      "details": {
+        "persona": "admin",
+        "roleName": "Admin",
+        "checkedCases": 6,
+        "deniedCases": 0,
+        "cases": [
+          {
+            "resourceKey": "crm.quotations.record",
+            "fieldKey": "sale_price",
+            "actionCode": "view",
+            "allowed": true
+          },
+          {
+            "resourceKey": "crm.quotations.record",
+            "fieldKey": "cost",
+            "actionCode": "view",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "purchase_amount",
+            "actionCode": "view",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "sale_amount",
+            "actionCode": "edit",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.cost_section",
+            "fieldKey": "profit_amount",
+            "actionCode": "view",
+            "allowed": true
+          },
+          {
+            "resourceKey": "pricing.quotations.workspace",
+            "fieldKey": "incoterm",
+            "actionCode": "edit",
+            "allowed": true
+          }
+        ]
+      }
+    }
+  ]
+}

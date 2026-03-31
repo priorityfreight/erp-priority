@@ -1,3 +1,12 @@
+import {
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInput,
+  PrioritySelectField,
+} from "@/components/priority/PriorityForm"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { UserRole } from "@/lib/db"
 
 export type UserFormValues = {
@@ -24,119 +33,107 @@ export function UserForm({
   onChange,
 }: UserFormProps) {
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#94A3B8]">
-            Perfil del usuario
-          </h3>
-          <p className="mt-1 text-sm text-[#64748B]">
-            Datos base del usuario asignado dentro del ERP.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#0F172A]">Nombre</span>
-            <input
+    <div className="space-y-5">
+      <PriorityFormSection
+        title="Perfil del usuario"
+        description="Datos base del usuario asignado dentro del ERP."
+      >
+        <PriorityFormGrid className="xl:grid-cols-2">
+          <PriorityFormField label="Nombre">
+            <PriorityInput
               type="text"
               value={values.fullName}
               onChange={(event) => onChange("fullName", event.target.value)}
               placeholder="Nombre completo"
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
             />
-          </label>
+          </PriorityFormField>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#0F172A]">Rol</span>
-            <select
+          <PriorityFormField label="Rol">
+            <PrioritySelectField
               value={values.roleName}
-              onChange={(event) => onChange("roleName", event.target.value)}
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
-            >
-              <option value="">Selecciona un rol</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.name}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              onValueChange={(value) => onChange("roleName", value)}
+              placeholder="Selecciona un rol"
+              options={[
+                { value: "", label: "Selecciona un rol" },
+                ...roles.map((role) => ({ value: role.name, label: role.name })),
+              ]}
+            />
+          </PriorityFormField>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#0F172A]">Correo</span>
-            <input
+          <PriorityFormField label="Correo">
+            <PriorityInput
               type="email"
               value={values.email}
               onChange={(event) => onChange("email", event.target.value)}
               placeholder="correo@empresa.com"
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
             />
-          </label>
+          </PriorityFormField>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#0F172A]">Telefono</span>
-            <input
+          <PriorityFormField label="Telefono">
+            <PriorityInput
               type="text"
               value={values.phone}
               onChange={(event) => onChange("phone", event.target.value)}
               placeholder="+52 81 0000 0000"
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
             />
-          </label>
-        </div>
-      </section>
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#94A3B8]">
-            Acceso
-          </h3>
-          <p className="mt-1 text-sm text-[#64748B]">
-            Credenciales y estatus de acceso al ERP.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#0F172A]">Username</span>
-            <input
+      <PriorityFormSection
+        title="Acceso"
+        description="Credenciales y estatus de acceso al ERP."
+      >
+        <PriorityFormGrid className="xl:grid-cols-2">
+          <PriorityFormField label="Username">
+            <PriorityInput
               type="text"
               value={values.username}
               onChange={(event) => onChange("username", event.target.value)}
               placeholder="usuario.erp"
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
             />
-          </label>
+          </PriorityFormField>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#0F172A]">Estatus</span>
-            <select
-              value={values.status}
-              onChange={(event) =>
-                onChange("status", event.target.value as UserFormValues["status"])
-              }
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
-            >
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-            </select>
-          </label>
+          <PriorityFormField label="Estatus">
+            <div className="space-y-3">
+              <ToggleGroup
+                type="single"
+                value={values.status}
+                onValueChange={(value) => {
+                  if (value) {
+                    onChange("status", value as UserFormValues["status"])
+                  }
+                }}
+                className="w-full justify-start"
+              >
+                <ToggleGroupItem value="activo" className="min-w-[120px]">
+                  Activo
+                </ToggleGroupItem>
+                <ToggleGroupItem value="inactivo" className="min-w-[120px]">
+                  Inactivo
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <PriorityTypography variant="caption">
+                Controla si el usuario puede autenticarse y operar dentro del ERP.
+              </PriorityTypography>
+            </div>
+          </PriorityFormField>
 
-          <label className="space-y-2 md:col-span-2">
-            <span className="text-sm font-medium text-[#0F172A]">
-              {passwordRequired ? "Contrasena" : "Nueva contrasena"}
-            </span>
-            <input
+          <PriorityFormField
+            label={passwordRequired ? "Contrasena" : "Nueva contrasena"}
+            className="md:col-span-2"
+          >
+            <PriorityInput
               type="password"
               value={values.password}
               onChange={(event) => onChange("password", event.target.value)}
-              placeholder={passwordRequired ? "Minimo 8 caracteres" : "Dejar vacio para no cambiar"}
-              className="w-full rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none transition focus:border-[#F97316] focus:ring-2 focus:ring-[#FDBA74]"
+              placeholder={
+                passwordRequired ? "Minimo 8 caracteres" : "Dejar vacio para no cambiar"
+              }
             />
-          </label>
-        </div>
-      </section>
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
     </div>
   )
 }

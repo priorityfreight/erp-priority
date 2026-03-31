@@ -397,7 +397,7 @@ query unlocode_country_summary_view for canonical country filter options
 do not query unlocodes directly from page components
 do not invent module-specific UN/LOCODE search logic when the canonical query layer already exists
 retain the current frontend contract even when backend indexing is optimized
-use snapshot fallback only as temporary rollback safety, never as the primary implementation target
+live modules must not fall back to snapshot data; recovery snapshots may exist only outside the live query path
 the canonical backend search is implemented through indexed search_text matching and ranked RPC ordering
 
 

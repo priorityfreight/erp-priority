@@ -1,8 +1,48 @@
 "use client"
 
+import { type ColumnDef } from "@tanstack/react-table"
+import {
+  PencilLineIcon,
+  PlusIcon,
+  RefreshCcwIcon,
+  ShieldAlertIcon,
+  Trash2Icon,
+  TrendingUpIcon,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Modal } from "@/components/data/Modal"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import {
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PriorityDateField } from "@/components/priority/PriorityDateField"
+import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
 import { PageContainer } from "@/components/layout/PageContainer"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { getErrorMessage, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback"
 import {
   createExchangeRate,
   deleteExchangeRate,
@@ -39,10 +79,10 @@ export function ExchangeRateManager() {
   const [baseCurrencyFilter, setBaseCurrencyFilter] = useState("all")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<ExchangeRate | null>(null)
   const [formValues, setFormValues] = useState<FormValues>(emptyForm)
 
   const loadItems = useCallback(async () => {
@@ -55,6 +95,7 @@ export function ExchangeRateManager() {
       setItems(data)
     } catch (error) {
       console.error(error)
+      notifyError("No se pudo cargar el catalogo de tipos de cambio")
     } finally {
       setLoading(false)
     }
@@ -71,44 +112,53 @@ export function ExchangeRateManager() {
     }))
   }, [items])
 
+  const baseCurrencyOptions = useMemo(
+    () => [{ value: "all", label: "Todas las monedas" }].concat(
+      currencyOptions.map((option) => ({ value: option, label: option }))
+    ),
+    []
+  )
+
   function resetForm() {
     setEditingId(null)
     setFormValues(emptyForm)
   }
 
+  function openCreateModal() {
+    resetForm()
+    setShowModal(true)
+  }
+
   async function handleSave() {
     if (!formValues.rateDate || !formValues.rateValue.trim()) {
-      alert("Fecha y tipo de cambio son obligatorios")
+      notifyWarning("Fecha y tipo de cambio son obligatorios")
       return
     }
 
     const parsedRate = Number(formValues.rateValue)
     if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
-      alert("El tipo de cambio debe ser mayor a cero")
+      notifyWarning("El tipo de cambio debe ser mayor a cero")
       return
     }
 
     try {
       setSaving(true)
 
+      const payload = {
+        rate_date: formValues.rateDate,
+        base_currency: formValues.baseCurrency,
+        quote_currency: formValues.quoteCurrency,
+        rate_value: parsedRate,
+        source: formValues.source,
+        source_series_code: formValues.sourceSeriesCode.trim() || null,
+      }
+
       if (editingId) {
-        await updateExchangeRate(editingId, {
-          rate_date: formValues.rateDate,
-          base_currency: formValues.baseCurrency,
-          quote_currency: formValues.quoteCurrency,
-          rate_value: parsedRate,
-          source: formValues.source,
-          source_series_code: formValues.sourceSeriesCode.trim() || null,
-        })
+        await updateExchangeRate(editingId, payload)
+        notifySuccess("Tipo de cambio actualizado correctamente")
       } else {
-        await createExchangeRate({
-          rate_date: formValues.rateDate,
-          base_currency: formValues.baseCurrency,
-          quote_currency: formValues.quoteCurrency,
-          rate_value: parsedRate,
-          source: formValues.source,
-          source_series_code: formValues.sourceSeriesCode.trim() || null,
-        })
+        await createExchangeRate(payload)
+        notifySuccess("Tipo de cambio creado correctamente")
       }
 
       setShowModal(false)
@@ -116,27 +166,25 @@ export function ExchangeRateManager() {
       await loadItems()
     } catch (error) {
       console.error(error)
-      alert("No se pudo guardar el tipo de cambio")
+      notifyError("No se pudo guardar el tipo de cambio")
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm("Eliminar este tipo de cambio?")
-    if (!confirmed) {
+  async function handleDeleteConfirm() {
+    if (!pendingDelete) {
       return
     }
 
     try {
-      setDeletingId(id)
-      await deleteExchangeRate(id)
+      await deleteExchangeRate(pendingDelete.id)
+      notifySuccess("Tipo de cambio eliminado correctamente")
+      setPendingDelete(null)
       await loadItems()
     } catch (error) {
       console.error(error)
-      alert("No se pudo eliminar el tipo de cambio")
-    } finally {
-      setDeletingId(null)
+      notifyError("No se pudo eliminar el tipo de cambio")
     }
   }
 
@@ -145,14 +193,103 @@ export function ExchangeRateManager() {
       setSyncing(true)
       await syncExchangeRatesFromBanxico(7)
       await loadItems()
-      alert("Tipos de cambio sincronizados desde Banxico correctamente.")
+      notifySuccess("Tipos de cambio sincronizados desde Banxico correctamente.")
     } catch (error) {
       console.error(error)
-      alert(error instanceof Error ? error.message : "No se pudo sincronizar Banxico")
+      notifyError(getErrorMessage(error, "No se pudo sincronizar Banxico"))
     } finally {
       setSyncing(false)
     }
   }
+
+  const columns = useMemo<ColumnDef<ExchangeRate>[]>(
+    () => [
+      {
+        accessorKey: "rate_date",
+        header: "Fecha",
+      },
+      {
+        id: "pair",
+        header: "Par",
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <div className="font-medium text-[var(--brand-navy)]">
+              {row.original.base_currency}/{row.original.quote_currency}
+            </div>
+            <div className="text-xs uppercase tracking-[0.18em] text-[#7A8BA1]">
+              {row.original.source}
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "rate_value",
+        header: "Tasa",
+        cell: ({ row }) => (
+          <span className="font-medium text-[var(--brand-navy)]">
+            {row.original.rate_value.toFixed(6)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "source",
+        header: "Fuente",
+        cell: ({ row }) => (
+          <Badge
+            variant={row.original.source === "MANUAL" ? "outline" : "secondary"}
+            className={
+              row.original.source === "MANUAL"
+                ? "border-[rgba(179,58,91,0.18)] bg-[rgba(179,58,91,0.05)] text-[var(--brand-burgundy)]"
+                : undefined
+            }
+          >
+            {row.original.source}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "source_series_code",
+        header: "Serie",
+        cell: ({ row }) => <span>{row.original.source_series_code || "—"}</span>,
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <PriorityRowActions
+              label="Acciones de tasa"
+              actions={[
+                {
+                  label: "Editar",
+                  icon: <PencilLineIcon />,
+                  onSelect: () => {
+                    setEditingId(row.original.id)
+                    setFormValues({
+                      rateDate: row.original.rate_date,
+                      baseCurrency: row.original.base_currency,
+                      quoteCurrency: row.original.quote_currency,
+                      rateValue: String(row.original.rate_value),
+                      source: row.original.source,
+                      sourceSeriesCode: row.original.source_series_code || "",
+                    })
+                    setShowModal(true)
+                  },
+                },
+                {
+                  label: "Eliminar",
+                  icon: <Trash2Icon />,
+                  onSelect: () => setPendingDelete(row.original),
+                  destructive: true,
+                },
+              ]}
+            />
+          </div>
+        ),
+      },
+    ],
+    []
+  )
 
   return (
     <PageContainer
@@ -160,140 +297,95 @@ export function ExchangeRateManager() {
       description="Catalogo canonico para convertir compras, ventas y profit contable a MXN usando la tasa Banxico del dia anterior. La sincronizacion automatica queda programada diariamente a las 6:00 a.m."
       actions={
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => void handleSyncBanxico()}
-            disabled={syncing}
-            className="rounded-md border border-[#0F766E] bg-[#ECFDF5] px-4 py-2 text-sm font-medium text-[#166534] shadow-sm hover:bg-[#DCFCE7] disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="button" variant="outline" size="lg" onClick={() => void handleSyncBanxico()} disabled={syncing}>
+            {syncing ? <Spinner className="text-current" /> : <RefreshCcwIcon />}
             {syncing ? "Sincronizando..." : "Sincronizar Banxico"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              resetForm()
-              setShowModal(true)
-            }}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-          >
+          </Button>
+          <Button type="button" size="lg" onClick={openCreateModal}>
+            <PlusIcon />
             Anadir tipo de cambio
-          </button>
+          </Button>
         </div>
       }
     >
       <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {latestByCurrency.map(({ currency, item }) => (
-            <div key={currency} className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-                {currency} → MXN
+            <div
+              key={currency}
+              className="rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_48px_-36px_rgba(3,10,24,0.28)]"
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B6A7D]">
+                  {currency} → MXN
+                </div>
+                <TrendingUpIcon className="size-4 text-[#0F766E]" />
               </div>
-              <div className="mt-2 text-2xl font-semibold text-[#111827]">
+              <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">
                 {item ? item.rate_value.toFixed(4) : "—"}
               </div>
-              <div className="mt-1 text-sm text-[#6B7280]">
+              <div className="mt-2 text-sm text-[#5B6A7D]">
                 {item ? `Fecha ${item.rate_date}` : "Sin registro"}
               </div>
             </div>
           ))}
+          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
+              Registros vigentes
+            </div>
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{items.length}</div>
+            <div className="mt-2 text-sm text-[#5B6A7D]">
+              El ERP toma la ultima tasa disponible anterior al dia de operacion.
+            </div>
+          </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
+          <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Catalogo de tipos de cambio</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+              <PriorityCardTitle>Catalogo de tipos de cambio</PriorityCardTitle>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 El ERP toma la ultima tasa disponible anterior al dia de trabajo para convertir todo a MXN.
-              </p>
+              </PriorityTypography>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                placeholder="Buscar"
+            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_auto]">
+              <PriorityInput
+                placeholder="Buscar por fecha, fuente o serie"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={baseCurrencyFilter}
-                onChange={(event) => setBaseCurrencyFilter(event.target.value)}
+                onValueChange={setBaseCurrencyFilter}
+                placeholder="Moneda base"
+                options={baseCurrencyOptions}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setQuery("")
+                  setBaseCurrencyFilter("all")
+                }}
               >
-                <option value="all">Todas las monedas</option>
-                {currencyOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+                Limpiar
+              </Button>
+            </PriorityToolbar>
           </div>
 
           {loading ? (
-            <p className="text-sm text-[#6B7280]">Cargando tipos de cambio...</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">No hay tipos de cambio registrados todavia.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Moneda base</th>
-                    <th className="px-4 py-3">Moneda destino</th>
-                    <th className="px-4 py-3">Tasa</th>
-                    <th className="px-4 py-3">Fuente</th>
-                    <th className="px-4 py-3">Serie</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 text-[#475569]">{item.rate_date}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.base_currency}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.quote_currency}</td>
-                      <td className="px-4 py-3 font-medium text-[#111827]">
-                        {item.rate_value.toFixed(6)}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">{item.source}</td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {item.source_series_code || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingId(item.id)
-                              setFormValues({
-                                rateDate: item.rate_date,
-                                baseCurrency: item.base_currency,
-                                quoteCurrency: item.quote_currency,
-                                rateValue: String(item.rate_value),
-                                source: item.source,
-                                sourceSeriesCode: item.source_series_code || "",
-                              })
-                              setShowModal(true)
-                            }}
-                            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-1.5 font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(item.id)}
-                            disabled={deletingId === item.id}
-                            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-1.5 font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingId === item.id ? "Eliminando..." : "Eliminar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
             </div>
+          ) : (
+            <PriorityDataTable
+              columns={columns}
+              data={items}
+              emptyTitle="No hay tipos de cambio registrados"
+              emptyDescription="Sincroniza Banxico o registra una tasa manual para arrancar el catalogo canonico."
+            />
           )}
         </section>
       </div>
@@ -307,71 +399,139 @@ export function ExchangeRateManager() {
             resetForm()
           }}
         >
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              type="date"
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              value={formValues.rateDate}
-              onChange={(event) => setFormValues((current) => ({ ...current, rateDate: event.target.value }))}
-            />
-            <select
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              value={formValues.baseCurrency}
-              onChange={(event) => setFormValues((current) => ({ ...current, baseCurrency: event.target.value }))}
+          <div className="space-y-5">
+            <PriorityFormSection
+              title="Identidad de la tasa"
+              description="Define la fecha, el par cambiario y el origen de la tasa oficial."
             >
-              {currencyOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <select
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              value={formValues.quoteCurrency}
-              onChange={(event) => setFormValues((current) => ({ ...current, quoteCurrency: event.target.value }))}
-            >
-              <option value="MXN">MXN</option>
-            </select>
-            <input
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              placeholder="Tipo de cambio"
-              inputMode="decimal"
-              value={formValues.rateValue}
-              onChange={(event) => setFormValues((current) => ({ ...current, rateValue: event.target.value }))}
-            />
-            <select
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              value={formValues.source}
-              onChange={(event) => setFormValues((current) => ({ ...current, source: event.target.value }))}
-            >
-              {sourceOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <input
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              placeholder="Serie BANXICO"
-              value={formValues.sourceSeriesCode}
-              onChange={(event) =>
-                setFormValues((current) => ({ ...current, sourceSeriesCode: event.target.value }))
-              }
-            />
-          </div>
+              <PriorityFormGrid>
+                <PriorityFormField label="Fecha">
+                  <PriorityDateField
+                    value={formValues.rateDate}
+                    onChange={(value) => setFormValues((current) => ({ ...current, rateDate: value }))}
+                  />
+                </PriorityFormField>
+                <PriorityFormField label="Moneda base">
+                  <PrioritySelectField
+                    value={formValues.baseCurrency}
+                    onValueChange={(value) =>
+                      setFormValues((current) => ({ ...current, baseCurrency: value }))
+                    }
+                    placeholder="Moneda base"
+                    options={currencyOptions.map((option) => ({ value: option, label: option }))}
+                  />
+                </PriorityFormField>
+                <PriorityFormField label="Moneda destino">
+                  <PrioritySelectField
+                    value={formValues.quoteCurrency}
+                    onValueChange={(value) =>
+                      setFormValues((current) => ({ ...current, quoteCurrency: value }))
+                    }
+                    placeholder="Moneda destino"
+                    options={[{ value: "MXN", label: "MXN" }]}
+                  />
+                </PriorityFormField>
+                <PriorityFormField label="Tipo de cambio">
+                  <PriorityInput
+                    placeholder="Tipo de cambio"
+                    inputMode="decimal"
+                    value={formValues.rateValue}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, rateValue: event.target.value }))
+                    }
+                  />
+                </PriorityFormField>
+              </PriorityFormGrid>
+            </PriorityFormSection>
 
-          <div className="mt-5 flex justify-end">
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saving}
-              className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
+            <PriorityFormSection
+              title="Fuente y trazabilidad"
+              description="Mantén la procedencia visible para auditoría y validación contable."
             >
-              {saving ? "Guardando..." : "Guardar"}
-            </button>
+              <PriorityFormGrid className="xl:grid-cols-2">
+                <PriorityFormField label="Fuente">
+                  <div className="space-y-3">
+                    <RadioGroup
+                      value={formValues.source}
+                      onValueChange={(value) =>
+                        setFormValues((current) => ({ ...current, source: value }))
+                      }
+                      className="grid gap-3 sm:grid-cols-2"
+                    >
+                      {sourceOptions.map((option) => (
+                        <label
+                          key={option}
+                          className="flex items-center gap-3 rounded-[18px] border border-[#D1D6DF] bg-white px-4 py-3 text-sm font-medium text-[var(--brand-navy)]"
+                        >
+                          <RadioGroupItem value={option} />
+                          <span>{option}</span>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                    <PriorityTypography variant="caption">
+                      El origen queda visible para auditoría y conciliación.
+                    </PriorityTypography>
+                  </div>
+                </PriorityFormField>
+                <PriorityFormField label="Serie Banxico">
+                  <PriorityInput
+                    placeholder="Serie BANXICO"
+                    value={formValues.sourceSeriesCode}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, sourceSeriesCode: event.target.value }))
+                    }
+                  />
+                </PriorityFormField>
+              </PriorityFormGrid>
+              <div className="mt-4">
+                <PriorityInfoField
+                  label="Uso esperado"
+                  value="Conversion canonica de compras, ventas y profit contable hacia MXN."
+                />
+              </div>
+            </PriorityFormSection>
+
+            <PrioritySubmitBar>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowModal(false)
+                  resetForm()
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+                {saving ? <Spinner className="text-current" /> : null}
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            </PrioritySubmitBar>
           </div>
         </Modal>
       ) : null}
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,246,249,0.96)_100%)] p-0 text-[var(--brand-navy)] shadow-[0_36px_80px_-36px_rgba(3,10,24,0.55)]">
+          <AlertDialogHeader className="px-6 pt-6 text-left sm:place-items-start sm:text-left">
+            <AlertDialogMedia className="bg-[rgba(179,58,91,0.08)] text-[var(--brand-burgundy)]">
+              <ShieldAlertIcon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Eliminar tipo de cambio</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `Vas a eliminar la tasa ${pendingDelete.base_currency}/${pendingDelete.quote_currency} del ${pendingDelete.rate_date}. Verifica que no sea necesaria para conciliacion o auditoria.`
+                : "Confirma la eliminacion del tipo de cambio."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="rounded-b-[28px] border-t border-[var(--border-subtle)] bg-[rgba(11,31,59,0.03)] px-6 py-4">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void handleDeleteConfirm()}>
+              Eliminar tasa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   )
 }

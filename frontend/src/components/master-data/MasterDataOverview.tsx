@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
 
 const submodules = [
   {
@@ -48,7 +49,7 @@ const submodules = [
     title: "UN/LOCODE",
     href: "/master-data/unlocode",
     status: "Live",
-    coverage: "Canonical backend with rollback snapshot safety",
+    coverage: "Canonical backend lookup",
     notes: "Read-only explorer for UNECE location codes used in logistics lanes.",
   },
   {
@@ -84,7 +85,7 @@ export function MasterDataOverview() {
               Data Strategy
             </div>
             <div className="mt-2 text-sm font-medium text-[#111827]">
-              Canonical backend first, with snapshot retained only as temporary rollback safety.
+              Canonical backend only for live master data reads and writes.
             </div>
           </div>
           <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
@@ -98,7 +99,7 @@ export function MasterDataOverview() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[#111827]">Submodules</h2>
+          <PriorityCardTitle>Submodules</PriorityCardTitle>
           <div className="grid gap-4 lg:grid-cols-2">
             {submodules.map((item) => (
               <Link
@@ -108,8 +109,10 @@ export function MasterDataOverview() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-lg font-semibold text-[#111827]">{item.title}</div>
-                    <div className="mt-1 text-sm text-[#6B7280]">{item.notes}</div>
+                    <PriorityCardTitle className="text-[1.05rem]">{item.title}</PriorityCardTitle>
+                    <PriorityTypography variant="bodyMuted" className="mt-1">
+                      {item.notes}
+                    </PriorityTypography>
                   </div>
                   <span
                     className={[
@@ -122,9 +125,9 @@ export function MasterDataOverview() {
                     {item.status}
                   </span>
                 </div>
-                <div className="mt-4 text-xs font-medium uppercase tracking-wide text-[#64748B]">
+                <PriorityTypography variant="caption" className="mt-4 uppercase tracking-[0.14em]">
                   {item.coverage}
-                </div>
+                </PriorityTypography>
               </Link>
             ))}
           </div>

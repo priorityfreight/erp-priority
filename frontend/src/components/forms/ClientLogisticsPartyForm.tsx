@@ -1,6 +1,20 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  PriorityFormHeader,
+  PriorityFormField,
+  PriorityFormGrid,
+  PriorityFormSection,
+  PriorityInfoField,
+  PriorityInput,
+  PrioritySubmitBar,
+  PriorityTextarea,
+} from "@/components/priority/PriorityForm"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
 import { isValidEmail, normalizeWhatsAppLink } from "./ContactForm"
 import { UnlocodeLookupField } from "./UnlocodeLookupField"
 
@@ -28,26 +42,6 @@ type ClientLogisticsPartyFormProps = {
   disabled?: boolean
 }
 
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#334155]">{title}</h3>
-        {description ? <p className="mt-1 text-sm text-[#64748B]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
 export function ClientLogisticsPartyForm({
   title,
   description,
@@ -63,57 +57,75 @@ export function ClientLogisticsPartyForm({
   const whatsappLink = normalizeWhatsAppLink(values.contactPhone)
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-      <div>
-        <h2 className="text-lg font-semibold text-[#111827]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[#6B7280]">{description}</p> : null}
-      </div>
+    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
+      <PriorityFormHeader title={title} description={description} />
 
-      <FormSection
+      <PriorityFormSection
         title="Informacion del registro"
         description="Define el tipo de registro logistico y el nombre operativo."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <select
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            value={values.partyType}
-            onChange={(event) => onChange("partyType", event.target.value)}
-            disabled={disabled}
-          >
-            <option value="shipper">Shipper</option>
-            <option value="consignee">Consignee</option>
-            <option value="aa">AA</option>
-          </select>
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Nombre *"
-            value={values.name}
-            onChange={(event) => onChange("name", event.target.value)}
-            disabled={disabled}
-          />
-        </div>
-      </FormSection>
+        <PriorityFormGrid>
+          <PriorityFormField label="Tipo de registro">
+            <div className="space-y-3">
+              <ToggleGroup
+                type="single"
+                value={values.partyType}
+                onValueChange={(value) => {
+                  if (value) {
+                    onChange("partyType", value)
+                  }
+                }}
+                className="w-full justify-start"
+              >
+                <ToggleGroupItem value="shipper" className="min-w-[120px]">
+                  Shipper
+                </ToggleGroupItem>
+                <ToggleGroupItem value="consignee" className="min-w-[120px]">
+                  Consignee
+                </ToggleGroupItem>
+                <ToggleGroupItem value="aa" className="min-w-[120px]">
+                  AA
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <PriorityTypography variant="caption">
+                El tipo debe reflejar el rol logistico real que cumple este registro para la cuenta.
+              </PriorityTypography>
+            </div>
+          </PriorityFormField>
+          <PriorityFormField label="Nombre operativo">
+            <PriorityInput
+              placeholder="Nombre *"
+              value={values.name}
+              onChange={(event) => onChange("name", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Ubicacion"
         description="Selecciona un UN/LOCODE para estandarizar ciudad y pais."
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <textarea
-            className="min-h-[92px] rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] md:col-span-2 xl:col-span-2"
-            placeholder="Direccion"
-            value={values.fullAddress}
-            onChange={(event) => onChange("fullAddress", event.target.value)}
-            disabled={disabled}
-          />
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Codigo postal"
-            value={values.postalCode}
-            onChange={(event) => onChange("postalCode", event.target.value)}
-            disabled={disabled}
-          />
-          <div className="space-y-2 md:col-span-2 xl:col-span-3">
+        <PriorityFormGrid className="xl:grid-cols-3">
+          <PriorityFormField label="Direccion completa" className="md:col-span-2 xl:col-span-2">
+            <PriorityTextarea
+              className="min-h-[96px]"
+              placeholder="Direccion"
+              value={values.fullAddress}
+              onChange={(event) => onChange("fullAddress", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField label="Codigo postal">
+            <PriorityInput
+              placeholder="Codigo postal"
+              value={values.postalCode}
+              onChange={(event) => onChange("postalCode", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <div className="space-y-3 md:col-span-2 xl:col-span-3">
             <UnlocodeLookupField
               label="UN/LOCODE"
               query={locationQuery}
@@ -139,81 +151,75 @@ export function ClientLogisticsPartyForm({
               }}
             />
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Ciudad calculada
-                </div>
-                <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {values.city || "Selecciona un UN/LOCODE"}
-                </div>
-              </div>
-              <div className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Pais calculado
-                </div>
-                <div className="mt-1 text-sm font-medium text-[#111827]">
-                  {values.country || "Selecciona un UN/LOCODE"}
-                </div>
-              </div>
+              <PriorityInfoField label="Ciudad calculada" value={values.city || "Selecciona un UN/LOCODE"} />
+              <PriorityInfoField label="Pais calculado" value={values.country || "Selecciona un UN/LOCODE"} />
             </div>
+            {values.cityUnlocode ? (
+              <PrioritySectionAlert title="Ubicacion normalizada" variant="info">
+                UN/LOCODE seleccionado: {values.cityUnlocode}
+              </PrioritySectionAlert>
+            ) : null}
           </div>
-        </div>
-      </FormSection>
+        </PriorityFormGrid>
+      </PriorityFormSection>
 
-      <FormSection
+      <PriorityFormSection
         title="Contacto asociado"
         description="Persona y canales principales del registro."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <input
-            className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-            placeholder="Nombre del contacto"
-            value={values.contactName}
-            onChange={(event) => onChange("contactName", event.target.value)}
-            disabled={disabled}
-          />
-          <div className="space-y-2">
-            <input
-              className={`rounded-md border bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] ${
-                emailValid ? "border-[#D1D5DB]" : "border-[#FCA5A5]"
-              }`}
+        <PriorityFormGrid className="md:grid-cols-2">
+          <PriorityFormField label="Nombre del contacto">
+            <PriorityInput
+              placeholder="Nombre del contacto"
+              value={values.contactName}
+              onChange={(event) => onChange("contactName", event.target.value)}
+              disabled={disabled}
+            />
+          </PriorityFormField>
+          <PriorityFormField
+            label="Correo del contacto"
+            description={emailValid ? "Validacion de formato solamente." : "El correo no tiene un formato valido."}
+          >
+            <PriorityInput
+              aria-invalid={!emailValid}
+              className={!emailValid ? "border-[#FCA5A5] focus-visible:ring-[rgba(185,28,28,0.15)]" : undefined}
               placeholder="Correo del contacto"
               value={values.contactEmail}
               onChange={(event) => onChange("contactEmail", event.target.value)}
               disabled={disabled}
             />
-            <div className={`text-xs ${emailValid ? "text-[#6B7280]" : "text-[#B91C1C]"}`}>
-              {emailValid
-                ? "Validacion de formato solamente."
-                : "El correo no tiene un formato valido."}
-            </div>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <input
-              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+          </PriorityFormField>
+          <PriorityFormField
+            label="Numero de contacto"
+            description={whatsappLink ? "Se puede abrir directo en WhatsApp." : "Sin enlace de WhatsApp."}
+            className="md:col-span-2"
+          >
+            <PriorityInput
               placeholder="Numero de contacto"
               value={values.contactPhone}
               onChange={(event) => onChange("contactPhone", event.target.value)}
               disabled={disabled}
             />
-            <div className="text-xs text-[#6B7280]">
-              {whatsappLink ? "Se puede abrir directo en WhatsApp." : "Sin enlace de WhatsApp."}
-            </div>
-          </div>
-        </div>
-      </FormSection>
+          </PriorityFormField>
+        </PriorityFormGrid>
+      </PriorityFormSection>
+
+      {!emailValid ? (
+        <PrioritySectionAlert title="Validacion pendiente" variant="warning">
+          Corrige el formato del correo del contacto antes de guardar este registro logistico.
+        </PrioritySectionAlert>
+      ) : null}
 
       {onSubmit ? (
-        <div className="flex justify-end">
-          <button
+        <PrioritySubmitBar>
+          <Button
             type="button"
             onClick={onSubmit}
             disabled={disabled || loading || !emailValid}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Working..." : submitLabel}
-          </button>
-        </div>
+            {loading ? "Guardando..." : submitLabel}
+          </Button>
+        </PrioritySubmitBar>
       ) : null}
     </section>
   )

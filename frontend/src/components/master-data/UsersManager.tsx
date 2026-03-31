@@ -1,12 +1,42 @@
 "use client"
 
+import { type ColumnDef } from "@tanstack/react-table"
+import { PencilLineIcon, PlusIcon, ShieldAlertIcon, Trash2Icon, UserCogIcon } from "lucide-react"
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
-import { PageContainer } from "@/components/layout/PageContainer"
 import { UserForm, type UserFormValues } from "@/components/forms/UserForm"
+import { PageContainer } from "@/components/layout/PageContainer"
+import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import {
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
+import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
+import { PriorityUserAvatar } from "@/components/priority/PriorityUserAvatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { Switch } from "@/components/ui/switch"
 import { getUserRoles, getUsers, type User, type UserRole } from "@/lib/db"
+import { notifyError } from "@/lib/feedback"
 
 const emptyForm: UserFormValues = {
   fullName: "",
@@ -63,24 +93,26 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
   const [roleFilter, setRoleFilter] = useState("todos")
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null)
   const [formValues, setFormValues] = useState<UserFormValues>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [tableError, setTableError] = useState<string | null>(null)
   const [tableFeedback, setTableFeedback] = useState<string | null>(null)
 
   const loadUsers = useCallback(async () => {
     try {
-      const [userRows, roleRows] = await Promise.all([
-        getUsers(),
-        getUserRoles(),
-      ])
+      setLoading(true)
+      const [userRows, roleRows] = await Promise.all([getUsers(), getUserRoles()])
       setUsers(userRows)
       setRoles(roleRows)
       setTableError(null)
     } catch (error) {
       console.error(error)
       setTableError(error instanceof Error ? error.message : "No se pudieron cargar los usuarios.")
+    } finally {
+      setLoading(false)
     }
   }, [])
 
@@ -100,12 +132,7 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
         return true
       }
 
-      return [
-        getDisplayName(user),
-        user.email,
-        user.username || "",
-        user.role_name || "",
-      ]
+      return [getDisplayName(user), user.email, user.username || "", user.role_name || ""]
         .join(" ")
         .toLowerCase()
         .includes(normalizedQuery)
@@ -114,6 +141,13 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
 
   const activeUsers = users.filter((user) => user.active).length
   const inactiveUsers = users.length - activeUsers
+
+  const roleOptions = useMemo(
+    () => [{ value: "todos", label: "Todos los roles" }].concat(
+      roles.map((role) => ({ value: role.name, label: role.name }))
+    ),
+    [roles]
+  )
 
   function resetForm() {
     setFormValues(emptyForm)
@@ -140,14 +174,17 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
     setShowCreateModal(true)
   }
 
-  function buildUpdatePayload(user: User, overrides?: Partial<{
-    active: boolean
-    roleName: string
-    phone: string | null
-    username: string | null
-    firstName: string
-    lastName: string
-  }>) {
+  function buildUpdatePayload(
+    user: User,
+    overrides?: Partial<{
+      active: boolean
+      roleName: string
+      phone: string | null
+      username: string | null
+      firstName: string
+      lastName: string
+    }>
+  ) {
     return {
       userId: user.id,
       authUserId: user.auth_user_id ?? null,
@@ -246,25 +283,20 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
       setTableFeedback(`Usuario marcado como ${nextStatus ? "activo" : "inactivo"}.`)
       await loadUsers()
     } catch (error) {
-      setTableError(
-        error instanceof Error ? error.message : "No se pudo actualizar el estatus del usuario."
-      )
+      setTableError(error instanceof Error ? error.message : "No se pudo actualizar el estatus del usuario.")
     } finally {
       setSubmitting(false)
     }
   }
 
-  async function handleDeleteUser(user: User) {
-    if (user.id === currentUserId) {
-      setTableError("No puedes eliminar tu propio usuario administrador.")
+  async function handleDeleteUser() {
+    if (!pendingDelete) {
       return
     }
 
-    const confirmed = window.confirm(
-      `Vas a eliminar al usuario ${getDisplayName(user)}. Esta accion no se puede deshacer.`
-    )
-
-    if (!confirmed) {
+    if (pendingDelete.id === currentUserId) {
+      setTableError("No puedes eliminar tu propio usuario administrador.")
+      setPendingDelete(null)
       return
     }
 
@@ -278,8 +310,8 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: user.id,
-          authUserId: user.auth_user_id ?? null,
+          userId: pendingDelete.id,
+          authUserId: pendingDelete.auth_user_id ?? null,
         }),
       })
 
@@ -293,16 +325,100 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
       }
 
       setTableFeedback("Usuario eliminado correctamente.")
+      setPendingDelete(null)
       await loadUsers()
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "No se pudo eliminar el usuario."
+      const message = error instanceof Error ? error.message : "No se pudo eliminar el usuario."
       setTableError(message)
-      window.alert(message)
+      notifyError(message)
     } finally {
       setSubmitting(false)
     }
   }
+
+  const columns: ColumnDef<User>[] = [
+    {
+      id: "name",
+      header: "Nombre",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <PriorityUserAvatar name={getDisplayName(row.original)} />
+          <div className="space-y-1">
+            <div className="font-medium text-[var(--brand-navy)]">{getDisplayName(row.original)}</div>
+            <PriorityTypography variant="caption">
+              {row.original.auth_user_id ? "Auth vinculado" : "Auth pendiente"}
+            </PriorityTypography>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "role_name",
+      header: "Rol",
+      cell: ({ row }) =>
+        row.original.role_name ? <Badge variant="secondary">{row.original.role_name}</Badge> : <span>Sin rol</span>,
+    },
+    {
+      accessorKey: "email",
+      header: "Correo",
+    },
+    {
+      accessorKey: "phone",
+      header: "Telefono",
+      cell: ({ row }) => <span>{row.original.phone || "No disponible"}</span>,
+    },
+    {
+      accessorKey: "username",
+      header: "Username",
+      cell: ({ row }) => <span>{row.original.username || "No asignado"}</span>,
+    },
+    {
+      accessorKey: "active",
+      header: "Estatus",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-between gap-3">
+          <StatusBadge status={row.original.active ? "active" : "inactive"} />
+          <Switch
+            checked={row.original.active}
+            aria-label={row.original.active ? "Inactivar usuario" : "Activar usuario"}
+            disabled={submitting}
+            onCheckedChange={() => void handleToggleActive(row.original)}
+          />
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <PriorityRowActions
+            label="Acciones de usuario"
+            actions={[
+              {
+                label: "Editar",
+                icon: <PencilLineIcon />,
+                onSelect: () => openEditModal(row.original),
+              },
+              {
+                label: row.original.active ? "Inactivar" : "Activar",
+                icon: <UserCogIcon />,
+                onSelect: () => void handleToggleActive(row.original),
+                disabled: submitting,
+              },
+              {
+                label: "Eliminar",
+                icon: <Trash2Icon />,
+                onSelect: () => setPendingDelete(row.original),
+                disabled: submitting,
+                destructive: true,
+              },
+            ]}
+          />
+        </div>
+      ),
+    },
+  ]
 
   return (
     <PageContainer
@@ -310,173 +426,115 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
       description="Directorio de acceso ERP para usuarios asignados, roles y estatus de acceso."
       actions={
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/master-data/users/roles"
-            className="rounded-md border border-[#CBD5E1] bg-white px-4 py-2 text-sm font-medium text-[#334155] shadow-sm hover:bg-[#F8FAFC]"
-          >
-            Roles y permisos
-          </Link>
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
-          >
+          <Button asChild type="button" variant="outline" size="lg">
+            <Link href="/master-data/users/roles">
+              <UserCogIcon />
+              Roles y permisos
+            </Link>
+          </Button>
+          <Button type="button" size="lg" onClick={openCreateModal}>
+            <PlusIcon />
             Anadir usuario
-          </button>
+          </Button>
         </div>
       }
     >
       <div className="space-y-8">
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
+          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
               Total usuarios
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{users.length}</div>
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{users.length}</div>
           </div>
-          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
+          <div className="rounded-[24px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(16,185,129,0.22)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#047857]">
               Activos
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{activeUsers}</div>
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{activeUsers}</div>
           </div>
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
+          <div className="rounded-[24px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(217,119,6,0.18)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">
               Inactivos
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{inactiveUsers}</div>
+            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{inactiveUsers}</div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
+          <div className="flex flex-col gap-4">
             <div>
-              <div className="text-lg font-semibold text-[#111827]">Directorio ERP</div>
-              <div className="text-sm text-[#6B7280]">
+              <PriorityCardTitle>Directorio ERP</PriorityCardTitle>
+              <PriorityTypography variant="bodyMuted" className="mt-1">
                 El login usa username o correo, pero solo permite acceso a usuarios activos.
-              </div>
+              </PriorityTypography>
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row">
-              <input
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto]">
+              <PriorityInput
                 placeholder="Buscar usuario"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+              <PrioritySelectField
                 value={roleFilter}
-                onChange={(event) => setRoleFilter(event.target.value)}
-              >
-                <option value="todos">Todos los roles</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.name}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                onValueChange={setRoleFilter}
+                placeholder="Rol"
+                options={roleOptions}
+              />
+              <PrioritySelectField
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as typeof statusFilter)
-                }
+                onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
+                placeholder="Estatus"
+                options={[
+                  { value: "todos", label: "Todos los estatus" },
+                  { value: "activo", label: "Activo" },
+                  { value: "inactivo", label: "Inactivo" },
+                ]}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSearch("")
+                  setRoleFilter("todos")
+                  setStatusFilter("todos")
+                }}
               >
-                <option value="todos">Todos los estatus</option>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-              </select>
-            </div>
+                Limpiar
+              </Button>
+            </PriorityToolbar>
           </div>
 
-          <div className="mb-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 text-xs text-[#64748B]">
-            Usuario actual: <span className="font-semibold text-[#0F172A]">{currentUserEmail}</span>
+          <div className="rounded-[22px] border border-[rgba(144,158,174,0.16)] bg-[rgba(11,31,59,0.04)] px-4 py-3 text-sm text-[#526175]">
+            Usuario actual: <span className="font-semibold text-[var(--brand-navy)]">{currentUserEmail}</span>
           </div>
 
           {tableFeedback ? (
-            <div className="mb-4 rounded-xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-sm text-[#166534]">
+            <PrioritySectionAlert title="Operacion completada" variant="success">
               {tableFeedback}
-            </div>
+            </PrioritySectionAlert>
           ) : null}
 
           {tableError ? (
-            <div className="mb-4 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+            <PrioritySectionAlert title="No se pudo completar la accion" variant="destructive">
               {tableError}
-            </div>
+            </PrioritySectionAlert>
           ) : null}
 
-          {filteredUsers.length === 0 ? (
-            <p className="text-sm text-[#6B7280]">
-              No hay usuarios que coincidan con los filtros actuales.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">Nombre</th>
-                    <th className="px-4 py-3">Rol</th>
-                    <th className="px-4 py-3">Correo</th>
-                    <th className="px-4 py-3">Telefono</th>
-                    <th className="px-4 py-3">Username</th>
-                    <th className="px-4 py-3">Estatus</th>
-                    <th className="px-4 py-3">Auth</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td className="px-4 py-3 font-medium text-[#111827]">{getDisplayName(user)}</td>
-                      <td className="px-4 py-3 text-[#475569]">{user.role_name || "Sin rol"}</td>
-                      <td className="px-4 py-3 text-[#475569]">{user.email}</td>
-                      <td className="px-4 py-3 text-[#475569]">{user.phone || "No disponible"}</td>
-                      <td className="px-4 py-3 text-[#475569]">{user.username || "No asignado"}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={user.active ? "active" : "inactive"} />
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {user.auth_user_id ? "Vinculado" : "Pendiente"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(user)}
-                            className="rounded-md border border-[#D1D5DB] px-3 py-2 text-xs font-medium text-[#374151] hover:bg-[#F8FAFC]"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleToggleActive(user)}
-                            disabled={submitting}
-                            className={[
-                              "rounded-md px-3 py-2 text-xs font-medium text-white",
-                              user.active
-                                ? "bg-[#B45309] hover:bg-[#92400E]"
-                                : "bg-[#047857] hover:bg-[#065F46]",
-                              submitting ? "cursor-not-allowed opacity-70" : "",
-                            ].join(" ")}
-                          >
-                            {user.active ? "Inactivar" : "Activar"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteUser(user)}
-                            disabled={submitting}
-                            className="rounded-md border border-[#FCA5A5] px-3 py-2 text-xs font-medium text-[#B91C1C] hover:bg-[#FEF2F2] disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
+              <Skeleton className="h-12 rounded-[18px]" />
             </div>
+          ) : (
+            <PriorityDataTable
+              columns={columns}
+              data={filteredUsers}
+              emptyTitle="No hay usuarios que coincidan con los filtros"
+              emptyDescription="Ajusta la búsqueda o crea un nuevo usuario para el directorio ERP."
+            />
           )}
         </section>
       </div>
@@ -490,7 +548,7 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
             resetForm()
           }}
         >
-          <div className="space-y-6">
+          <div className="space-y-5">
             <UserForm
               values={formValues}
               roles={roles}
@@ -499,34 +557,52 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
             />
 
             {formError ? (
-              <div className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+              <div className="rounded-[22px] border border-[rgba(239,68,68,0.16)] bg-[rgba(254,242,242,0.95)] px-4 py-3 text-sm text-[#B91C1C]">
                 {formError}
               </div>
             ) : null}
 
-            <div className="flex justify-end gap-3">
-              <button
+            <PrioritySubmitBar>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => {
                   setShowCreateModal(false)
                   resetForm()
                 }}
-                className="rounded-md border border-[#D1D5DB] px-4 py-2 text-sm font-medium text-[#374151] hover:bg-[#F8FAFC]"
               >
                 Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSubmit()}
-                disabled={submitting}
-                className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-70"
-              >
+              </Button>
+              <Button type="button" onClick={() => void handleSubmit()} disabled={submitting}>
+                {submitting ? <Spinner className="text-current" /> : null}
                 {submitting ? "Guardando..." : editingUser ? "Guardar cambios" : "Crear usuario"}
-              </button>
-            </div>
+              </Button>
+            </PrioritySubmitBar>
           </div>
         </Modal>
       ) : null}
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,246,249,0.96)_100%)] p-0 text-[var(--brand-navy)] shadow-[0_36px_80px_-36px_rgba(3,10,24,0.55)]">
+          <AlertDialogHeader className="px-6 pt-6 text-left sm:place-items-start sm:text-left">
+            <AlertDialogMedia className="bg-[rgba(179,58,91,0.08)] text-[var(--brand-burgundy)]">
+              <ShieldAlertIcon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Eliminar usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `Vas a eliminar a ${getDisplayName(pendingDelete)}. Esta accion no se puede deshacer y primero debes asegurarte de que no tenga relaciones operativas activas.`
+                : "Confirma la eliminacion del usuario."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="rounded-b-[28px] border-t border-[var(--border-subtle)] bg-[rgba(11,31,59,0.03)] px-6 py-4">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void handleDeleteUser()}>
+              Eliminar usuario
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   )
 }

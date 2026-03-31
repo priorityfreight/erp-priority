@@ -1,13 +1,17 @@
 import { supabase } from "@/lib/supabaseClient"
 
-export type BackendMode = "canonical" | "legacy"
-export type MasterDataBackendMode = "canonical" | "snapshot"
+export type BackendMode = "canonical"
+export type MasterDataBackendMode = "canonical"
 
 let backendModePromise: Promise<BackendMode> | null = null
 let masterDataBackendModePromise: Promise<MasterDataBackendMode> | null = null
 
-// Temporary rollback safety only. The linked cloud backend is canonical and
-// new product behavior must not be designed around legacy or snapshot modes.
+function buildMissingCanonicalBackendError(objectName: string, context: string) {
+  return new Error(
+    `Canonical backend object "${objectName}" is not available for ${context}. ` +
+      "This ERP now runs in canonical-only mode; restore the linked canonical schema before continuing."
+  )
+}
 
 export function isMissingSchemaObjectError(error: { message?: string } | null): boolean {
   const message = error?.message?.toLowerCase() ?? ""
@@ -27,7 +31,7 @@ async function detectBackendMode(): Promise<BackendMode> {
   }
 
   if (isMissingSchemaObjectError(error)) {
-    return "legacy"
+    throw buildMissingCanonicalBackendError("client_overview_view", "CRM reads and writes")
   }
 
   throw error
@@ -49,7 +53,7 @@ async function detectMasterDataBackendMode(): Promise<MasterDataBackendMode> {
   }
 
   if (isMissingSchemaObjectError(error)) {
-    return "snapshot"
+    throw buildMissingCanonicalBackendError("unlocode_lookup_view", "master data lookups")
   }
 
   throw error

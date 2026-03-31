@@ -95,6 +95,24 @@ light
 
 Text should always prioritize readability.
 
+Typography implementation rule
+
+- `Avenir Next` remains the primary font for the ERP shell and workspaces
+- typography must be expressed through semantic roles, not one-off utility mixes
+- approved semantic roles include:
+  - page title
+  - section title
+  - card title
+  - eyebrow
+  - body
+  - muted body
+  - field label
+  - data value
+  - table header
+  - caption
+- dense administrative screens should reduce excessive tracking and avoid ultra-light text on bright cards
+- every new workspace should inherit its text hierarchy from shared typography wrappers instead of inventing its own scale
+
 
 
 --------------------------------------------------
@@ -147,7 +165,15 @@ use business meaning colors without overwhelming the corporate palette
 Brand asset rule
 
 - repository source of truth: ASSETS/
-- Next.js runtime copies: frontend/public/assets/
+- official synced runtime brand assets: frontend/public/assets/
+- the approved shell lockup is `frontend/public/assets/logo_vSVG.svg`
+- prototype shell assets may exist in frontend/public/brand/ but they are not the canonical shell lockups once approved SVG exports exist
+- document and PDF runtime raster assets: frontend/public/assets/
+- app metadata icon: frontend/public/assets/favicon-transparent.png
+- use SVG lockups for sidebar, topbar, login, and app-shell brand rendering
+- if official shell assets render unreliably in the local/runtime app, a temporary code-rendered shell lockup is allowed until the approved asset path is fixed
+- use raster logo assets only for document/PDF surfaces that already depend on PNG export quality
+- all runtime brand paths must come from a shared branding module; do not hardcode logo paths inside pages, components, or PDF routes
 - do not recreate logos with text when official assets exist
 
 
@@ -210,6 +236,16 @@ The UI should be built using reusable components.
 
 Core components
 
+- `shadcn/ui` is the only approved component foundation
+- the ERP-facing layer must continue to use branded `Priority` wrappers
+- official `shadcn` compositions for empty states, comboboxes, and data tables are approved as the technical base below `PriorityEmptyState`, `PrioritySearchCombobox`, and `PriorityDataTable`
+- semantic typography must be applied through `PriorityTypography` roles before adding new one-off `text-*` or `tracking-*` mixes
+- form headers, section headers, helper text, data-value cards, and sticky submit areas must use shared typography roles so dialogs and sheets do not drift visually from the rest of the ERP
+- date selection should use the shared composed date field pattern (`calendar + popover + button`) instead of browser-default date inputs on premium ERP surfaces
+- hover previews, grouped actions, and resizable panels are approved for dense workspaces when they reduce clicks and scroll, not when they merely add novelty
+- the official `shadcn` primitives for alert, avatar, checkbox, dropdown menu, empty, spinner, switch, and related interaction components are approved as the technical base under `Priority UI`
+- low-contrast secondary actions are not acceptable on premium light surfaces; secondary actions should use approved button variants or row-action menus instead of dark-on-dark micro-buttons
+
 Button
 Card
 Table
@@ -224,6 +260,21 @@ Notification
 
 
 Components must be consistent across all modules.
+
+Approved component foundation
+
+- `shadcn/ui` with `radix` is the only approved primitive foundation for the ERP frontend
+- Priority branding, spacing, density, and business semantics must be applied on top of that foundation through shared wrappers and tokens
+- do not introduce a second component foundation or competing visual kit
+- do not ship raw default kit styling as the final ERP brand language
+
+Tabs rule
+
+- tabs are approved for dense workspaces inside a record or module
+- tabs are not approved as the primary global navigation pattern
+- sidebar + topbar remain the canonical shell navigation model
+- tabs should reduce vertical sprawl in places such as detail screens, pricing/sales workspaces, and permissions workspaces
+- current approved tabbed workspaces already implemented: client detail, provider detail, quotation detail, and roles & permissions
 
 
 
