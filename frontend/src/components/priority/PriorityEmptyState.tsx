@@ -17,6 +17,7 @@ type PriorityEmptyStateProps = {
   icon?: ReactNode
   className?: string
   variant?: "default" | "search" | "blocked" | "error"
+  density?: "default" | "compact"
 }
 
 export function PriorityEmptyState({
@@ -26,6 +27,7 @@ export function PriorityEmptyState({
   icon,
   className,
   variant = "default",
+  density = "default",
 }: PriorityEmptyStateProps) {
   const fallbackIcon = {
     default: <InboxIcon />,
@@ -44,19 +46,24 @@ export function PriorityEmptyState({
   return (
     <Empty
       className={cn(
-        "rounded-[24px] border border-dashed border-[var(--border-subtle)] bg-[rgba(255,255,255,0.62)] px-6 py-10 shadow-[0_24px_48px_-36px_rgba(3,10,24,0.35)]",
+        density === "compact"
+          ? "rounded-[20px] border border-dashed border-[var(--border-subtle)] bg-[rgba(255,255,255,0.76)] px-5 py-8 shadow-[0_18px_36px_-30px_rgba(3,10,24,0.22)]"
+          : "rounded-[24px] border border-dashed border-[var(--border-subtle)] bg-[rgba(255,255,255,0.72)] px-6 py-10 shadow-[0_24px_48px_-36px_rgba(3,10,24,0.28)]",
         className
       )}
     >
-      <EmptyHeader className="max-w-xl gap-3">
+      <EmptyHeader className={cn("max-w-xl", density === "compact" ? "gap-2.5" : "gap-3")}>
         <EmptyMedia
           variant="icon"
-          className={cn("mb-0 size-14 rounded-2xl [&_svg]:size-6", mediaTone)}
+          className={cn(
+            density === "compact" ? "mb-0 size-12 rounded-[18px] [&_svg]:size-5" : "mb-0 size-14 rounded-2xl [&_svg]:size-6",
+            mediaTone
+          )}
         >
           {icon ?? fallbackIcon}
         </EmptyMedia>
-        <EmptyTitle className="text-lg font-semibold text-[var(--brand-navy)]">{title}</EmptyTitle>
-        <EmptyDescription className="max-w-xl text-sm leading-7 text-[#5B6A7D]">
+        <EmptyTitle className={cn("font-semibold text-[var(--brand-navy)]", density === "compact" ? "text-base" : "text-lg")}>{title}</EmptyTitle>
+        <EmptyDescription className={cn("max-w-xl text-[#5B6A7D]", density === "compact" ? "text-sm leading-6" : "text-sm leading-7")}>
           {description}
         </EmptyDescription>
       </EmptyHeader>

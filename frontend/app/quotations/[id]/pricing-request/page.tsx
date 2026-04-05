@@ -72,7 +72,7 @@ export default function QuotationPricingRequestPage() {
   }, [quotationId])
 
   if (!quotationId) {
-    return <div className="p-8 text-sm text-[#6B7280]">Quotation id no valido.</div>
+    return <div className="p-8 text-sm text-[#6B7280]">ID de cotización no válido.</div>
   }
 
   if (loading && !details) {
@@ -80,7 +80,7 @@ export default function QuotationPricingRequestPage() {
   }
 
   if (!details) {
-    return <div className="p-8 text-sm text-[#6B7280]">No se encontro la cotizacion.</div>
+    return <div className="p-8 text-sm text-[#6B7280]">No se encontró la cotización.</div>
   }
 
   const { quotation, cargoLines } = details
@@ -99,7 +99,7 @@ export default function QuotationPricingRequestPage() {
             href={`/quotations/${quotation.id}`}
             className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
           >
-            Regresar a cotizacion
+            Regresar a cotización
           </Link>
           <Link
             href={pdfHref}
@@ -135,10 +135,10 @@ export default function QuotationPricingRequestPage() {
                   Documento interno de pricing
                 </div>
                 <h1 className="mt-3 text-3xl font-semibold text-white">
-                  Solicitud de Cotizacion a Proveedor
+                  Solicitud de cotización a proveedor
                 </h1>
                 <div className="mt-3 max-w-2xl text-sm leading-6" style={{ color: priorityPalette.lightText }}>
-                  Solicitud interna para recopilacion de costos. Este documento no contiene el nombre del cliente ni importes comerciales.
+                  Solicitud interna para recopilación de costos. Este documento no contiene el nombre del cliente ni importes comerciales.
                 </div>
               </div>
             </div>
@@ -164,9 +164,9 @@ export default function QuotationPricingRequestPage() {
             </div>
           </div>
           <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Tipo de operacion
-            </div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+              Tipo de operación
+              </div>
             <div className="mt-1 text-sm font-medium text-[#111827]">
               {quotation.operation_type || "No disponible"}
             </div>
@@ -183,7 +183,7 @@ export default function QuotationPricingRequestPage() {
 
         <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
           <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-            Informacion de la Cotizacion
+            Información de la cotización
           </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
@@ -202,7 +202,7 @@ export default function QuotationPricingRequestPage() {
             </div>
             <div className="md:col-span-2">
               <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Fecha requerida para la cotizacion
+                Fecha requerida para la cotización
               </div>
               <div className="mt-1 text-sm text-[#111827]">
                 {quotation.required_quote_date || "No disponible"}
@@ -218,7 +218,7 @@ export default function QuotationPricingRequestPage() {
           <div className="mt-4 grid gap-4">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Direccion de recoleccion
+                Dirección de recolección
               </div>
               <div className="mt-1 text-sm text-[#111827]">
                 {quotation.pickup_address || "No disponible"}
@@ -226,7 +226,7 @@ export default function QuotationPricingRequestPage() {
             </div>
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Direccion de entrega
+                Dirección de entrega
               </div>
               <div className="mt-1 text-sm text-[#111827]">
                 {quotation.delivery_address || "No disponible"}
@@ -237,7 +237,7 @@ export default function QuotationPricingRequestPage() {
 
         <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
           <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-            Informacion de Carga
+            Información de carga
           </h2>
           <div className="mt-5 overflow-x-auto rounded-xl border border-[#E7EAF0]">
             <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
@@ -247,7 +247,7 @@ export default function QuotationPricingRequestPage() {
                   <th className="px-4 py-3">Cantidad</th>
                   <th className="px-4 py-3">Dimensiones</th>
                   <th className="px-4 py-3">Peso</th>
-                  <th className="px-4 py-3">Commodities</th>
+                  <th className="px-4 py-3">Mercancía</th>
                   <th className="px-4 py-3">CBM</th>
                   <th className="px-4 py-3">KG / VOL</th>
                   <th className="px-4 py-3">Clase</th>
@@ -257,7 +257,7 @@ export default function QuotationPricingRequestPage() {
                 {cargoLines.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-[#6B7280]">
-                      No hay informacion de carga capturada todavia.
+                      No hay información de carga capturada todavía.
                     </td>
                   </tr>
                 ) : (
@@ -293,6 +293,13 @@ export default function QuotationPricingRequestPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-[#E7EAF0] bg-[#FBFCFE] p-6 text-center shadow-sm">
+          <p className="mx-auto max-w-3xl text-base leading-8 text-[#475569]">
+            Documento interno para sourcing con proveedores. Está pensado para acelerar la solicitud de costos
+            sin exponer información comercial sensible del cliente final.
+          </p>
         </section>
       </div>
     </main>

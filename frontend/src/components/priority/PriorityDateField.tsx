@@ -14,6 +14,7 @@ type PriorityDateFieldProps = {
   onChange: (value: string) => void
   disabled?: boolean
   placeholder?: string
+  ariaLabel?: string
   className?: string
 }
 
@@ -22,6 +23,7 @@ export function PriorityDateField({
   onChange,
   disabled = false,
   placeholder = "Seleccionar fecha",
+  ariaLabel,
   className,
 }: PriorityDateFieldProps) {
   const selectedDate = value ? parseISO(value) : undefined
@@ -32,6 +34,7 @@ export function PriorityDateField({
         <Button
           type="button"
           variant="outline"
+          aria-label={ariaLabel ?? placeholder}
           disabled={disabled}
           className={cn(
             "h-11 w-full justify-between rounded-[18px] border-[#D1D6DF] bg-white px-4 text-left font-medium text-[var(--brand-navy)] shadow-none hover:bg-[rgba(11,31,59,0.03)]",

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { PageContainer } from "@/components/layout/PageContainer"
 import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
@@ -20,24 +21,24 @@ export default function QuotationDetailPage() {
 
   if (!quotationId) {
     return (
-      <PageContainer title="Quotation" description="Invalid quotation id.">
-        <p className="text-sm text-[#6B7280]">Quotation id is missing from the URL.</p>
+      <PageContainer title="Cotización" description="ID de cotización inválido.">
+        <p className="text-sm text-[#6B7280]">Falta el identificador de la cotización en la URL.</p>
       </PageContainer>
     )
   }
 
   if (controller.loading && !controller.details) {
     return (
-      <PageContainer title="Quotation" description="Loading quotation data...">
-        <p className="text-sm text-[#6B7280]">Loading quotation information.</p>
+      <PageContainer title="Cotización" description="Cargando información de la cotización…">
+        <p className="text-sm text-[#6B7280]">Estamos preparando la vista comercial de la cotización.</p>
       </PageContainer>
     )
   }
 
   if (!controller.details) {
     return (
-      <PageContainer title="Quotation" description="Quotation not found.">
-        <p className="text-sm text-[#6B7280]">We could not find a quotation with this id.</p>
+      <PageContainer title="Cotización" description="Cotización no encontrada.">
+        <p className="text-sm text-[#6B7280]">No encontramos una cotización con este identificador.</p>
       </PageContainer>
     )
   }
@@ -46,28 +47,28 @@ export default function QuotationDetailPage() {
 
   return (
     <PageContainer
-      title={quotation.reference_number || "Quotation"}
-      description={`Cotizacion comercial para ${quotation.client_name || "cliente"}.`}
+      title={quotation.reference_number || "Cotización"}
+      description={`Cotización comercial para ${quotation.client_name || "cliente"}.`}
       actions={
-        <>
+        <ButtonGroup className="flex flex-wrap items-center gap-3 bg-transparent p-0">
           <PrioritySectionAlert
-            title={quotation.status === "borrador" ? "Captura interna" : "Estatus de la cotizacion"}
+            title={quotation.status === "borrador" ? "Captura interna" : "Estatus de la cotización"}
             variant="info"
             className="max-w-[360px]"
           >
             {quotation.status === "borrador" ? (
               <>
-                Completa ruta e informacion de carga antes de solicitarla a pricing.
+                Completa ruta e información de carga antes de solicitarla a pricing.
               </>
             ) : (
               <div className="flex items-center gap-3">
                 <StatusBadge status={quotation.status} />
-                <span>{quotation.pricing_owner_name || "Sin owner de pricing"}</span>
+                <span>{quotation.pricing_owner_name || "Sin responsable de pricing"}</span>
               </div>
             )}
           </PrioritySectionAlert>
           <Button asChild type="button" variant="outline">
-            <Link href="/quotations">Back</Link>
+            <Link href="/quotations">Volver</Link>
           </Button>
           {quotation.status === "borrador" ? (
             <Button
@@ -75,7 +76,7 @@ export default function QuotationDetailPage() {
               onClick={() => void controller.handleRequestPricing()}
               disabled={controller.requestingPricing}
             >
-              {controller.requestingPricing ? "Solicitando..." : "Solicitar a pricing"}
+              {controller.requestingPricing ? "Solicitando…" : "Solicitar a pricing"}
             </Button>
           ) : null}
           <Button
@@ -86,7 +87,7 @@ export default function QuotationDetailPage() {
               controller.setShowEditModal(true)
             }}
           >
-            Editar informacion
+            Editar información
           </Button>
           {quotation.status !== "borrador" ? (
             <Button
@@ -108,7 +109,7 @@ export default function QuotationDetailPage() {
               controller.setShowCargoModal(true)
             }}
           >
-            Anadir detalle de carga
+            Añadir detalle de carga
           </Button>
           <Button asChild type="button" variant="outline">
             <Link href={`/quotations/${quotation.id}/document/pdf`} target="_blank">
@@ -122,10 +123,10 @@ export default function QuotationDetailPage() {
               disabled={controller.creatingBooking}
               variant="secondary"
             >
-              {controller.creatingBooking ? "Creando booking..." : "Crear booking"}
+              {controller.creatingBooking ? "Creando booking…" : "Crear booking"}
             </Button>
           ) : null}
-        </>
+        </ButtonGroup>
       }
     >
       <QuotationDetailView controller={controller} />

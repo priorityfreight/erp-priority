@@ -1,15 +1,19 @@
 "use client"
 
 import { useMemo } from "react"
+import type { ColDef } from "ag-grid-community"
 import { PriorityDateField } from "@/components/priority/PriorityDateField"
 import { Button } from "@/components/ui/button"
 import {
+  PriorityFormShell,
   PriorityFormHeader,
   PriorityInfoField,
   PrioritySubmitBar,
 } from "@/components/priority/PriorityForm"
 import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
 import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityGrid } from "@/components/priority/grid/PriorityGrid"
+import { PriorityGridToolbar } from "@/components/priority/grid/PriorityGridToolbar"
 import type { Provider, SalesAccountingConcept } from "@/lib/db"
 
 export type QuotationChargeLineFormValues = {
@@ -58,18 +62,13 @@ function formatCurrencyValue(value: number, currency: string) {
   }).format(value)
 }
 
-function formatGroupedTotals(
-  values: Record<string, number>,
-  emptyLabel = "No disponible"
-) {
+function formatGroupedTotals(values: Record<string, number>, emptyLabel = "No disponible") {
   const entries = Object.entries(values).filter(([, amount]) => amount > 0)
   if (entries.length === 0) {
     return emptyLabel
   }
 
-  return entries
-    .map(([currency, amount]) => formatCurrencyValue(amount, currency))
-    .join(" · ")
+  return entries.map(([currency, amount]) => formatCurrencyValue(amount, currency)).join(" · ")
 }
 
 export function QuotationChargeLineForm({
@@ -90,6 +89,8 @@ export function QuotationChargeLineForm({
   disabled = false,
   disabledReason = null,
 }: QuotationChargeLineFormProps) {
+  const gridHeight = rows.length <= 2 ? 228 : Math.min(200 + rows.length * 72, 420)
+
   const filteredConcepts = useMemo(
     () =>
       concepts.filter((concept) => {
@@ -120,9 +121,7 @@ export function QuotationChargeLineForm({
         (groupedWithVat[currency] ?? 0) + amount * (1 + (Number.isFinite(vatRate) ? vatRate : 0) / 100)
     }
 
-    const validities = Array.from(
-      new Set(rows.map((row) => row.purchaseValidUntil).filter((value) => value.trim()))
-    )
+    const validities = Array.from(new Set(rows.map((row) => row.purchaseValidUntil).filter((value) => value.trim())))
 
     return {
       rowCount: rows.length,
@@ -137,168 +136,370 @@ export function QuotationChargeLineForm({
     }
   }, [rows])
 
-  return (
-    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
-      <PriorityFormHeader title={title} description={description} />
-
-      <div className="overflow-x-auto rounded-xl border border-[#D1D5DB] bg-white pb-3">
-        <div className="min-w-[1480px] pr-3">
-          <div className="grid grid-cols-[190px_240px_120px_100px_100px_160px_minmax(240px,1fr)_96px] border-b border-[#E5E7EB] bg-[#EEF2FF]">
-            {[
-              "Proveedor",
-              "Concepto contable",
-              "Compra",
-              "IVA",
-              "Divisa",
-              "Valides",
-              "Notas del cargo",
-              "",
-            ].map((label) => (
-              <div
-                key={label}
-                className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#475569]"
-              >
-                {label}
-              </div>
+  const providerOptions = useMemo(
+    () =>
+      providers.map((provider) => ({
+        value: provider.id,
+        label: provider.name,
+      })),
+    [providers]
+  )
+  const conceptOptions = useMemo(
+    () =>
+      filteredConcepts.map((concept) => ({
+        value: concept.id,
+        label: `${concept.concept} · ${concept.sat_code}`,
+      })),
+    [filteredConcepts]
+  )
+  const columns = useMemo<Array<ColDef<QuotationChargeLineFormValues>>>(
+    () => [
+      {
+        field: "providerId",
+        headerName: "Proveedor",
+        minWidth: 190,
+        flex: 1.2,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <select
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            value={params.data?.providerId ?? ""}
+            disabled={disabled}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "providerId", event.target.value)
+              }
+            }}
+          >
+            <option value="">Proveedor</option>
+            {providerOptions.map((provider) => (
+              <option key={provider.value} value={provider.value}>
+                {provider.label}
+              </option>
             ))}
-          </div>
+          </select>
+        ),
+      },
+      {
+        field: "salesAccountingConceptId",
+        headerName: "Concepto contable",
+        minWidth: 260,
+        flex: 1.5,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <select
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            value={params.data?.salesAccountingConceptId ?? ""}
+            disabled={disabled}
+            onChange={(event) => {
+              if (!params.data) {
+                return
+              }
 
-          {rows.map((row) => (
-            <div
-              key={row.draftId}
-              className="grid grid-cols-[190px_240px_120px_100px_100px_160px_minmax(240px,1fr)_96px] border-b border-[#E5E7EB] last:border-b-0"
+              const nextId = event.target.value
+              const nextConcept = filteredConcepts.find((item) => item.id === nextId)
+              onChangeRow(params.data.draftId, "salesAccountingConceptId", nextId)
+              if (nextConcept) {
+                onChangeRow(params.data.draftId, "vatRate", String(nextConcept.vat_rate))
+              }
+            }}
+          >
+            <option value="">Concepto contable</option>
+            {conceptOptions.map((concept) => (
+              <option key={concept.value} value={concept.value}>
+                {concept.label}
+              </option>
+            ))}
+          </select>
+        ),
+      },
+      {
+        field: "purchaseAmount",
+        headerName: "Compra",
+        minWidth: 140,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Compra"
+            inputMode="decimal"
+            value={params.data?.purchaseAmount ?? ""}
+            disabled={disabled}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "purchaseAmount", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "vatRate",
+        headerName: "IVA",
+        minWidth: 120,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="IVA"
+            inputMode="decimal"
+            value={params.data?.vatRate ?? ""}
+            disabled={disabled}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "vatRate", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "purchaseCurrency",
+        headerName: "Divisa",
+        minWidth: 128,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <select
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            value={params.data?.purchaseCurrency ?? "MXN"}
+            disabled={disabled}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "purchaseCurrency", event.target.value)
+              }
+            }}
+          >
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        ),
+      },
+      {
+        field: "purchaseValidUntil",
+        headerName: "Vigencia",
+        minWidth: 180,
+        flex: 1,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <PriorityDateField
+            value={params.data?.purchaseValidUntil ?? ""}
+            disabled={disabled}
+            ariaLabel="Vigencia de compra"
+            placeholder="Vigencia"
+            className="h-11 rounded-[16px] px-3 text-sm"
+            onChange={(value) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "purchaseValidUntil", value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "notes",
+        headerName: "Notas del cargo",
+        minWidth: 260,
+        flex: 1.5,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Notas del cargo"
+            value={params.data?.notes ?? ""}
+            disabled={disabled}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "notes", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        headerName: "",
+        minWidth: 118,
+        maxWidth: 118,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        cellRenderer: (params: { data?: QuotationChargeLineFormValues }) => {
+          if (!params.data) {
+            return null
+          }
+
+          if (params.data.existingChargeId) {
+            return <PriorityTypography variant="fieldLabel">Base</PriorityTypography>
+          }
+
+          return (
+            <Button
+              type="button"
+              onClick={() => onRemoveRow(params.data!.draftId)}
+              disabled={disabled || rows.length <= 1}
+              variant="outline"
+              className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
             >
-              <select
-                className="border-r border-[#E5E7EB] bg-white px-3 py-3 text-sm outline-none focus:bg-[#F8FAFC]"
-                value={row.providerId}
+              Quitar
+            </Button>
+          )
+        },
+      },
+    ],
+    [conceptOptions, disabled, filteredConcepts, onChangeRow, onRemoveRow, providerOptions, rows.length]
+  )
+
+  return (
+    <PriorityFormShell density="compact" className="space-y-4">
+      <PriorityFormHeader title={title} description={description} density="compact" />
+
+      <PriorityGrid
+        rowData={rows}
+        columnDefs={columns}
+        mobileBreakpoint={767}
+        height={gridHeight}
+        rowHeight={78}
+        emptyTitle="Sin conceptos de compra"
+        emptyDescription="Agrega al menos un concepto para construir esta opcion comercial."
+        getRowId={(params) => params.data.draftId}
+        toolbar={
+          <PriorityGridToolbar
+            density="compact"
+            title="Captura de cargos de compra"
+            description="Usa una fila por concepto real. En desktop se prioriza velocidad; en mobile se degrada a tarjetas editables."
+            actions={
+              <Button
+                type="button"
+                onClick={onAddRow}
                 disabled={disabled}
-                onChange={(event) => onChangeRow(row.draftId, "providerId", event.target.value)}
+                variant="outline"
+                className="border-[#CBD5E1] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
               >
-                <option value="">Proveedor</option>
-                {providers.map((provider) => (
-                  <option key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="border-r border-[#E5E7EB] bg-white px-3 py-3 text-sm outline-none focus:bg-[#F8FAFC]"
-                value={row.salesAccountingConceptId}
-                disabled={disabled}
-                onChange={(event) => {
-                  const nextId = event.target.value
-                  const nextConcept = filteredConcepts.find((item) => item.id === nextId)
-                  onChangeRow(row.draftId, "salesAccountingConceptId", nextId)
-                  if (nextConcept) {
-                    onChangeRow(row.draftId, "vatRate", String(nextConcept.vat_rate))
-                  }
-                }}
-              >
-                <option value="">Concepto contable</option>
-                {filteredConcepts.map((concept) => (
-                  <option key={concept.id} value={concept.id}>
-                    {concept.concept} · {concept.sat_code}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Compra"
-                inputMode="decimal"
-                value={row.purchaseAmount}
-                disabled={disabled}
-                onChange={(event) => onChangeRow(row.draftId, "purchaseAmount", event.target.value)}
-              />
-
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="IVA"
-                inputMode="decimal"
-                value={row.vatRate}
-                disabled={disabled}
-                onChange={(event) => onChangeRow(row.draftId, "vatRate", event.target.value)}
-              />
-
-              <select
-                className="border-r border-[#E5E7EB] bg-white px-3 py-3 text-sm outline-none focus:bg-[#F8FAFC]"
-                value={row.purchaseCurrency}
-                disabled={disabled}
-                onChange={(event) => onChangeRow(row.draftId, "purchaseCurrency", event.target.value)}
-              >
-                <option value="MXN">MXN</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-
-              <div className="border-r border-[#E5E7EB] px-3 py-2">
+                Añadir otro concepto
+              </Button>
+            }
+          />
+        }
+        renderMobileCard={(row) => (
+          <div className="rounded-[22px] border border-[rgba(144,158,174,0.16)] bg-white p-4 shadow-[0_18px_38px_-32px_rgba(3,10,24,0.28)]">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">Proveedor</div>
+                <select
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none"
+                  value={row.providerId}
+                  disabled={disabled}
+                  onChange={(event) => onChangeRow(row.draftId, "providerId", event.target.value)}
+                >
+                  <option value="">Proveedor</option>
+                  {providerOptions.map((provider) => (
+                    <option key={provider.value} value={provider.value}>
+                      {provider.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">Concepto</div>
+                <select
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none"
+                  value={row.salesAccountingConceptId}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const nextId = event.target.value
+                    const nextConcept = filteredConcepts.find((item) => item.id === nextId)
+                    onChangeRow(row.draftId, "salesAccountingConceptId", nextId)
+                    if (nextConcept) {
+                      onChangeRow(row.draftId, "vatRate", String(nextConcept.vat_rate))
+                    }
+                  }}
+                >
+                  <option value="">Concepto contable</option>
+                  {conceptOptions.map((concept) => (
+                    <option key={concept.value} value={concept.value}>
+                      {concept.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">Compra</div>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none"
+                  placeholder="Compra"
+                  inputMode="decimal"
+                  value={row.purchaseAmount}
+                  disabled={disabled}
+                  onChange={(event) => onChangeRow(row.draftId, "purchaseAmount", event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">IVA</div>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none"
+                  placeholder="IVA"
+                  inputMode="decimal"
+                  value={row.vatRate}
+                  disabled={disabled}
+                  onChange={(event) => onChangeRow(row.draftId, "vatRate", event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">Divisa</div>
+                <select
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none"
+                  value={row.purchaseCurrency}
+                  disabled={disabled}
+                  onChange={(event) => onChangeRow(row.draftId, "purchaseCurrency", event.target.value)}
+                >
+                  <option value="MXN">MXN</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">Vigencia</div>
                 <PriorityDateField
                   value={row.purchaseValidUntil}
                   disabled={disabled}
+                  ariaLabel="Vigencia de compra"
                   placeholder="Vigencia"
-                  className="h-10 rounded-[14px] px-3 text-sm"
+                  className="h-11 rounded-[16px] px-3 text-sm"
                   onChange={(value) => onChangeRow(row.draftId, "purchaseValidUntil", value)}
                 />
               </div>
-
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Notas del cargo"
-                value={row.notes}
-                disabled={disabled}
-                onChange={(event) => onChangeRow(row.draftId, "notes", event.target.value)}
-              />
-
-              <div className="flex items-center justify-center px-2 py-2">
-                {row.existingChargeId ? (
-                  <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
-                    Base
-                  </PriorityTypography>
-                ) : rows.length > 1 ? (
-                  <Button
-                    type="button"
-                    onClick={() => onRemoveRow(row.draftId)}
-                    disabled={disabled}
-                    variant="outline"
-                    className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                  >
-                    Quitar
-                  </Button>
-                ) : (
-                  <PriorityTypography variant="fieldLabel" className="text-transparent">
-                    ---
-                  </PriorityTypography>
-                )}
+              <div className="space-y-2 sm:col-span-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#72839A]">Notas del cargo</div>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none"
+                  placeholder="Notas del cargo"
+                  value={row.notes}
+                  disabled={disabled}
+                  onChange={(event) => onChangeRow(row.draftId, "notes", event.target.value)}
+                />
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+            {!row.existingChargeId && rows.length > 1 ? (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  onClick={() => onRemoveRow(row.draftId)}
+                  disabled={disabled}
+                  variant="outline"
+                  className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                >
+                  Quitar
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        )}
+      />
 
-      <div className="flex justify-start">
-        <Button
-          type="button"
-          onClick={onAddRow}
-          disabled={disabled}
-          variant="outline"
-          className="border-[#CBD5E1] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
-        >
-          Anadir otro concepto
-        </Button>
-      </div>
-
-      <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+      <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5">
         <PriorityTypography variant="cardTitle">Acumulado de la opcion</PriorityTypography>
         <PriorityTypography variant="bodyMuted" className="mt-1">
           La suma considera todos los conceptos capturados dentro de esta misma opcion de compra.
         </PriorityTypography>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
           <PriorityInfoField label="Conceptos en captura" value={String(summary.rowCount)} />
           <PriorityInfoField label="Compra acumulada" value={formatGroupedTotals(summary.purchaseByCurrency)} />
           <PriorityInfoField label="Total con IVA" value={formatGroupedTotals(summary.totalWithVatByCurrency)} />
         </div>
-        <div className="mt-3">
+        <div className="mt-2.5">
           <PriorityInfoField label="Vigencia detectada" value={summary.validitySummary} />
         </div>
       </div>
@@ -309,12 +510,12 @@ export function QuotationChargeLineForm({
         </PrioritySectionAlert>
       ) : null}
 
-      <PrioritySectionAlert title="Captura tabular" variant="info">
-        Este bloque privilegia velocidad operativa. Agrega un renglon por concepto real de compra y revisa la vigencia antes de guardar.
+      <PrioritySectionAlert title="Captura tabular con fallback movil" variant="info">
+        En desktop este flujo usa grid denso para velocidad operativa. En mobile se degrada a tarjetas editables sin perder contexto.
       </PrioritySectionAlert>
 
       {onSubmit ? (
-        <PrioritySubmitBar className="justify-between">
+        <PrioritySubmitBar density="compact" mode="inline" className="justify-between">
           {onCancel ? (
             <Button
               type="button"
@@ -325,15 +526,11 @@ export function QuotationChargeLineForm({
               Cancelar
             </Button>
           ) : null}
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={loading || disabled}
-          >
+          <Button type="button" onClick={onSubmit} disabled={loading || disabled}>
             {loading ? "Guardando..." : submitLabel}
           </Button>
         </PrioritySubmitBar>
       ) : null}
-    </section>
+    </PriorityFormShell>
   )
 }

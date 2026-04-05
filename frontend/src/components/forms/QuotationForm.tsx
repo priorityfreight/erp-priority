@@ -1,22 +1,11 @@
 "use client"
 
-import {
-  PriorityFormField,
-  PriorityFormGrid,
-  PriorityFormSection,
-  PriorityInfoField,
-  PrioritySubmitBar,
-  PriorityTextarea,
-} from "@/components/priority/PriorityForm"
-import { PriorityDateField } from "@/components/priority/PriorityDateField"
-import { PriorityTypography } from "@/components/priority/PriorityTypography"
-import { Button } from "@/components/ui/button"
+import { useMemo } from "react"
+import { PriorityFormEngine } from "@/components/priority/forms/PriorityFormEngine"
+import { quotationFormSchema, type QuotationFormSchemaValues } from "@/features/quotations/detail/schemas/quotation-form"
+import type { FormSchemaDefinition } from "@/lib/forms/types"
 
-export type QuotationFormValues = {
-  pickupAddress: string
-  deliveryAddress: string
-  requiredQuoteDate: string
-}
+export type QuotationFormValues = QuotationFormSchemaValues
 
 type QuotationFormProps = {
   title: string
@@ -55,84 +44,73 @@ export function QuotationForm({
   loading = false,
   disabled = false,
 }: QuotationFormProps) {
+  const schemaDefinition = useMemo<FormSchemaDefinition<typeof quotationFormSchema>>(
+    () => ({
+      schema: quotationFormSchema,
+      title,
+      description,
+      sections: [
+        {
+          id: "summary",
+          title: "Información de la cotización",
+          description: "Esta información se arrastra desde la oportunidad comercial.",
+          columnsClassName: "xl:grid-cols-4",
+          fields: [
+            { type: "info", label: "Cliente", infoValue: () => clientName },
+            { type: "info", label: "Tipo de servicio", infoValue: () => serviceType },
+            { type: "info", label: "Tipo de transporte", infoValue: () => transportType },
+            { type: "info", label: "Tipo de operación", infoValue: () => operationType },
+            { type: "info", label: "Incoterm", infoValue: () => incotermCode },
+            { type: "info", label: "Origen", infoValue: () => origin },
+            { type: "info", label: "Destino", infoValue: () => destination },
+            { type: "info", label: "Fecha creada", infoValue: () => createdAt ?? null },
+          ],
+        },
+        {
+          id: "route",
+          title: "Ruta",
+          description: "Captura únicamente las direcciones operativas de recolección y entrega.",
+          fields: [
+            {
+              name: "pickupAddress",
+              type: "textarea",
+              label: "Dirección de pickup",
+              placeholder: "Dirección completa de pickup",
+            },
+            {
+              name: "deliveryAddress",
+              type: "textarea",
+              label: "Dirección de entrega",
+              placeholder: "Dirección completa de entrega",
+            },
+          ],
+        },
+        {
+          id: "dates",
+          title: "Detalles de cotización",
+          description: "Captura las fechas comerciales necesarias para el seguimiento.",
+          fields: [
+            {
+              name: "requiredQuoteDate",
+              type: "date",
+              label: "Fecha en que requieren la cotización",
+            },
+          ],
+        },
+      ],
+    }),
+    [clientName, createdAt, description, destination, incotermCode, operationType, origin, serviceType, title, transportType]
+  )
+
   return (
-    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(248,250,252,0.82)] p-5 shadow-[0_26px_60px_-42px_rgba(3,10,24,0.42)]">
-      <div>
-        <PriorityTypography as="h2" variant="sectionTitle" className="text-xl">
-          {title}
-        </PriorityTypography>
-        {description ? (
-          <PriorityTypography variant="bodyMuted" className="mt-2">
-            {description}
-          </PriorityTypography>
-        ) : null}
-      </div>
-
-      <PriorityFormSection
-        title="Informacion de la cotizacion"
-        description="Esta informacion se arrastra desde la oportunidad comercial."
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <PriorityInfoField label="Cliente" value={clientName} />
-          <PriorityInfoField label="Tipo de servicio" value={serviceType} />
-          <PriorityInfoField label="Tipo de transporte" value={transportType} />
-          <PriorityInfoField label="Tipo de operacion" value={operationType} />
-          <PriorityInfoField label="Incoterm" value={incotermCode} />
-          <PriorityInfoField label="Origen" value={origin} />
-          <PriorityInfoField label="Destino" value={destination} />
-          <PriorityInfoField label="Fecha creada" value={createdAt} />
-        </div>
-      </PriorityFormSection>
-
-      <PriorityFormSection title="Ruta" description="Captura unicamente las direcciones operativas de recoleccion y entrega.">
-        <PriorityFormGrid className="md:grid-cols-2 xl:grid-cols-2">
-          <PriorityFormField label="Direccion de pickup">
-            <PriorityTextarea
-              value={values.pickupAddress}
-              onChange={(event) => onChange("pickupAddress", event.target.value)}
-              placeholder="Direccion completa de pickup"
-              disabled={disabled}
-              className="min-h-[120px]"
-            />
-          </PriorityFormField>
-          <PriorityFormField label="Direccion de entrega">
-            <PriorityTextarea
-              value={values.deliveryAddress}
-              onChange={(event) => onChange("deliveryAddress", event.target.value)}
-              placeholder="Direccion completa de entrega"
-              disabled={disabled}
-              className="min-h-[120px]"
-            />
-          </PriorityFormField>
-        </PriorityFormGrid>
-      </PriorityFormSection>
-
-      <PriorityFormSection
-        title="Detalles de cotizacion"
-        description="Captura las fechas comerciales necesarias para el seguimiento."
-      >
-        <PriorityFormGrid className="md:grid-cols-2 xl:grid-cols-2">
-          <PriorityFormField label="Fecha que requieren la cotizacion">
-            <PriorityDateField
-              value={values.requiredQuoteDate}
-              onChange={(value) => onChange("requiredQuoteDate", value)}
-              disabled={disabled}
-            />
-          </PriorityFormField>
-        </PriorityFormGrid>
-      </PriorityFormSection>
-
-      {onSubmit ? (
-        <PrioritySubmitBar>
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={loading || disabled}
-          >
-            {loading ? "Guardando..." : submitLabel}
-          </Button>
-        </PrioritySubmitBar>
-      ) : null}
-    </section>
+    <PriorityFormEngine
+      schemaDefinition={schemaDefinition}
+      values={values}
+      loading={loading}
+      disabled={disabled}
+      submitLabel={submitLabel}
+      onSubmit={onSubmit}
+      onFieldChange={(field, value) => onChange(field as keyof QuotationFormValues, String(value ?? ""))}
+    />
   )
 }

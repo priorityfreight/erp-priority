@@ -51,7 +51,7 @@ PRIMARY IMPROVEMENT GROUPS
 4. Visual and interaction polish
 
 - modal/confirm/alert behaviors standardized
-- tables standardized on `PriorityDataTable`
+- browse tables standardized on `PriorityCollectionWorkspace` / `PriorityCollectionTable`
 - combobox/search standardized
 - empty states standardized
 - semantic typography introduced

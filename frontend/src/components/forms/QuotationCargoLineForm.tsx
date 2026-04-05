@@ -1,14 +1,18 @@
 "use client"
 
 import { useMemo } from "react"
+import type { ColDef } from "ag-grid-community"
 import { Button } from "@/components/ui/button"
 import {
+  PriorityFormShell,
   PriorityFormHeader,
   PriorityInfoField,
   PrioritySubmitBar,
 } from "@/components/priority/PriorityForm"
 import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
 import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityGrid } from "@/components/priority/grid/PriorityGrid"
+import { PriorityGridToolbar } from "@/components/priority/grid/PriorityGridToolbar"
 import {
   calculateCbm,
   calculateVolumetricWeightKg,
@@ -90,6 +94,8 @@ export function QuotationCargoLineForm({
   submitLabel = "Guardar detalle",
   loading = false,
 }: QuotationCargoLineFormProps) {
+  const gridHeight = rows.length <= 2 ? 214 : Math.min(196 + rows.length * 70, 420)
+
   const rowComputations = useMemo(
     () =>
       rows.map((row) => {
@@ -177,125 +183,321 @@ export function QuotationCargoLineForm({
   }, [existingLines, rowComputations, rows])
 
   const labels = getComputedLabels(serviceType)
+  const columns = useMemo<Array<ColDef<QuotationCargoLineFormValues>>>(
+    () => [
+      {
+        field: "pieceCount",
+        headerName: "Cantidad",
+        minWidth: 120,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Cantidad"
+            inputMode="numeric"
+            value={params.data?.pieceCount ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "pieceCount", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "loadType",
+        headerName: "Tipo",
+        minWidth: 140,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <select
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            value={params.data?.loadType ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "loadType", event.target.value)
+              }
+            }}
+          >
+            <option value="">Tipo</option>
+            {loadTypeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ),
+      },
+      {
+        field: "length",
+        headerName: "Largo (cm)",
+        minWidth: 130,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Largo"
+            inputMode="decimal"
+            value={params.data?.length ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "length", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "width",
+        headerName: "Ancho (cm)",
+        minWidth: 130,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Ancho"
+            inputMode="decimal"
+            value={params.data?.width ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "width", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "height",
+        headerName: "Alto (cm)",
+        minWidth: 130,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Alto"
+            inputMode="decimal"
+            value={params.data?.height ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "height", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "weight",
+        headerName: "Peso (kg)",
+        minWidth: 130,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Peso"
+            inputMode="decimal"
+            value={params.data?.weight ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "weight", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        field: "commodities",
+        headerName: "Mercancía",
+        minWidth: 240,
+        flex: 1,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => (
+          <input
+            className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+            placeholder="Describe la mercancía"
+            value={params.data?.commodities ?? ""}
+            onChange={(event) => {
+              if (params.data) {
+                onChangeRow(params.data.draftId, "commodities", event.target.value)
+              }
+            }}
+          />
+        ),
+      },
+      {
+        headerName: "Acción",
+        minWidth: 120,
+        sortable: false,
+        filter: false,
+        cellRenderer: (params: { data?: QuotationCargoLineFormValues }) => {
+          const row = params.data
+          if (!row) return null
+
+          if (row.existingCargoId) {
+            return (
+              <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
+                Base
+              </PriorityTypography>
+            )
+          }
+
+          if (rows.length <= 1) {
+            return (
+              <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
+                Activa
+              </PriorityTypography>
+            )
+          }
+
+          return (
+            <Button
+              type="button"
+              onClick={() => onRemoveRow(row.draftId)}
+              variant="outline"
+              className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+            >
+              Quitar
+            </Button>
+          )
+        },
+      },
+    ],
+    [onChangeRow, onRemoveRow, rows.length]
+  )
 
   return (
-    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
-      <PriorityFormHeader title={title} description={description} />
+    <PriorityFormShell density="compact" className="space-y-4">
+      <PriorityFormHeader title={title} description={description} density="compact" />
 
-      <div className="overflow-x-auto rounded-xl border border-[#D1D5DB] bg-white">
-        <div className="min-w-[1120px]">
-          <div className="grid grid-cols-[120px_140px_120px_120px_120px_120px_minmax(220px,1fr)_96px] border-b border-[#E5E7EB] bg-[#EEF2FF]">
-            {["Cantidad", "Tipo", "Largo (cm)", "Ancho (cm)", "Alto (cm)", "Peso (kg)", "Commodities", ""].map(
-              (label) => (
-                <div
-                  key={label}
-                  className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#475569]"
-                >
-                  {label}
-                </div>
-              )
-            )}
-          </div>
-          {rows.map((row) => (
-            <div
-              key={row.draftId}
-              className="grid grid-cols-[120px_140px_120px_120px_120px_120px_minmax(220px,1fr)_96px] border-b border-[#E5E7EB] last:border-b-0"
-            >
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Cantidad"
-                inputMode="numeric"
-                value={row.pieceCount}
-                onChange={(event) => onChangeRow(row.draftId, "pieceCount", event.target.value)}
-              />
-              <select
-                className="border-r border-[#E5E7EB] bg-white px-3 py-3 text-sm outline-none focus:bg-[#F8FAFC]"
-                value={row.loadType}
-                onChange={(event) => onChangeRow(row.draftId, "loadType", event.target.value)}
+      <PriorityGrid
+        mode="hybrid"
+        rowData={rows}
+        columnDefs={columns}
+        mobileBreakpoint={767}
+        emptyTitle="Sin renglones de carga"
+        emptyDescription="Agrega al menos un tipo de carga para estimar volumen, peso y clase."
+        height={gridHeight}
+        rowHeight={76}
+        getRowId={(params) => params.data.draftId}
+        toolbar={
+          <PriorityGridToolbar
+            density="compact"
+            title="Detalle tabular de carga"
+            description="Captura piezas, dimensiones y peso en formato denso. En móvil se transforma a tarjetas editables."
+            actions={
+              <Button
+                type="button"
+                onClick={onAddRow}
+                variant="outline"
+                className="border-[#CBD5E1] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
               >
-                <option value="">Tipo</option>
-                {loadTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+                Añadir otro tipo de carga
+              </Button>
+            }
+          />
+        }
+        renderMobileCard={(row) => (
+          <div className="space-y-4 rounded-[22px] border border-[var(--border-subtle)] bg-white p-4 shadow-[0_20px_40px_-34px_rgba(3,10,24,0.26)]">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Cantidad</span>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                  placeholder="Cantidad"
+                  inputMode="numeric"
+                  value={row.pieceCount}
+                  onChange={(event) => onChangeRow(row.draftId, "pieceCount", event.target.value)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Tipo</span>
+                <select
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] bg-white px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                  value={row.loadType}
+                  onChange={(event) => onChangeRow(row.draftId, "loadType", event.target.value)}
+                >
+                  <option value="">Tipo</option>
+                  {loadTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Largo (cm)</span>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                  placeholder="Largo"
+                  inputMode="decimal"
+                  value={row.length}
+                  onChange={(event) => onChangeRow(row.draftId, "length", event.target.value)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Ancho (cm)</span>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                  placeholder="Ancho"
+                  inputMode="decimal"
+                  value={row.width}
+                  onChange={(event) => onChangeRow(row.draftId, "width", event.target.value)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Alto (cm)</span>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                  placeholder="Alto"
+                  inputMode="decimal"
+                  value={row.height}
+                  onChange={(event) => onChangeRow(row.draftId, "height", event.target.value)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Peso (kg)</span>
+                <input
+                  className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                  placeholder="Peso"
+                  inputMode="decimal"
+                  value={row.weight}
+                  onChange={(event) => onChangeRow(row.draftId, "weight", event.target.value)}
+                />
+              </label>
+            </div>
+
+            <label className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">Mercancía</span>
               <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Largo"
-                inputMode="decimal"
-                value={row.length}
-                onChange={(event) => onChangeRow(row.draftId, "length", event.target.value)}
-              />
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Ancho"
-                inputMode="decimal"
-                value={row.width}
-                onChange={(event) => onChangeRow(row.draftId, "width", event.target.value)}
-              />
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Alto"
-                inputMode="decimal"
-                value={row.height}
-                onChange={(event) => onChangeRow(row.draftId, "height", event.target.value)}
-              />
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Peso"
-                inputMode="decimal"
-                value={row.weight}
-                onChange={(event) => onChangeRow(row.draftId, "weight", event.target.value)}
-              />
-              <input
-                className="border-r border-[#E5E7EB] px-3 py-3 text-sm outline-none placeholder:text-[#94A3B8] focus:bg-[#F8FAFC]"
-                placeholder="Describe la mercancia"
+                className="h-11 w-full rounded-[16px] border border-[#D1D6DF] px-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)]"
+                placeholder="Describe la mercancía"
                 value={row.commodities}
                 onChange={(event) => onChangeRow(row.draftId, "commodities", event.target.value)}
               />
-              <div className="flex items-center justify-center px-2 py-2">
-                {row.existingCargoId ? (
-                  <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
-                    Base
-                  </PriorityTypography>
-                ) : rows.length > 1 ? (
-                  <Button
-                    type="button"
-                    onClick={() => onRemoveRow(row.draftId)}
-                    variant="outline"
-                    className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                  >
-                    Quitar
-                  </Button>
-                ) : (
-                  <PriorityTypography variant="fieldLabel" className="text-transparent">
-                    ---
-                  </PriorityTypography>
-                )}
-              </div>
+            </label>
+
+            <div className="flex justify-end">
+              {row.existingCargoId ? (
+                <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
+                  Base
+                </PriorityTypography>
+              ) : rows.length > 1 ? (
+                <Button
+                  type="button"
+                  onClick={() => onRemoveRow(row.draftId)}
+                  variant="outline"
+                  className="border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                >
+                  Quitar renglón
+                </Button>
+              ) : (
+                <PriorityTypography variant="fieldLabel" className="text-[#94A3B8]">
+                  Renglón activo
+                </PriorityTypography>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        )}
+      />
 
-      <div className="flex justify-start">
-        <Button
-          type="button"
-          onClick={onAddRow}
-          variant="outline"
-          className="border-[#CBD5E1] bg-white text-[var(--brand-navy)] hover:bg-[#F8FAFC]"
-        >
-          Anadir otro tipo de carga
-        </Button>
-      </div>
-
-      <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+      <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5">
         <PriorityTypography variant="cardTitle">{labels.helperTitle}</PriorityTypography>
         <PriorityTypography variant="bodyMuted" className="mt-1">
           {labels.helperDescription} El acumulado considera todos los renglones de la consolidacion.
         </PriorityTypography>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
           <PriorityInfoField
             label="CBM"
             value={aggregateComputed.totalCbm != null ? aggregateComputed.totalCbm.toFixed(3) : "No disponible"}
@@ -310,7 +512,7 @@ export function QuotationCargoLineForm({
           />
           <PriorityInfoField label="Clase estimada" value={aggregateComputed.estimatedClass || "No disponible"} />
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
           <PriorityInfoField
             label="Cantidad total"
             value={aggregateComputed.totalPieceCount > 0 ? String(aggregateComputed.totalPieceCount) : "No disponible"}
@@ -331,7 +533,7 @@ export function QuotationCargoLineForm({
       </PrioritySectionAlert>
 
       {onSubmit ? (
-        <PrioritySubmitBar>
+        <PrioritySubmitBar density="compact" mode="inline">
           <Button
             type="button"
             onClick={onSubmit}
@@ -341,6 +543,6 @@ export function QuotationCargoLineForm({
           </Button>
         </PrioritySubmitBar>
       ) : null}
-    </section>
+    </PriorityFormShell>
   )
 }

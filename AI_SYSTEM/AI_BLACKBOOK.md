@@ -218,6 +218,33 @@ Root cause:
 Approved solution:
 
 - add named-persona `field-masking` validation
+
+
+9. Local browser audit on macOS must use inline env vars when passwords contain special characters
+
+Observed problem:
+
+- terminal sessions entered `dquote>` and Playwright started with incomplete credentials
+- the browser opened but only the login user field was filled reliably
+
+Root cause:
+
+- shell parsing broke on `!` inside double quotes
+- E2E helpers still referenced legacy login labels after the login screen copy changed
+
+Approved solution:
+
+- run headed local browser audits with inline env vars using single quotes:
+  - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:critical -- --headed`
+  - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e -- --headed`
+- keep Playwright login selectors compatible with both current and legacy labels:
+  - `Usuario o correo|Usuario`
+  - `Contraseña|Contrasena`
+
+Prevention rule:
+
+- when local browser audits use credentials containing `!`, prefer inline env vars with single quotes
+- update E2E expectations whenever the shell or page copy is renamed, especially after localization changes
 - validate quotation economics and pricing-cost visibility separately from route visibility
 
 Prevention rule:
@@ -280,6 +307,8 @@ Root cause:
 Approved solution:
 
 - standardize live forms on `PriorityFormHeader`, `PriorityFormSection`, `PriorityFormField`, `PriorityInfoField`, and `PrioritySubmitBar`
+- standardize next-generation forms on `react-hook-form + zod + PriorityFormEngine`
+- use `PriorityGrid` instead of ad hoc raw tables when the workflow is truly dense, editable, or matrix-like
 - use `ToggleGroup` for short exclusive choice sets and `Switch` for real boolean states
 - use `PrioritySectionAlert` for inline validation, sync, and guidance messages
 - keep the default form density at two columns unless a third column has a strong workflow reason
@@ -366,15 +395,17 @@ Root cause:
 
 Approved solution:
 
-- migrate core list workspaces to `PriorityDataTable`
-- standardize toolbar search/filter controls with `PriorityInput` and `PrioritySelectField`
+- migrate core list workspaces to `PriorityCollectionWorkspace`
+- standardize toolbar search/filter controls with `PrioritySearchField`, `PriorityFilterPopover`, and `PrioritySavedViews`
+- standardize lane-based state orientation with `PriorityStatusLanes`
+- standardize visible first-column actions with `PriorityActionRail`
 - standardize loading with `Skeleton`
-- standardize empty states via the table layer
+- standardize empty states via the workspace layer
 - move long forms like contacts and opportunities to `PriorityFormSection` and `PrioritySubmitBar`
 
 Prevention rule:
 
-- new list workspaces should not introduce raw tables if `PriorityDataTable` already fits the use case
+- new browse/list workspaces should not introduce raw tables if `PriorityCollectionWorkspace` already fits the use case
 - new live forms should not fall back to legacy raw inputs/buttons when the Priority form layer exists
 
 
@@ -492,7 +523,7 @@ Dense workspaces fall back to raw tables, raw date inputs, or scattered action b
 
 Response:
 
-- move tabular sections to `PriorityDataTable`
+- move tabular sections to `PriorityCollectionTable` or `PriorityCollectionWorkspace`, depending on whether the screen is embedded or full-workspace
 - compose date selection through `PriorityDateField`
 - group related secondary actions with `ButtonGroup`
 - add `HoverCard`/`ResizablePanelGroup` only when they reduce navigation friction or scroll depth
@@ -586,7 +617,7 @@ Approved solution:
 
 - use summary cards for top-line metrics
 - use a toolbar built from `PriorityInput` and `PrioritySelectField`
-- use `PriorityDataTable` as the default main grid
+- use `PriorityCollectionWorkspace` for full browse workspaces and `PriorityCollectionTable` for embedded/read-mostly list surfaces
 - use `AlertDialog` for destructive confirmation
 - use `PriorityFormSection` plus `PrioritySubmitBar` inside modal editing flows
 
@@ -627,7 +658,8 @@ Root cause:
 
 Approved solution:
 
-- keep global navigation in sidebar and topbar
+- keep global navigation topbar-first with `NavigationMenu` and `PriorityCommandBar`
+- keep local backtracking inside `PriorityWorkspacePath`
 - use internal tabs only inside dense single-record or single-workspace surfaces
 - current approved tabbed workspaces are client detail, provider detail, quotation detail, and roles & permissions
 

@@ -4,13 +4,15 @@ import { type ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
 import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityHoverPreview } from "@/components/priority/PriorityHoverPreview"
 import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
 import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityMetricCard, PriorityMetricStrip, PrioritySummaryRail } from "@/components/priority/PriorityWorkspace"
 import { ClientForm } from "@/components/forms/ClientForm"
 import { ClientLogisticsPartyForm } from "@/components/forms/ClientLogisticsPartyForm"
 import { ContactForm } from "@/components/forms/ContactForm"
+import { normalizeContactStatus } from "@/components/forms/contact-form-utils"
 import { OpportunityForm } from "@/components/forms/OpportunityForm"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -139,7 +141,7 @@ export function ClientDetailView({
           description={row.original.position || "Puesto no definido"}
           lines={[
             { label: "Correo", value: row.original.email || "No disponible" },
-            { label: "Telefono", value: row.original.phone || "No disponible" },
+            { label: "Teléfono", value: row.original.phone || "No disponible" },
             { label: "LinkedIn", value: row.original.linkedin_url || "No disponible" },
           ]}
           trigger={<span className="font-medium text-[var(--brand-navy)]">{row.original.name}</span>}
@@ -160,7 +162,7 @@ export function ClientDetailView({
     },
     {
       accessorKey: "phone",
-      header: "Telefono",
+      header: "Teléfono",
       cell: ({ row }) => row.original.phone || "No disponible",
     },
     {
@@ -224,7 +226,7 @@ export function ClientDetailView({
     },
     {
       id: "location",
-      header: "Ubicacion",
+      header: "Ubicación",
       cell: ({ row }) =>
         [row.original.city, row.original.country, row.original.postal_code].filter(Boolean).join(" · ") ||
         row.original.full_address ||
@@ -247,7 +249,7 @@ export function ClientDetailView({
     },
     {
       accessorKey: "contact_phone",
-      header: "Numero",
+      header: "Número",
       cell: ({ row }) => row.original.contact_phone || "No disponible",
     },
     {
@@ -274,20 +276,20 @@ export function ClientDetailView({
   const opportunityColumns: ColumnDef<(typeof opportunities)[number]>[] = [
     {
       accessorKey: "title",
-      header: "Titulo",
+      header: "Título",
       cell: ({ row }) => (
         <PriorityHoverPreview
           eyebrow="Oportunidad"
-          title={row.original.title || "Untitled opportunity"}
+          title={row.original.title || "Oportunidad sin título"}
           description={
             [row.original.service_type, row.original.transport_type].filter(Boolean).join(" / ") || "No definido"
           }
           lines={[
             {
-              label: "Lane",
+              label: "Ruta",
               value:
                 row.original.origin && row.original.destination
-                  ? `${row.original.origin} -> ${row.original.destination}`
+                  ? `${row.original.origin} → ${row.original.destination}`
                   : "No disponible",
             },
             {
@@ -295,12 +297,12 @@ export function ClientDetailView({
               value:
                 row.original.estimated_value != null
                   ? `$${row.original.estimated_value.toLocaleString()}`
-                  : "No value",
+                  : "Sin valor",
             },
           ]}
           trigger={
             <Link href={`/opportunities/${row.original.id}`} className="font-medium text-[#111827] hover:text-[#1D4ED8]">
-              {row.original.title || "Untitled opportunity"}
+              {row.original.title || "Oportunidad sin título"}
             </Link>
           }
         />
@@ -315,21 +317,21 @@ export function ClientDetailView({
     {
       accessorKey: "status",
       header: "Estatus",
-      cell: ({ row }) => row.original.status || "No status",
+      cell: ({ row }) => row.original.status || "Sin estatus",
     },
     {
       id: "lane",
-      header: "Lane",
+      header: "Ruta",
       cell: ({ row }) =>
         row.original.origin && row.original.destination
-          ? `${row.original.origin} -> ${row.original.destination}`
+          ? `${row.original.origin} → ${row.original.destination}`
           : "No disponible",
     },
     {
       accessorKey: "estimated_value",
       header: "Valor",
       cell: ({ row }) =>
-        row.original.estimated_value != null ? `$${row.original.estimated_value.toLocaleString()}` : "No value",
+        row.original.estimated_value != null ? `$${row.original.estimated_value.toLocaleString()}` : "Sin valor",
     },
     {
       id: "actions",
@@ -355,82 +357,73 @@ export function ClientDetailView({
   return (
     <>
       <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Status
-            </div>
-            <div className="mt-3">
-              <StatusBadge status={status} />
+        <PrioritySummaryRail className="xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+          <div>
+            <PriorityTypography variant="eyebrow">Cuenta cliente</PriorityTypography>
+            <PriorityTypography as="h2" variant="sectionTitle" className="mt-2">
+              Cuenta, contactos y actividad comercial visibles desde una sola superficie.
+            </PriorityTypography>
+            <PriorityTypography variant="bodyMuted" className="mt-2">
+              Diseñado para que cualquier ejecutivo entienda rápido el estado del cliente, sus registros operativos y el pipeline asociado.
+            </PriorityTypography>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="rounded-[20px] border border-[rgba(11,31,59,0.08)] bg-[rgba(11,31,59,0.03)] p-4">
+              <PriorityTypography variant="eyebrow">Responsable comercial</PriorityTypography>
+              <PriorityTypography variant="body" className="mt-2 font-medium">
+                {accountOwnerName || "Sin responsable asignado"}
+              </PriorityTypography>
+              <div className="mt-2">
+                <StatusBadge status={status} />
+              </div>
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Contacts
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{contacts.length}</div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Consignee & Shippers
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {logistics_parties.length}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Opportunities
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {opportunities.length}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Pipeline Value
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              ${pipelineValue.toLocaleString()}
-            </div>
-          </div>
-        </section>
+        </PrioritySummaryRail>
 
-        <InfoCard title="Informacion de la empresa">
+        <PriorityMetricStrip className="xl:grid-cols-5">
+          <PriorityMetricCard label="Contactos" value={String(contacts.length)} helper="Personas activas para seguimiento comercial." tone="info" />
+          <PriorityMetricCard label="Registros operativos" value={String(logistics_parties.length)} helper="Consignee, shipper y AA vinculados." tone="default" />
+          <PriorityMetricCard label="Oportunidades" value={String(opportunities.length)} helper="Histórico y pipeline vivo de la cuenta." tone="warning" />
+          <PriorityMetricCard label="Pipeline" value={`$${pipelineValue.toLocaleString()}`} helper="Valor estimado acumulado." tone="spotlight" />
+          <PriorityMetricCard label="Estatus" value={client.status || "Sin estatus"} helper="Seguimiento comercial actual." tone="success" />
+        </PriorityMetricStrip>
+
+        <InfoCard title="Información de la empresa">
           <InfoField label="Nombre" value={client.company_name} />
           <InfoField label="RFC" value={client.tax_id} />
-          <InfoField label="Vendedor dueno de cuenta" value={accountOwnerName} />
+          <InfoField label="Responsable de cuenta" value={accountOwnerName} />
           <InfoField label="Industria" value={client.industry} />
           <InfoField label="Estatus" value={client.status} />
         </InfoCard>
 
-        <InfoCard title="Ubicacion de la empresa">
-          <InfoField label="Direccion" value={client.full_address} wide />
-          <InfoField label="Codigo postal" value={client.postal_code} />
+        <InfoCard title="Ubicación de la empresa">
+          <InfoField label="Dirección" value={client.full_address} wide />
+          <InfoField label="Código postal" value={client.postal_code} />
           <InfoField label="Ciudad" value={client.city} />
           <InfoField label="UN/LOCODE" value={client.city_unlocode} />
-          <InfoField label="Pais" value={client.country} />
+          <InfoField label="País" value={client.country} />
         </InfoCard>
 
-        <InfoCard title="Informacion de contacto">
-          <InfoField label="Pagina web" value={client.website} />
-          <InfoField label="Tel corporativo" value={client.corporate_phone} />
+        <InfoCard title="Información de contacto">
+          <InfoField label="Página web" value={client.website} />
+          <InfoField label="Teléfono corporativo" value={client.corporate_phone} />
         </InfoCard>
 
         {backendMode !== "canonical" ? (
           <section className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">
-            Core client data is stored in the cloud backend. Extended client profile fields are being
-            preserved locally in this browser until the canonical CRM schema is applied remotely.
+            La ficha principal del cliente ya vive en el backend canónico. Los campos extendidos de
+            perfil siguen resguardándose localmente en este navegador hasta terminar la migración del
+            esquema CRM remoto.
           </section>
         ) : null}
 
-        <section className="space-y-4 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.95)] p-5 shadow-[0_28px_60px_-46px_rgba(3,10,24,0.45)]">
+        <section className="workspace-panel space-y-4 rounded-[28px] p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[#111827]">Relacionados del cliente</h2>
               <p className="mt-1 text-sm text-[#6B7280]">
-                Consulta y administra contactos, consignee and shippers y oportunidades desde una
-                sola zona.
+                    Consulta y administra contactos, consignee, shippers y oportunidades desde una
+                    sola zona.
               </p>
             </div>
           </div>
@@ -444,13 +437,13 @@ export function ClientDetailView({
           >
             <TabsList className="h-auto w-full flex-wrap justify-start rounded-[22px] border border-[rgba(144,158,174,0.16)] bg-[rgba(11,31,59,0.04)] p-1.5">
               <TabsTrigger value="contacts" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
-                Contacts ({contacts.length})
+                Contactos ({contacts.length})
               </TabsTrigger>
               <TabsTrigger value="logistics" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
-                Consignee and Shippers ({logistics_parties.length})
+                Consignee y Shippers ({logistics_parties.length})
               </TabsTrigger>
               <TabsTrigger value="opportunities" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
-                Opportunities ({opportunities.length})
+                Oportunidades ({opportunities.length})
               </TabsTrigger>
             </TabsList>
 
@@ -458,22 +451,22 @@ export function ClientDetailView({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <PriorityTypography as="h3" variant="cardTitle">
-                    Contacts
+                    Contactos
                   </PriorityTypography>
                   <PriorityTypography variant="bodyMuted" className="mt-1">
                     Personas vinculadas actualmente a esta empresa.
                   </PriorityTypography>
                 </div>
                 <Button type="button" onClick={() => setShowContactModal(true)}>
-                  Anadir contacto
+                  Añadir contacto
                 </Button>
               </div>
 
-              <PriorityDataTable
+              <PriorityCollectionTable
                 columns={contactColumns}
                 data={contacts}
                 emptyTitle="Sin contactos vinculados"
-                emptyDescription="Todavia no hay contactos asociados a esta empresa. Agrega el primer contacto para dejar listo el seguimiento comercial."
+                emptyDescription="Todavía no hay contactos asociados a esta empresa. Agrega el primer contacto para dejar listo el seguimiento comercial."
               />
             </TabsContent>
 
@@ -481,22 +474,22 @@ export function ClientDetailView({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <PriorityTypography as="h3" variant="cardTitle">
-                    Consignee and Shippers
+                    Consignee y Shippers
                   </PriorityTypography>
                   <PriorityTypography variant="bodyMuted" className="mt-1">
                     Registros operativos del cliente para shipper, consignee y AA.
                   </PriorityTypography>
                 </div>
                 <Button type="button" onClick={() => setShowLogisticsPartyModal(true)}>
-                  Anadir registro
+                  Añadir registro
                 </Button>
               </div>
 
-              <PriorityDataTable
+              <PriorityCollectionTable
                 columns={logisticsColumns}
                 data={logistics_parties}
-                emptyTitle="Sin registros logisticos"
-                emptyDescription="Aun no hay consignee, shipper o agentes aduanales vinculados al cliente. Agrega el primer registro operativo para acelerar futuras oportunidades."
+                emptyTitle="Sin registros logísticos"
+                emptyDescription="Aún no hay consignee, shipper o agentes aduanales vinculados al cliente. Agrega el primer registro operativo para acelerar futuras oportunidades."
               />
             </TabsContent>
 
@@ -504,7 +497,7 @@ export function ClientDetailView({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <PriorityTypography as="h3" variant="cardTitle">
-                    Opportunities
+                    Oportunidades
                   </PriorityTypography>
                   <PriorityTypography variant="bodyMuted" className="mt-1">
                     Oportunidades activas o historicas vinculadas a esta cuenta.
@@ -521,15 +514,15 @@ export function ClientDetailView({
                     setShowOpportunityModal(true)
                   }}
                 >
-                  Anadir oportunidad
+                  Añadir oportunidad
                 </Button>
               </div>
 
-              <PriorityDataTable
+              <PriorityCollectionTable
                 columns={opportunityColumns}
                 data={opportunities}
                 emptyTitle="Sin oportunidades comerciales"
-                emptyDescription="Este cliente todavia no tiene oportunidades abiertas o historicas. Crea la primera oportunidad desde aqui para iniciar el flujo comercial."
+                emptyDescription="Este cliente todavía no tiene oportunidades abiertas o históricas. Crea la primera oportunidad desde aquí para iniciar el flujo comercial."
               />
             </TabsContent>
           </Tabs>
@@ -538,8 +531,9 @@ export function ClientDetailView({
 
       {showEditModal ? (
         <Modal
-          title="Editar informacion del cliente"
-          description="Actualiza la informacion principal de la empresa en una sola vista."
+          title="Editar información del cliente"
+          description="Actualiza la información principal de la empresa en una sola vista."
+          size="workspace"
           onClose={() => {
             setShowEditModal(false)
             syncClientForm(client)
@@ -547,7 +541,7 @@ export function ClientDetailView({
         >
           <ClientForm
             title="Perfil del cliente"
-            description="Agrupa la informacion comercial, ubicacion y contacto de la empresa."
+            description="Agrupa la información comercial, ubicación y contacto de la empresa."
             values={{
               companyName,
               taxId,
@@ -580,15 +574,16 @@ export function ClientDetailView({
             onSubmit={handleSaveClient}
             submitLabel="Guardar cambios"
             loading={savingClient}
-            submitNote="This profile is stored in the canonical backend."
+            submitNote="Este perfil se guarda en el backend canónico."
           />
         </Modal>
       ) : null}
 
       {showContactModal ? (
         <Modal
-          title="Anadir contacto"
+          title="Añadir contacto"
           description="Crea un nuevo contacto vinculado a esta empresa."
+          size="standard"
           onClose={() => {
             setShowContactModal(false)
             resetContactForm()
@@ -604,7 +599,7 @@ export function ClientDetailView({
               phone: contactPhone,
               linkedinUrl: contactLinkedinUrl,
               email: contactEmail,
-              status: contactStatus,
+              status: normalizeContactStatus(contactStatus),
             }}
             clients={[client]}
             onChange={(field, value) => {
@@ -625,8 +620,9 @@ export function ClientDetailView({
 
       {showOpportunityModal ? (
         <Modal
-          title="Anadir oportunidad"
-          description="Registra una nueva oportunidad comercial para esta cuenta usando el modelo canonico."
+          title="Añadir oportunidad"
+          description="Registra una nueva oportunidad comercial para esta cuenta usando el modelo canónico."
+          size="workspace"
           onClose={() => {
             setShowOpportunityModal(false)
             resetOpportunityForm()
@@ -634,7 +630,7 @@ export function ClientDetailView({
         >
           <OpportunityForm
             title="Nueva oportunidad"
-            description="La oportunidad se crea con servicio, transporte, lane estandarizado y valor calculado."
+            description="La oportunidad se crea con servicio, transporte, ruta estandarizada y valor calculado."
             values={opportunityForm}
             clients={[client]}
             users={users}
@@ -665,8 +661,9 @@ export function ClientDetailView({
 
       {showLogisticsPartyModal ? (
         <Modal
-          title="Anadir registro consignee / shipper"
-          description="Guarda un registro logistico estandarizado vinculado al cliente."
+          title="Añadir registro consignee / shipper"
+          description="Guarda un registro logístico estandarizado vinculado al cliente."
+          size="workspace"
           onClose={() => {
             setShowLogisticsPartyModal(false)
             resetLogisticsPartyForm()
@@ -674,7 +671,7 @@ export function ClientDetailView({
         >
           <ClientLogisticsPartyForm
             title="Nuevo registro logistico"
-            description="Captura el tipo, ubicacion estandarizada y contacto principal."
+            description="Captura el tipo, ubicación estandarizada y contacto principal."
             values={logisticsPartyForm}
             onChange={(field, value) => {
               setLogisticsPartyForm((current) => ({

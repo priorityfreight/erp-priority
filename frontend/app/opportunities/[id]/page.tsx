@@ -25,7 +25,12 @@ import { Modal } from "@/components/data/Modal"
 import { OpportunityForm, type OpportunityFormValues } from "@/components/forms/OpportunityForm"
 import { QuotationForm, type QuotationFormValues } from "@/components/forms/QuotationForm"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
+import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityMetricCard, PriorityMetricStrip, PrioritySummaryRail } from "@/components/priority/PriorityWorkspace"
 import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
+import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 
 const statusOptions = [
   { value: "investigando", label: "Investigando" },
@@ -52,10 +57,8 @@ function InfoCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-      <div className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#64748B]">
-        {title}
-      </div>
+    <section className="workspace-panel space-y-4 rounded-[24px] p-5">
+      <PriorityTypography variant="eyebrow">{title}</PriorityTypography>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   )
@@ -72,8 +75,10 @@ function InfoField({
 }) {
   return (
     <div className={wide ? "sm:col-span-2 xl:col-span-3" : ""}>
-      <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">{label}</div>
-      <div className="mt-1 text-sm font-medium text-[#111827]">{value || "No disponible"}</div>
+      <PriorityTypography variant="fieldLabel">{label}</PriorityTypography>
+      <PriorityTypography variant="body" className="mt-1 font-medium">
+        {value || "No disponible"}
+      </PriorityTypography>
     </div>
   )
 }
@@ -384,26 +389,24 @@ export default function OpportunityDetailPage() {
 
   if (!opportunityId) {
     return (
-      <PageContainer title="Opportunity" description="Invalid opportunity id.">
-        <p className="text-sm text-[#6B7280]">Opportunity id is missing from the URL.</p>
+      <PageContainer title="Oportunidad" description="ID de oportunidad inválido.">
+        <p className="text-sm text-[#6B7280]">Falta el identificador de la oportunidad en la URL.</p>
       </PageContainer>
     )
   }
 
   if (loading && !details) {
     return (
-      <PageContainer title="Opportunity" description="Loading opportunity data...">
-        <p className="text-sm text-[#6B7280]">Loading opportunity information.</p>
+      <PageContainer title="Oportunidad" description="Cargando información de la oportunidad…">
+        <p className="text-sm text-[#6B7280]">Cargando información de la oportunidad.</p>
       </PageContainer>
     )
   }
 
   if (!details) {
     return (
-      <PageContainer title="Opportunity" description="Opportunity not found.">
-        <p className="text-sm text-[#6B7280]">
-          We could not find an opportunity with this id.
-        </p>
+      <PageContainer title="Oportunidad" description="Oportunidad no encontrada.">
+        <p className="text-sm text-[#6B7280]">No encontramos una oportunidad con ese identificador.</p>
       </PageContainer>
     )
   }
@@ -418,111 +421,89 @@ export default function OpportunityDetailPage() {
 
   return (
     <PageContainer
-      title={opportunity.title || "Opportunity"}
+      title={opportunity.title || "Oportunidad"}
       description={`Seguimiento comercial para ${opportunity.clients?.company_name || "cliente"}.`}
+      meta={
+        <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-white/10 bg-white/8 px-3 py-2 text-sm text-[var(--brand-light-gray)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-gray)]">Estatus</span>
+          <select
+            value={status}
+            onChange={(event) => {
+              void handleUpdateStatus(event.target.value)
+            }}
+            disabled={savingStatus}
+            className="rounded-xl border border-white/10 bg-[rgba(255,255,255,0.08)] px-3 py-2 text-sm font-medium text-white outline-none focus:border-[rgba(179,58,91,0.45)]"
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value} className="text-[#111827]">
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <StatusBadge status={status} />
+          <span className="text-xs text-[var(--brand-soft-gray)]">
+            {savingStatus ? "Guardando estatus…" : "Seguimiento principal de la oportunidad"}
+          </span>
+        </div>
+      }
       actions={
-        <>
-          <div className="min-w-[220px] rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[#1D4ED8]">
-              Estatus de la oportunidad
-            </div>
-            <div className="mt-2 flex items-center gap-3">
-              <select
-                value={status}
-                onChange={(event) => {
-                  void handleUpdateStatus(event.target.value)
-                }}
-                disabled={savingStatus}
-                className="w-full rounded-md border border-[#93C5FD] bg-white px-3 py-2 text-sm font-medium text-[#1E3A8A] outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#DBEAFE]"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <StatusBadge status={status} />
-            </div>
-            <div className="mt-2 text-[11px] text-[#1D4ED8]">
-              {savingStatus ? "Guardando estatus..." : "Seguimiento principal de la oportunidad"}
-            </div>
-          </div>
-          <Link
-            href="/opportunities"
-            className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
-          >
-            Back
-          </Link>
-          <button
-            type="button"
-            onClick={() => setShowEditModal(true)}
-            className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
-          >
-            Editar informacion
-          </button>
-          <div className="flex flex-col items-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowQuoteModal(true)}
-              disabled={!canCreateQuotation}
-              className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:bg-[#93C5FD]"
-            >
-              Cotizar
-            </button>
-            {!canCreateQuotation ? (
-              <div className="max-w-[320px] text-right text-[11px] text-[#B45309]">
-                Completa antes de cotizar: {quotationReadinessIssues.join(", ")}.
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-2 text-sm font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </>
+        <ButtonGroup className="flex flex-wrap items-center gap-3 bg-transparent p-0">
+          <Button asChild variant="outline" size="lg">
+            <Link href="/opportunities">Volver</Link>
+          </Button>
+          <Button type="button" variant="outline" size="lg" onClick={() => setShowEditModal(true)}>
+            Editar información
+          </Button>
+          <Button type="button" size="lg" onClick={() => setShowQuoteModal(true)} disabled={!canCreateQuotation}>
+            Cotizar
+          </Button>
+          <Button type="button" variant="destructive" size="lg" onClick={handleDelete} disabled={deleting}>
+            {deleting ? "Eliminando…" : "Eliminar oportunidad"}
+          </Button>
+        </ButtonGroup>
       }
     >
       <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Cliente
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {opportunity.clients?.company_name || "No asignado"}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Servicio
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {opportunity.service_type || "No definido"}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Transporte
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {opportunity.transport_type || "No definido"}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Estimated value
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {formatCurrency(estimatedValue)}
-            </div>
-          </div>
-        </section>
+        {!canCreateQuotation ? (
+          <PrioritySectionAlert title="Aún no está lista para cotizar" variant="warning">
+            Completa antes de cotizar: {quotationReadinessIssues.join(", ")}.
+          </PrioritySectionAlert>
+        ) : null}
 
-        <InfoCard title="Informacion de la oportunidad">
+        <PrioritySummaryRail className="xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+          <div>
+            <PriorityTypography variant="eyebrow">Workspace comercial</PriorityTypography>
+            <PriorityTypography as="h2" variant="sectionTitle" className="mt-2">
+              Perfil comercial, lane y readiness de cotización en un solo lugar.
+            </PriorityTypography>
+            <PriorityTypography variant="bodyMuted" className="mt-2">
+              Diseñado para que ventas entienda rápido qué falta, qué sí está listo y cuándo conviene convertir esta oportunidad en cotización.
+            </PriorityTypography>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5B6A7D]">
+              <StatusBadge status={status} />
+              <span>{opportunity.salesperson_name || "Sin ejecutivo asignado"}</span>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="rounded-[20px] border border-[rgba(11,31,59,0.08)] bg-[rgba(11,31,59,0.03)] p-4">
+              <PriorityTypography variant="eyebrow">Readiness</PriorityTypography>
+              <PriorityTypography variant="body" className="mt-2 font-medium">
+                {canCreateQuotation
+                  ? "Lista para convertirse en cotización cuando el equipo comercial lo decida."
+                  : `Faltan ${quotationReadinessIssues.length} dato(s) clave para cotizar.`}
+              </PriorityTypography>
+            </div>
+          </div>
+        </PrioritySummaryRail>
+
+        <PriorityMetricStrip>
+          <PriorityMetricCard label="Cliente" value={opportunity.clients?.company_name || "No asignado"} helper="Cuenta vinculada a esta oportunidad." tone="info" />
+          <PriorityMetricCard label="Servicio" value={opportunity.service_type || "No definido"} helper={opportunity.operation_type || "Tipo de operación pendiente"} tone="default" />
+          <PriorityMetricCard label="Transporte" value={opportunity.transport_type || "No definido"} helper={opportunity.incoterm_code || "Incoterm pendiente"} tone="warning" />
+          <PriorityMetricCard label="Valor estimado" value={formatCurrency(estimatedValue)} helper="Profit esperado por volumen aproximado." tone="spotlight" />
+        </PriorityMetricStrip>
+
+        <InfoCard title="Información de la oportunidad">
           <InfoField label="Cliente" value={opportunity.clients?.company_name} />
           <InfoField label="Usuario" value={opportunity.salesperson_name} />
           <InfoField label="Tipo de servicio" value={opportunity.service_type} />
@@ -545,7 +526,7 @@ export default function OpportunityDetailPage() {
                 : "No disponible"
             }
           />
-          <InfoField label="Estimated value" value={formatCurrency(estimatedValue)} />
+          <InfoField label="Valor estimado" value={formatCurrency(estimatedValue)} />
           <InfoField label="Notas internas" value={opportunity.description} wide />
         </InfoCard>
 
@@ -615,10 +596,10 @@ export default function OpportunityDetailPage() {
           }}
         >
           {!canCreateQuotation ? (
-            <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-4 text-sm text-[#92400E]">
+            <PrioritySectionAlert title="Aún no está lista para cotizar" variant="warning">
               Completa estos campos en la oportunidad antes de crear una cotizacion:{" "}
               {quotationReadinessIssues.join(", ")}.
-            </div>
+            </PrioritySectionAlert>
           ) : (
             <QuotationForm
               title="Nueva cotizacion"

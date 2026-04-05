@@ -1,7 +1,7 @@
 import { type ColumnDef } from "@tanstack/react-table"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
 import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
 import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
@@ -93,7 +93,7 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const PriorityDataTableReview: Story = {
+export const PriorityCollectionTableReview: Story = {
   render: () => (
     <div className="space-y-6 rounded-[32px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-8 shadow-[0_32px_80px_-48px_rgba(3,10,24,0.4)]">
       <div className="space-y-2">
@@ -107,7 +107,7 @@ export const PriorityDataTableReview: Story = {
         </PriorityTypography>
       </div>
 
-      <PriorityDataTable
+      <PriorityCollectionTable
         columns={columns}
         data={sampleRows}
         emptyTitle="Sin registros"

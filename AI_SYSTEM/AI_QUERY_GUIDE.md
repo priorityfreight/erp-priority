@@ -177,6 +177,7 @@ Quotation-specific write rules:
 - use take_quotation_for_pricing() when pricing ownership is taken from the pending queue
 - use update_quotation_status() for lifecycle transitions
 - use search_quotations() for CRM and Pricing quotation list screens
+- search_quotations() is the canonical backend path for workspace query, lane/status, column filters, sorting, pagination, and page size
 - use create_quotation_cost_line(), update_quotation_cost_line(), and delete_quotation_cost_line() for charge lines
 - use create_quotation_cargo_line(), update_quotation_cargo_line(), and delete_quotation_cargo_line() for service-specific cargo detail lines
 - use update_quotation_option_sales_amounts() when CRM saves sale amounts for an entire option in one action
@@ -192,6 +193,7 @@ Quotation-specific write rules:
 - accepted quotations may create shipments only through create_booking_from_quotation()
 - CRM list screens should use search_quotations(scope = crm) instead of direct full-view reads
 - Pricing list screens should use search_quotations(scope = pricing) instead of direct full-view reads
+- workspace saved views and column presets must persist through workspace_saved_views rather than isolated local-only frontend state
 - detail screens should read quotation_summary_view for masked economic summary fields
 - charge-line detail screens should read quotation_cost_line_secure_view instead of direct quotation_costs reads when rendering sensitive economics
 - detail screens may read quotation_summary_view plus quotation_cost_line_secure_view and quotation_cargo_lines rows

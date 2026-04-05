@@ -9,7 +9,8 @@ test.describe("frontend authenticated smoke", () => {
     await loginThroughUi(page)
 
     await expect(page).toHaveURL(/\/($|dashboard|clients|master-data|pricing|quotations|contacts|opportunities)/)
-    await expect(page.getByText(/Module/i)).toBeVisible()
+    await expect(page.getByRole("heading", { name: /Dashboard/i })).toBeVisible()
+    await expect(page.getByText(/Hoy en CRM/i)).toBeVisible()
 
     await captureEvidence(page, testInfo, "dashboard-shell.png")
   })
@@ -19,7 +20,7 @@ test.describe("frontend authenticated smoke", () => {
     await page.goto("/clients")
 
     await expect(page).toHaveURL(/\/clients/)
-    await expect(page.getByText(/Clients/i).first()).toBeVisible()
+    await expect(page.getByRole("heading", { level: 1, name: "Clientes" })).toBeVisible()
 
     await captureEvidence(page, testInfo, "clients-list.png")
   })

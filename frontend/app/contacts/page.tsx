@@ -18,11 +18,15 @@ import { StatusBadge } from "@/components/data/StatusBadge"
 import {
   ContactForm,
   type ContactFormValues,
-  normalizeWhatsAppLink,
 } from "@/components/forms/ContactForm"
+import { normalizeContactStatus, normalizeWhatsAppLink } from "@/components/forms/contact-form-utils"
 import { PageContainer } from "@/components/layout/PageContainer"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
+import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
 import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import { PriorityMetricCard, PriorityMetricStrip } from "@/components/priority/PriorityWorkspace"
+import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
 import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -43,6 +47,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
   const [statusFilter, setStatusFilter] = useState("all")
+  const [clientFilter, setClientFilter] = useState("all")
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingContact, setEditingContact] = useState<ContactWithClient | null>(null)
   const [formValues, setFormValues] = useState<ContactFormValues>(emptyForm)
@@ -99,7 +104,7 @@ export default function ContactsPage() {
       phone: contact.phone || "",
       linkedinUrl: contact.linkedin_url || "",
       email: contact.email || "",
-      status: contact.status || "activo",
+      status: normalizeContactStatus(contact.status),
     })
   }
 
@@ -130,7 +135,7 @@ export default function ContactsPage() {
       await loadContactsData(search, statusFilter)
     } catch (error) {
       console.error(error)
-      notifyError("Error creating contact", getErrorMessage(error, "The contact could not be saved."))
+      notifyError("No se pudo crear el contacto", getErrorMessage(error, "No fue posible guardar el contacto."))
     } finally {
       setCreating(false)
     }
@@ -162,7 +167,7 @@ export default function ContactsPage() {
       await loadContactsData(search, statusFilter)
     } catch (error) {
       console.error(error)
-      notifyError("Error saving contact", getErrorMessage(error, "The contact could not be updated."))
+      notifyError("No se pudo guardar el contacto", getErrorMessage(error, "No fue posible actualizar el contacto."))
     } finally {
       setSaving(false)
     }
@@ -171,7 +176,7 @@ export default function ContactsPage() {
   const handleDeleteContact = useCallback(async (id: string, name: string) => {
     const confirmed = await confirm({
       title: "Eliminar contacto",
-      description: `Se eliminara el contacto ${name} de forma permanente del catalogo CRM.`,
+      description: `Se eliminará el contacto ${name} de forma permanente del catálogo CRM.`,
       actionLabel: "Eliminar contacto",
       variant: "destructive",
     })
@@ -186,14 +191,25 @@ export default function ContactsPage() {
       await loadContactsData(search, statusFilter)
     } catch (error) {
       console.error(error)
-      notifyError("Error deleting contact", getErrorMessage(error, "The contact could not be deleted."))
+      notifyError("No se pudo eliminar el contacto", getErrorMessage(error, "No fue posible eliminar el contacto."))
     } finally {
       setDeletingId(null)
     }
   }, [confirm, search, statusFilter])
 
-  const activeContacts = contacts.filter((contact) => contact.status === "activo").length
-  const inactiveContacts = contacts.filter((contact) => contact.status === "ya_no_trabaja").length
+  const filteredContacts = useMemo(() => {
+    if (clientFilter === "all") {
+      return contacts
+    }
+
+    return contacts.filter((contact) => contact.client_id === clientFilter)
+  }, [clientFilter, contacts])
+
+  const activeContacts = filteredContacts.filter((contact) => contact.status === "activo").length
+  const inactiveContacts = filteredContacts.filter((contact) => contact.status === "ya_no_trabaja").length
+  const hasActiveFilters =
+    Boolean(deferredSearch.trim()) || statusFilter !== "all" || clientFilter !== "all"
+  const isWorkspaceEmpty = !loading && contacts.length === 0 && !hasActiveFilters
 
   const contactColumns = useMemo<ColumnDef<ContactWithClient>[]>(
     () => [
@@ -219,12 +235,12 @@ export default function ContactsPage() {
               {row.original.client_name}
             </Link>
           ) : (
-            "No client"
+            "Sin cliente"
           ),
       },
       {
         accessorKey: "phone",
-        header: "Telefono",
+        header: "Teléfono",
         cell: ({ row }) => {
           const whatsappLink = normalizeWhatsAppLink(row.original.phone || "")
           return (
@@ -271,19 +287,22 @@ export default function ContactsPage() {
         id: "actions",
         header: "Acciones",
         cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => startEdit(row.original)}>
-              Editar
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => void handleDeleteContact(row.original.id, row.original.name)}
-              disabled={deletingId === row.original.id}
-            >
-              {deletingId === row.original.id ? "Eliminando..." : "Eliminar"}
-            </Button>
+          <div className="flex justify-end">
+            <PriorityRowActions
+              label={`Acciones de ${row.original.name}`}
+              actions={[
+                {
+                  label: "Editar",
+                  onSelect: () => startEdit(row.original),
+                },
+                {
+                  label: deletingId === row.original.id ? "Eliminando…" : "Eliminar",
+                  onSelect: () => void handleDeleteContact(row.original.id, row.original.name),
+                  disabled: deletingId === row.original.id,
+                  destructive: true,
+                },
+              ]}
+            />
           </div>
         ),
       },
@@ -293,96 +312,145 @@ export default function ContactsPage() {
 
   return (
     <PageContainer
-      title="Contacts"
-      description="Gestion de contactos clave por cuenta con enlaces directos y estatus laboral."
+      density="compact"
+      title="Contactos"
+      description="Gestión de contactos clave por cuenta con enlaces directos y estatus laboral."
       actions={
-        <Button type="button" size="lg" onClick={() => setShowCreateModal(true)}>
-          Anadir contacto
-        </Button>
+        !isWorkspaceEmpty ? (
+          <Button type="button" size="lg" onClick={() => setShowCreateModal(true)}>
+            Añadir contacto
+          </Button>
+        ) : null
       }
     >
-      <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
-              Total contactos
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{contacts.length}</div>
-          </div>
-          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
-              Activos
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{activeContacts}</div>
-          </div>
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
-              Ya no trabaja
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{inactiveContacts}</div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#475569]">
-              Clientes cubiertos
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {new Set(contacts.map((contact) => contact.client_id)).size}
-            </div>
-          </div>
-        </section>
+      <div className={isWorkspaceEmpty ? "space-y-4" : "space-y-8"}>
+        {!isWorkspaceEmpty ? (
+        <PriorityMetricStrip>
+          <PriorityMetricCard label="Total contactos" value={filteredContacts.length} helper={`${contacts.length} registros cargados.`} tone="info" />
+          <PriorityMetricCard label="Activos" value={activeContacts} helper="Contactos listos para operar." tone="success" />
+          <PriorityMetricCard label="Ya no trabaja" value={inactiveContacts} helper="Registros retenidos por historial." tone="warning" />
+          <PriorityMetricCard
+            label="Clientes cubiertos"
+            value={new Set(contacts.map((contact) => contact.client_id)).size}
+            helper="Cuentas con al menos un punto de contacto."
+            tone="default"
+          />
+        </PriorityMetricStrip>
+        ) : null}
 
-        <section className="space-y-4 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.95)] p-5 shadow-[0_28px_60px_-46px_rgba(3,10,24,0.45)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--brand-navy)]">Lista de contactos</h2>
-              <p className="mt-1 text-sm text-[#5B6A7D]">
-                Tooling comercial con filtros, acceso directo y edicion sin salir del workspace.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <PriorityInput
-                placeholder="Buscar contacto o cliente"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <PrioritySelectField
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-                placeholder="Filtra por estatus"
-                options={[
-                  { value: "all", label: "Todos los estatus" },
-                  { value: "activo", label: "Activo" },
-                  { value: "ya_no_trabaja", label: "Ya no trabaja" },
-                ]}
-              />
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-12 rounded-[20px]" />
-              <Skeleton className="h-12 rounded-[20px]" />
-              <Skeleton className="h-12 rounded-[20px]" />
+        <section className={isWorkspaceEmpty ? "workspace-panel space-y-3 rounded-[24px] p-4" : "workspace-panel space-y-4 rounded-[28px] p-5"}>
+          {!isWorkspaceEmpty ? (
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--brand-navy)]">Lista de contactos</h2>
+                <p className="mt-1 text-sm text-[#5B6A7D]">
+                  Workspace comercial con filtros, acceso directo y edición sin salir de la pantalla.
+                </p>
+              </div>
+              <PriorityToolbar className="w-full sm:max-w-2xl">
+                <PriorityInput
+                  placeholder="Buscar contacto o cliente…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="min-w-0 flex-1"
+                />
+                <PrioritySelectField
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                  placeholder="Filtra por estatus"
+                  options={[
+                    { value: "all", label: "Todos los estatus" },
+                    { value: "activo", label: "Activo" },
+                    { value: "ya_no_trabaja", label: "Ya no trabaja" },
+                  ]}
+                />
+                <PrioritySelectField
+                  value={clientFilter}
+                  onValueChange={setClientFilter}
+                  placeholder="Filtra por cliente"
+                  options={[
+                    { value: "all", label: "Todos los clientes" },
+                    ...clients.map((client) => ({ value: client.id, label: client.company_name })),
+                  ]}
+                />
+              </PriorityToolbar>
             </div>
           ) : (
-            <PriorityDataTable
-              columns={contactColumns}
-              data={contacts}
-              emptyTitle={!deferredSearch.trim() && statusFilter === "all" ? "Sin contactos" : "Sin resultados"}
-              emptyDescription={
-                !deferredSearch.trim() && statusFilter === "all"
-                  ? "Todavia no hay contactos. Crea el primero desde este popup."
-                  : "No encontramos contactos con los filtros actuales."
-              }
-            />
+            <>
+              <PriorityToolbar density="compact" className="w-full xl:max-w-4xl">
+                <PriorityInput
+                  placeholder="Buscar contacto o cliente…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="min-w-0 flex-1"
+                />
+                <PrioritySelectField
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                  placeholder="Filtra por estatus"
+                  options={[
+                    { value: "all", label: "Todos los estatus" },
+                    { value: "activo", label: "Activo" },
+                    { value: "ya_no_trabaja", label: "Ya no trabaja" },
+                  ]}
+                />
+                <PrioritySelectField
+                  value={clientFilter}
+                  onValueChange={setClientFilter}
+                  placeholder="Filtra por cliente"
+                  options={[
+                    { value: "all", label: "Todos los clientes" },
+                    ...clients.map((client) => ({ value: client.id, label: client.company_name })),
+                  ]}
+                />
+              </PriorityToolbar>
+              <PriorityEmptyState
+                density="compact"
+                title="Sin contactos"
+                description="Agrega el primer punto de contacto para que comercial pueda llamar, escribir o actualizar el estatus desde aquí mismo."
+                action={
+                  <Button type="button" onClick={() => setShowCreateModal(true)}>
+                    Añadir contacto
+                  </Button>
+                }
+              />
+            </>
           )}
+
+          {!isWorkspaceEmpty ? (
+          <>
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 rounded-[20px]" />
+                <Skeleton className="h-12 rounded-[20px]" />
+                <Skeleton className="h-12 rounded-[20px]" />
+              </div>
+            ) : (
+              <PriorityCollectionTable
+                columns={contactColumns}
+                data={filteredContacts}
+                emptyTitle={
+                  !deferredSearch.trim() && statusFilter === "all" && clientFilter === "all"
+                    ? "Sin contactos"
+                    : "Sin resultados"
+                }
+                emptyDescription={
+                  !deferredSearch.trim() && statusFilter === "all" && clientFilter === "all"
+                    ? "Todavía no hay contactos. Crea el primero desde este modal."
+                    : "No encontramos contactos con los filtros actuales."
+                }
+              />
+            )}
+          </>
+          ) : null}
         </section>
       </div>
 
       {showCreateModal ? (
         <Modal
-          title="Anadir contacto"
+          title="Añadir contacto"
           description="Captura los datos del contacto con validaciones básicas y enlaces futuros."
+          size="standard"
           onClose={() => {
             setShowCreateModal(false)
             resetForm()
@@ -410,6 +478,7 @@ export default function ContactsPage() {
         <Modal
           title="Editar contacto"
           description="Actualiza el perfil del contacto sin salir de la tabla principal."
+          size="standard"
           onClose={() => {
             setEditingContact(null)
             resetForm()

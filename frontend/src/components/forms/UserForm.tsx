@@ -1,23 +1,13 @@
-import {
-  PriorityFormField,
-  PriorityFormGrid,
-  PriorityFormSection,
-  PriorityInput,
-  PrioritySelectField,
-} from "@/components/priority/PriorityForm"
-import { PriorityTypography } from "@/components/priority/PriorityTypography"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { UserRole } from "@/lib/db"
+"use client"
 
-export type UserFormValues = {
-  fullName: string
-  roleName: string
-  email: string
-  phone: string
-  username: string
-  password: string
-  status: "activo" | "inactivo"
-}
+import { useMemo } from "react"
+import type { UserRole } from "@/lib/db"
+import { PrioritySectionAlert } from "@/components/priority"
+import { PriorityFormEngine } from "@/components/priority/forms/PriorityFormEngine"
+import type { FormSchemaDefinition } from "@/lib/forms/types"
+import { userFormSchema, type UserFormSchemaValues } from "@/features/master-data/users/schemas/user-form"
+
+export type UserFormValues = UserFormSchemaValues
 
 type UserFormProps = {
   values: UserFormValues
@@ -32,108 +22,102 @@ export function UserForm({
   passwordRequired = false,
   onChange,
 }: UserFormProps) {
+  const schemaDefinition = useMemo<FormSchemaDefinition<typeof userFormSchema>>(
+    () => ({
+      schema: userFormSchema,
+      title: "Perfil del usuario",
+      description: "Datos base, acceso y estatus operativo del usuario dentro del ERP.",
+      sections: [
+        {
+          id: "profile",
+          title: "Perfil del usuario",
+          description: "Datos base del usuario asignado dentro del ERP.",
+          columnsClassName: "xl:grid-cols-3",
+          fields: [
+            {
+              name: "fullName",
+              type: "text",
+              label: "Nombre",
+              placeholder: "Nombre completo",
+              required: true,
+            },
+            {
+              name: "roleName",
+              type: "select",
+              label: "Rol",
+              placeholder: "Selecciona un rol",
+              required: true,
+              options: roles.map((role) => ({ value: role.name, label: role.name })),
+            },
+            {
+              name: "email",
+              type: "text",
+              label: "Correo",
+              placeholder: "correo@empresa.com",
+              required: true,
+            },
+            {
+              name: "phone",
+              type: "text",
+              label: "Teléfono",
+              placeholder: "+52 81 0000 0000",
+            },
+          ],
+        },
+        {
+          id: "access",
+          title: "Acceso",
+          description: "Credenciales y estatus de acceso al ERP.",
+          columnsClassName: "xl:grid-cols-3",
+          fields: [
+            {
+              name: "username",
+              type: "text",
+              label: "Username",
+              placeholder: "usuario.erp",
+              required: true,
+            },
+            {
+              name: "status",
+              type: "toggle-group",
+              label: "Estatus",
+              helperText: "Controla si el usuario puede autenticarse y operar dentro del ERP.",
+              required: true,
+              options: [
+                { value: "activo", label: "Activo" },
+                { value: "inactivo", label: "Inactivo" },
+              ],
+            },
+            {
+              name: "password",
+              type: "text",
+              label: passwordRequired ? "Contraseña" : "Nueva contraseña",
+              placeholder: passwordRequired ? "Mínimo 8 caracteres" : "Dejar vacío para no cambiar",
+              className: "md:col-span-2",
+              required: passwordRequired,
+            },
+          ],
+        },
+      ],
+    }),
+    [passwordRequired, roles]
+  )
+
   return (
-    <div className="space-y-5">
-      <PriorityFormSection
-        title="Perfil del usuario"
-        description="Datos base del usuario asignado dentro del ERP."
-      >
-        <PriorityFormGrid className="xl:grid-cols-2">
-          <PriorityFormField label="Nombre">
-            <PriorityInput
-              type="text"
-              value={values.fullName}
-              onChange={(event) => onChange("fullName", event.target.value)}
-              placeholder="Nombre completo"
-            />
-          </PriorityFormField>
+    <PriorityFormEngine
+      schemaDefinition={schemaDefinition}
+      values={values}
+      density="compact"
+      onFieldChange={(field, value) => onChange(field as keyof UserFormValues, String(value ?? ""))}
+      afterSections={(currentValues) => {
+        const passwordLength = currentValues.password.trim().length
 
-          <PriorityFormField label="Rol">
-            <PrioritySelectField
-              value={values.roleName}
-              onValueChange={(value) => onChange("roleName", value)}
-              placeholder="Selecciona un rol"
-              options={[
-                { value: "", label: "Selecciona un rol" },
-                ...roles.map((role) => ({ value: role.name, label: role.name })),
-              ]}
-            />
-          </PriorityFormField>
-
-          <PriorityFormField label="Correo">
-            <PriorityInput
-              type="email"
-              value={values.email}
-              onChange={(event) => onChange("email", event.target.value)}
-              placeholder="correo@empresa.com"
-            />
-          </PriorityFormField>
-
-          <PriorityFormField label="Telefono">
-            <PriorityInput
-              type="text"
-              value={values.phone}
-              onChange={(event) => onChange("phone", event.target.value)}
-              placeholder="+52 81 0000 0000"
-            />
-          </PriorityFormField>
-        </PriorityFormGrid>
-      </PriorityFormSection>
-
-      <PriorityFormSection
-        title="Acceso"
-        description="Credenciales y estatus de acceso al ERP."
-      >
-        <PriorityFormGrid className="xl:grid-cols-2">
-          <PriorityFormField label="Username">
-            <PriorityInput
-              type="text"
-              value={values.username}
-              onChange={(event) => onChange("username", event.target.value)}
-              placeholder="usuario.erp"
-            />
-          </PriorityFormField>
-
-          <PriorityFormField label="Estatus">
-            <div className="space-y-3">
-              <ToggleGroup
-                type="single"
-                value={values.status}
-                onValueChange={(value) => {
-                  if (value) {
-                    onChange("status", value as UserFormValues["status"])
-                  }
-                }}
-                className="w-full justify-start"
-              >
-                <ToggleGroupItem value="activo" className="min-w-[120px]">
-                  Activo
-                </ToggleGroupItem>
-                <ToggleGroupItem value="inactivo" className="min-w-[120px]">
-                  Inactivo
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <PriorityTypography variant="caption">
-                Controla si el usuario puede autenticarse y operar dentro del ERP.
-              </PriorityTypography>
-            </div>
-          </PriorityFormField>
-
-          <PriorityFormField
-            label={passwordRequired ? "Contrasena" : "Nueva contrasena"}
-            className="md:col-span-2"
-          >
-            <PriorityInput
-              type="password"
-              value={values.password}
-              onChange={(event) => onChange("password", event.target.value)}
-              placeholder={
-                passwordRequired ? "Minimo 8 caracteres" : "Dejar vacio para no cambiar"
-              }
-            />
-          </PriorityFormField>
-        </PriorityFormGrid>
-      </PriorityFormSection>
-    </div>
+        return passwordRequired && passwordLength > 0 && passwordLength < 8 ? (
+          <PrioritySectionAlert title="Contraseña incompleta" variant="warning">
+            La contraseña inicial debe tener al menos 8 caracteres para crear al usuario.
+          </PrioritySectionAlert>
+        ) : null
+      }}
+    />
   )
 }

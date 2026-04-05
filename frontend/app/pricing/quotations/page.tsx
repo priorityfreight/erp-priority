@@ -9,7 +9,8 @@ export default function PricingQuotationsPage() {
 
   return (
     <PageContainer
-      title="Pricing Quotations"
+      density="compact"
+      title="Cotizaciones para pricing"
       description="Tablero de pricing para tomar cotizaciones, contactar proveedores y consolidar compra antes de enviarlas al equipo comercial."
     >
       <PricingQuotationsView controller={controller} />

@@ -6,16 +6,18 @@ type ModalProps = {
   title: string
   description?: string
   onClose: () => void
+  size?: "compact" | "standard" | "workspace"
   headerActions?: ReactNode
   children: ReactNode
 }
 
-export function Modal({ title, description, onClose, headerActions, children }: ModalProps) {
+export function Modal({ title, description, onClose, size = "standard", headerActions, children }: ModalProps) {
   return (
     <PriorityDialog
       open
       title={title}
       description={description}
+      size={size}
       onOpenChange={(open) => {
         if (!open) {
           onClose()

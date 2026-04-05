@@ -2797,6 +2797,59 @@ export type Database = {
           },
         ]
       }
+      workspace_saved_views: {
+        Row: {
+          created_at: string
+          filters_json: Json
+          id: string
+          is_default: boolean
+          name: string
+          owner_user_id: string
+          search_query: string | null
+          sort_json: Json
+          status_lane: string | null
+          updated_at: string | null
+          visible_columns_json: Json
+          workspace_key: string
+        }
+        Insert: {
+          created_at?: string
+          filters_json?: Json
+          id?: string
+          is_default?: boolean
+          name: string
+          owner_user_id: string
+          search_query?: string | null
+          sort_json?: Json
+          status_lane?: string | null
+          updated_at?: string | null
+          visible_columns_json?: Json
+          workspace_key: string
+        }
+        Update: {
+          created_at?: string
+          filters_json?: Json
+          id?: string
+          is_default?: boolean
+          name?: string
+          owner_user_id?: string
+          search_query?: string | null
+          sort_json?: Json
+          status_lane?: string | null
+          updated_at?: string | null
+          visible_columns_json?: Json
+          workspace_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_saved_views_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       active_shipments_view: {
@@ -3858,6 +3911,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_provider_service_offering_record: {
+        Args: {
+          p_provider_id: string
+          p_service_transport_type_id: string
+          p_terms_and_conditions?: string
+        }
+        Returns: string
+      }
       create_quotation_cargo_line:
         | {
             Args: {
@@ -3942,7 +4003,28 @@ export type Database = {
         Args: { p_party_id: string }
         Returns: undefined
       }
+      delete_client_record: { Args: { p_client_id: string }; Returns: string }
+      delete_contact_record: {
+        Args: { p_contact_id: string }
+        Returns: undefined
+      }
       delete_exchange_rate: { Args: { p_id: string }; Returns: undefined }
+      delete_opportunity_record: {
+        Args: { p_opportunity_id: string }
+        Returns: undefined
+      }
+      delete_provider_contact_record: {
+        Args: { p_contact_id: string }
+        Returns: undefined
+      }
+      delete_provider_record: {
+        Args: { p_provider_id: string }
+        Returns: undefined
+      }
+      delete_provider_service_offering_record: {
+        Args: { p_offering_id: string }
+        Returns: undefined
+      }
       delete_quotation_cargo_line: {
         Args: { p_id: string }
         Returns: undefined
@@ -4127,6 +4209,10 @@ export type Database = {
         Returns: string
       }
       normalize_currency_code: { Args: { p_currency: string }; Returns: string }
+      purge_ephemeral_client_record: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
       recalculate_quotation_totals: {
         Args: { p_quotation_id: string }
         Returns: undefined
@@ -4162,6 +4248,16 @@ export type Database = {
           resolved_id: string
           resolved_unlocode: string
         }[]
+      }
+      save_quotation_purchase_option: {
+        Args: {
+          p_lines?: Json
+          p_option_label?: string
+          p_purchase_valid_until?: string
+          p_quotation_id: string
+          p_quotation_option_id?: string
+        }
+        Returns: string
       }
       search_clients: {
         Args: { p_query: string }
@@ -4226,64 +4322,189 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      search_quotations: {
-        Args: {
-          p_limit?: number
-          p_offset?: number
-          p_query?: string
-          p_scope?: string
-          p_status?: string
-        }
-        Returns: {
-          can_edit_purchase_amount: boolean
-          can_edit_sale_price: boolean
-          can_view_cost: boolean
-          can_view_expected_profit: boolean
-          can_view_sale_price: boolean
-          cancellation_notes: string
-          client_id: string
-          client_name: string
-          created_at: string
-          created_by: string
-          created_by_name: string
-          currency: string
-          delivery_address: string
-          destination: string
-          destination_unlocode: string
-          destination_unlocode_id: string
-          estimated_cost: number
-          estimated_price: number
-          expected_profit: number
-          id: string
-          incoterm_code: string
-          incoterm_id: string
-          operation_type: string
-          opportunity_id: string
-          opportunity_title: string
-          origin: string
-          origin_unlocode: string
-          origin_unlocode_id: string
-          pickup_address: string
-          pricing_owner_id: string
-          pricing_owner_name: string
-          purchase_valid_until: string
-          reference_number: string
-          rejection_notes: string
-          rejection_reason: string
-          rejection_reason_id: string
-          required_quote_date: string
-          sales_valid_until: string
-          salesperson_id: string
-          salesperson_name: string
-          service_type: string
-          status: string
-          target_rate: number
-          total_charge_lines: number
-          total_count: number
-          transport_type: string
-          updated_at: string
-        }[]
-      }
+      search_quotations:
+        | {
+            Args: {
+              p_limit?: number
+              p_offset?: number
+              p_query?: string
+              p_scope?: string
+              p_status?: string
+            }
+            Returns: {
+              can_edit_purchase_amount: boolean
+              can_edit_sale_price: boolean
+              can_view_cost: boolean
+              can_view_expected_profit: boolean
+              can_view_sale_price: boolean
+              cancellation_notes: string
+              client_id: string
+              client_name: string
+              created_at: string
+              created_by: string
+              created_by_name: string
+              currency: string
+              delivery_address: string
+              destination: string
+              destination_unlocode: string
+              destination_unlocode_id: string
+              estimated_cost: number
+              estimated_price: number
+              expected_profit: number
+              id: string
+              incoterm_code: string
+              incoterm_id: string
+              operation_type: string
+              opportunity_id: string
+              opportunity_title: string
+              origin: string
+              origin_unlocode: string
+              origin_unlocode_id: string
+              pickup_address: string
+              pricing_owner_id: string
+              pricing_owner_name: string
+              purchase_valid_until: string
+              reference_number: string
+              rejection_notes: string
+              rejection_reason: string
+              rejection_reason_id: string
+              required_quote_date: string
+              sales_valid_until: string
+              salesperson_id: string
+              salesperson_name: string
+              service_type: string
+              status: string
+              target_rate: number
+              total_charge_lines: number
+              total_count: number
+              transport_type: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_offset?: number
+              p_only_mine?: boolean
+              p_pricing_owner_id?: string
+              p_query?: string
+              p_scope?: string
+              p_service_type?: string
+              p_status?: string
+              p_transport_type?: string
+            }
+            Returns: {
+              cancellation_notes: string
+              client_id: string
+              client_name: string
+              commodities: string
+              created_at: string
+              created_by: string
+              created_by_name: string
+              currency: string
+              delivery_address: string
+              destination: string
+              destination_unlocode: string
+              destination_unlocode_id: string
+              estimated_cost: number
+              estimated_price: number
+              expected_profit: number
+              id: string
+              incoterm_code: string
+              incoterm_id: string
+              operation_type: string
+              opportunity_id: string
+              opportunity_title: string
+              origin: string
+              origin_unlocode: string
+              origin_unlocode_id: string
+              pickup_address: string
+              pricing_owner_id: string
+              pricing_owner_name: string
+              purchase_valid_until: string
+              quantity: number
+              reference_number: string
+              rejection_notes: string
+              rejection_reason: string
+              rejection_reason_id: string
+              required_quote_date: string
+              sales_valid_until: string
+              salesperson_id: string
+              salesperson_name: string
+              service_type: string
+              status: string
+              target_rate: number
+              total_charge_lines: number
+              total_count: number
+              transport_type: string
+              updated_at: string
+              volume: number
+              weight: number
+            }[]
+          }
+        | {
+            Args: {
+              p_filters?: Json
+              p_limit?: number
+              p_offset?: number
+              p_only_mine?: boolean
+              p_pricing_owner_id?: string
+              p_query?: string
+              p_scope?: string
+              p_service_type?: string
+              p_sort?: Json
+              p_status?: string
+              p_transport_type?: string
+            }
+            Returns: {
+              cancellation_notes: string
+              client_id: string
+              client_name: string
+              commodities: string
+              created_at: string
+              created_by: string
+              created_by_name: string
+              currency: string
+              delivery_address: string
+              destination: string
+              destination_unlocode: string
+              destination_unlocode_id: string
+              estimated_cost: number
+              estimated_price: number
+              expected_profit: number
+              id: string
+              incoterm_code: string
+              incoterm_id: string
+              operation_type: string
+              opportunity_id: string
+              opportunity_title: string
+              origin: string
+              origin_unlocode: string
+              origin_unlocode_id: string
+              pickup_address: string
+              pricing_owner_id: string
+              pricing_owner_name: string
+              purchase_valid_until: string
+              quantity: number
+              reference_number: string
+              rejection_notes: string
+              rejection_reason: string
+              rejection_reason_id: string
+              required_quote_date: string
+              sales_valid_until: string
+              salesperson_id: string
+              salesperson_name: string
+              service_type: string
+              status: string
+              target_rate: number
+              total_charge_lines: number
+              total_count: number
+              transport_type: string
+              updated_at: string
+              volume: number
+              weight: number
+            }[]
+          }
       search_unlocodes: {
         Args: {
           p_country_code?: string
@@ -4321,6 +4542,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_workspace_saved_view_default: {
+        Args: { p_workspace_key: string; p_workspace_view_id: string }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       soft_delete_client: { Args: { p_client_id: string }; Returns: undefined }
@@ -4328,6 +4553,14 @@ export type Database = {
       take_quotation_for_pricing: {
         Args: { p_pricing_owner_id?: string; p_quotation_id: string }
         Returns: undefined
+      }
+      update_client_record: {
+        Args: { p_changes?: Json; p_client_id: string }
+        Returns: string
+      }
+      update_contact_record: {
+        Args: { p_changes?: Json; p_contact_id: string }
+        Returns: string
       }
       update_erp_user_profile: {
         Args: {
@@ -4355,9 +4588,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_opportunity_record: {
+        Args: { p_changes?: Json; p_opportunity_id: string }
+        Returns: string
+      }
       update_opportunity_status: {
         Args: { p_opportunity_id: string; p_status: string }
         Returns: undefined
+      }
+      update_provider_contact_record: {
+        Args: { p_changes?: Json; p_contact_id: string }
+        Returns: string
+      }
+      update_provider_record: {
+        Args: { p_changes?: Json; p_provider_id: string }
+        Returns: string
+      }
+      update_provider_service_offering_record: {
+        Args: { p_changes?: Json; p_offering_id: string }
+        Returns: string
       }
       update_quotation_cargo_line:
         | {
@@ -4427,6 +4676,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_quotation_record: {
+        Args: { p_changes?: Json; p_quotation_id: string }
+        Returns: string
+      }
       update_quotation_rejection_reason: {
         Args: { p_id: string; p_reason: string }
         Returns: undefined
@@ -4459,6 +4712,26 @@ export type Database = {
       }
       update_shipment_status: {
         Args: { p_shipment_id: string; p_status: string }
+        Returns: undefined
+      }
+      upsert_role_field_permission: {
+        Args: {
+          p_action_id: string
+          p_allowed: boolean
+          p_condition_id: string
+          p_field_id: string
+          p_role_id: string
+        }
+        Returns: undefined
+      }
+      upsert_role_resource_permission: {
+        Args: {
+          p_action_id: string
+          p_allowed: boolean
+          p_condition_id: string
+          p_resource_id: string
+          p_role_id: string
+        }
         Returns: undefined
       }
     }

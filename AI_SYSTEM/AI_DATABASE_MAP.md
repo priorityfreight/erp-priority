@@ -362,7 +362,10 @@ update_quotation_status()
 Handles the canonical quotation lifecycle transitions.
 
 search_quotations()
-Returns the paginated CRM or Pricing quotation queue without forcing full summary-view scans.
+Returns the paginated CRM or Pricing quotation queue with workspace-aware search, lane/status, column filters, sorting, and page-size controls without forcing full summary-view scans.
+
+workspace_saved_views
+Stores per-user workspace presets including search, lane/tab, filters, sorting, and visible-column preferences. Internal system rows may also persist workspace column layouts.
 
 erp_can_view_quotation_cost()
 Returns whether the current role may view quotation purchase-side economics.

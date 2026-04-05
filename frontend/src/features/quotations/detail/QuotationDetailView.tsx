@@ -7,15 +7,25 @@ import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { QuotationCargoLineForm } from "@/components/forms/QuotationCargoLineForm"
 import { QuotationForm } from "@/components/forms/QuotationForm"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityDateField } from "@/components/priority/PriorityDateField"
 import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
+import {
+  PriorityFormField,
+  PriorityFormSection,
+  PriorityInput,
+  PrioritySelectField,
+  PrioritySubmitBar,
+} from "@/components/priority/PriorityForm"
 import { PriorityHoverPreview } from "@/components/priority/PriorityHoverPreview"
 import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
+import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
 import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityMetricCard, PriorityMetricStrip, PrioritySummaryRail } from "@/components/priority/PriorityWorkspace"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   buildCargoFormFromLine,
@@ -230,44 +240,39 @@ export function QuotationDetailView({
   return (
     <>
       <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Cliente
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {quotation.client_name || "No asignado"}
+        <PrioritySummaryRail className="xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
+          <div>
+            <PriorityTypography variant="eyebrow">Cotización</PriorityTypography>
+            <PriorityTypography as="h2" variant="sectionTitle" className="mt-2">
+              Una sola superficie para revisar ruta, carga, pricing y documento comercial.
+            </PriorityTypography>
+            <PriorityTypography variant="bodyMuted" className="mt-2">
+              La pantalla debe responder rápido: qué se está cotizando, en qué estado está y cuál es la siguiente acción útil.
+            </PriorityTypography>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="rounded-[20px] border border-[rgba(11,31,59,0.08)] bg-[rgba(11,31,59,0.03)] p-4">
+              <PriorityTypography variant="eyebrow">Contacto principal</PriorityTypography>
+              <PriorityTypography variant="body" className="mt-2 font-medium">
+                {primaryContact?.name || "Sin contacto definido"}
+              </PriorityTypography>
+              <PriorityTypography variant="caption" className="mt-1">
+                {primaryContact?.email || "Sin correo"}
+              </PriorityTypography>
             </div>
           </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Servicio
-            </div>
-            <div className="mt-2 text-base font-semibold text-[#111827]">
-              {quotation.service_type || "No definido"}
-            </div>
-          </div>
+        </PrioritySummaryRail>
+
+        <PriorityMetricStrip className={canViewCost || canViewExpectedProfit ? "" : "xl:grid-cols-2"}>
+          <PriorityMetricCard label="Cliente" value={quotation.client_name || "Sin asignar"} helper="Cuenta comercial ligada a la cotización." tone="default" className="[&_div:nth-child(2)]:text-[1.25rem] [&_div:nth-child(2)]:leading-tight" />
+          <PriorityMetricCard label="Servicio" value={quotation.service_type || "No definido"} helper={quotation.transport_type || "Sin transporte definido"} tone="info" className="[&_div:nth-child(2)]:text-[1.25rem] [&_div:nth-child(2)]:leading-tight" />
           {canViewCost && quotation.status === "aceptada" ? (
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-                Costo estimado
-              </div>
-              <div className="mt-2 text-base font-semibold text-[#111827]">
-                {formatCurrency(quotation.estimated_cost)}
-              </div>
-            </div>
+            <PriorityMetricCard label="Costo estimado" value={formatCurrency(quotation.estimated_cost)} helper="Visible según permisos del rol." tone="warning" />
           ) : null}
           {canViewExpectedProfit && quotation.status === "aceptada" ? (
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-                Profit estimado
-              </div>
-              <div className="mt-2 text-base font-semibold text-[#111827]">
-                {formatCurrency(quotation.expected_profit)}
-              </div>
-            </div>
+            <PriorityMetricCard label="Profit estimado" value={formatCurrency(quotation.expected_profit)} helper="Resultado esperado visible para el rol." tone="success" />
           ) : null}
-        </section>
+        </PriorityMetricStrip>
 
         <Tabs defaultValue="overview" className="gap-5">
           <div className="rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.86)] px-4 py-3 shadow-[0_20px_40px_-34px_rgba(3,10,24,0.26)]">
@@ -280,14 +285,14 @@ export function QuotationDetailView({
           </div>
 
           <TabsContent value="overview" className="space-y-8">
-            <InfoCard title="Informacion de la cotizacion">
+            <InfoCard title="Información de la cotización">
               <InfoField label="Referencia" value={quotation.reference_number} />
               <InfoField label="Cliente" value={quotation.client_name} />
               <InfoField label="Oportunidad" value={quotation.opportunity_title} />
-              <InfoField label="Pricing owner" value={quotation.pricing_owner_name} />
+              <InfoField label="Responsable de pricing" value={quotation.pricing_owner_name} />
               <InfoField label="Tipo de servicio" value={quotation.service_type} />
               <InfoField label="Tipo de transporte" value={quotation.transport_type} />
-              <InfoField label="Tipo de operacion" value={quotation.operation_type} />
+              <InfoField label="Tipo de operación" value={quotation.operation_type} />
               <InfoField label="Incoterm" value={quotation.incoterm_code} />
               <InfoField label="Origen" value={quotation.origin} />
               <InfoField label="Destino" value={quotation.destination} />
@@ -296,32 +301,32 @@ export function QuotationDetailView({
             </InfoCard>
 
             <InfoCard title="Ruta">
-              <InfoField label="Direccion de recoleccion" value={quotation.pickup_address} wide />
-              <InfoField label="Direccion de entrega" value={quotation.delivery_address} wide />
+              <InfoField label="Dirección de recolección" value={quotation.pickup_address} wide />
+              <InfoField label="Dirección de entrega" value={quotation.delivery_address} wide />
             </InfoCard>
 
-            <InfoCard title="Detalles de cotizacion">
+            <InfoCard title="Detalles de cotización">
               <InfoField label="Fecha creada" value={quotation.created_at} />
-              <InfoField label="Requieren cotizacion" value={quotation.required_quote_date} />
+              <InfoField label="Requerida para cotizar" value={quotation.required_quote_date} />
               <InfoField
-                label="Target rate"
+                label="Tarifa objetivo"
                 value={quotation.target_rate != null ? formatCurrency(quotation.target_rate) : null}
               />
-              <InfoField label="Motivo rechazo" value={quotation.rejection_reason} />
-              <InfoField label="Notas rechazo" value={quotation.rejection_notes} wide />
-              <InfoField label="Notas cancelacion" value={quotation.cancellation_notes} wide />
+              <InfoField label="Motivo de rechazo" value={quotation.rejection_reason} />
+              <InfoField label="Notas de rechazo" value={quotation.rejection_notes} wide />
+              <InfoField label="Notas de cancelación" value={quotation.cancellation_notes} wide />
             </InfoCard>
           </TabsContent>
 
           <TabsContent value="cargo" className="space-y-8">
-            <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+            <section className="workspace-panel space-y-4 rounded-2xl p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <PriorityTypography as="h2" variant="cardTitle">
-                    Informacion de carga
+                    Información de carga
                   </PriorityTypography>
                   <PriorityTypography variant="bodyMuted" className="mt-1">
-                    Captura piezas y dimensiones por renglon para copiar o registrar la informacion de
+                    Captura piezas y dimensiones por renglón para copiar o registrar la información de
                     carga.
                   </PriorityTypography>
                 </div>
@@ -332,44 +337,48 @@ export function QuotationDetailView({
                     setShowCargoModal(true)
                   }}
                 >
-                  Anadir detalle
+                  Añadir detalle
                 </Button>
               </div>
 
               {cargoLines.length === 0 ? (
                 <PriorityEmptyState
                   title="Sin detalles de carga"
-                  description="Todavia no hay detalles de carga registrados para esta cotizacion."
+                  description="Todavía no hay detalles de carga registrados para esta cotización."
                 />
               ) : (
-                <PriorityDataTable
+                <PriorityCollectionTable
                   columns={cargoColumns}
                   data={cargoLines}
                   emptyTitle="Sin detalles de carga"
-                  emptyDescription="Todavia no hay detalles de carga registrados para esta cotizacion."
+                  emptyDescription="Todavía no hay detalles de carga registrados para esta cotización."
                 />
               )}
             </section>
           </TabsContent>
 
           <TabsContent value="pricing" className="space-y-8">
-            <section className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+            <section className="workspace-panel space-y-4 rounded-2xl p-5">
           <div>
-            <h2 className="text-lg font-semibold text-[#111827]">Costos</h2>
-            <p className="mt-1 text-sm text-[#6B7280]">
-              Opciones de costo preparadas para esta cotizacion.
-            </p>
+            <PriorityTypography as="h2" variant="cardTitle">
+              Costos
+            </PriorityTypography>
+            <PriorityTypography variant="bodyMuted" className="mt-1">
+              Opciones de costo preparadas para esta cotización.
+            </PriorityTypography>
           </div>
 
           {canSeePricingOutcome ? (
             <div>
               <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
                 <div>
-                  <h3 className="text-base font-semibold text-[#111827]">Opciones de costo</h3>
-                  <p className="mt-1 text-sm text-[#6B7280]">
+                  <PriorityTypography as="h3" variant="cardTitle">
+                    Opciones de costo
+                  </PriorityTypography>
+                  <PriorityTypography variant="bodyMuted" className="mt-1">
                     Pricing captura una o varias opciones de compra y CRM decide cuales se
                     presentan al cliente.
-                  </p>
+                  </PriorityTypography>
                 </div>
 
                 {chargeOptionSummaries.length > 0 ? (
@@ -385,19 +394,26 @@ export function QuotationDetailView({
                               {summary.optionLabel}
                             </div>
                             <div className="mt-1 text-xs text-[#64748B]">
-                              {summary.lines.length} cargo(s)
+                              {summary.lines.length} concepto(s)
                             </div>
                           </div>
                           {canEditCommercialSale ? (
-                            <label className="flex items-center gap-2 text-xs font-medium text-[#475569]">
-                              <input
-                                type="checkbox"
+                            <div className="flex items-center gap-3 rounded-2xl border border-[rgba(11,31,59,0.08)] bg-[rgba(11,31,59,0.03)] px-3 py-2">
+                              <div className="text-right">
+                                <div className="text-xs font-semibold text-[#334155]">
+                                  Mostrar al cliente
+                                </div>
+                                <div className="text-[11px] text-[#64748B]">
+                                  {summary.includeInCustomerQuote ? "Visible en propuesta" : "Solo uso interno"}
+                                </div>
+                              </div>
+                              <Switch
                                 checked={summary.includeInCustomerQuote}
                                 disabled={updatingVisibleOptionId === summary.optionId}
-                                onChange={() => void handleToggleCustomerOption(summary)}
+                                onCheckedChange={() => void handleToggleCustomerOption(summary)}
+                                aria-label="Mostrar opción al cliente"
                               />
-                              Mostrar al cliente
-                            </label>
+                            </div>
                           ) : (
                             <div className="text-xs text-[#64748B]">
                               {summary.includeInCustomerQuote
@@ -473,7 +489,7 @@ export function QuotationDetailView({
                                 disabled={savingOptionValidityId === summary.optionId}
                               >
                                 {savingOptionValidityId === summary.optionId
-                                  ? "Guardando..."
+                                  ? "Guardando…"
                                   : "Guardar vigencia"}
                               </Button>
                             </div>
@@ -485,13 +501,9 @@ export function QuotationDetailView({
                         ) : null}
                         {canEditCommercialSale ? (
                           <div className="mt-3">
-                            <button
-                              type="button"
-                              onClick={() => openSalesOption(summary)}
-                              className="rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-medium text-[#111827] hover:bg-[#F8FAFC]"
-                            >
-                              {summary.hasCompleteSale ? "Editar venta" : "Anadir venta"}
-                            </button>
+                            <Button type="button" variant="outline" onClick={() => openSalesOption(summary)}>
+                              {summary.hasCompleteSale ? "Editar venta" : "Añadir venta"}
+                            </Button>
                           </div>
                         ) : null}
                       </div>
@@ -499,32 +511,33 @@ export function QuotationDetailView({
                   </div>
                 ) : (
                   <p className="text-sm text-[#6B7280]">
-                    Pricing todavia no ha cargado opciones de costo para esta cotizacion.
+                    Pricing todavía no ha cargado opciones de costo para esta cotización.
                   </p>
                 )}
               </section>
             </div>
           ) : (
             <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-4 text-sm text-[#475569]">
-              Los costos apareceran aqui cuando Pricing tome la cotizacion y capture sus opciones.
+              Los costos aparecerán aquí cuando Pricing tome la cotización y capture sus opciones.
             </div>
           )}
             </section>
           </TabsContent>
 
           <TabsContent value="commercial" className="space-y-8">
-            <section>
-          <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+            <section className="workspace-panel rounded-2xl p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-[#111827]">Seguimiento comercial</h2>
-                <p className="mt-1 text-sm text-[#6B7280]">
+                <PriorityTypography as="h2" variant="cardTitle">
+                  Seguimiento comercial
+                </PriorityTypography>
+                <PriorityTypography variant="bodyMuted" className="mt-1">
                   {canSeeCommercialActions
                     ? "Genera el documento comercial y compártelo con el contacto principal del cliente."
                     : canPrepareCommercial
-                      ? "Pricing ya devolvio opciones. Agrega la venta por opcion y luego envia la cotizacion al cliente."
-                      : "Esta cotizacion sigue en captura interna o en pricing. Las acciones comerciales se habilitan cuando pricing devuelve la propuesta."}
-                </p>
+                      ? "Pricing ya devolvió opciones. Agrega la venta por opción y luego envía la cotización al cliente."
+                      : "Esta cotización sigue en captura interna o en pricing. Las acciones comerciales se habilitan cuando pricing devuelve la propuesta."}
+                </PriorityTypography>
               </div>
               <StatusBadge status={quotation.status} />
             </div>
@@ -541,7 +554,7 @@ export function QuotationDetailView({
                         description="Destino principal para el envio de la propuesta."
                         lines={[
                           { label: "Correo", value: primaryContact?.email || "Sin correo" },
-                          { label: "Telefono", value: primaryContact?.phone || "Sin telefono" },
+                          { label: "Teléfono", value: primaryContact?.phone || "Sin teléfono" },
                         ]}
                         trigger={
                           <div className="cursor-default">
@@ -552,7 +565,7 @@ export function QuotationDetailView({
                               {primaryContact?.email || "Sin correo"}
                             </PriorityTypography>
                             <PriorityTypography variant="bodyMuted">
-                              {primaryContact?.phone || "Sin telefono"}
+                              {primaryContact?.phone || "Sin teléfono"}
                             </PriorityTypography>
                           </div>
                         }
@@ -602,7 +615,7 @@ export function QuotationDetailView({
                     {primaryContact?.email || "Sin correo"}
                   </div>
                   <div className="mt-1 text-sm text-[#475569]">
-                    {primaryContact?.phone || "Sin telefono"}
+                    {primaryContact?.phone || "Sin teléfono"}
                   </div>
                 </div>
 
@@ -611,7 +624,7 @@ export function QuotationDetailView({
                     Salida comercial
                   </div>
                   <div className="mt-2 text-sm text-[#475569]">
-                    La cotizacion puede enviarse cuando al menos una opcion tenga venta completa.
+                    La cotización puede enviarse cuando al menos una opción tenga venta completa.
                   </div>
                   <ButtonGroup className="mt-4 flex flex-wrap gap-2 bg-transparent p-0">
                     <Button
@@ -619,7 +632,7 @@ export function QuotationDetailView({
                       onClick={() => void handleSendQuotation(documentHref)}
                       disabled={sendingQuotation || !hasSendableOption || !canEditSalePrice}
                     >
-                      {sendingQuotation ? "Enviando..." : "Enviar cotizacion"}
+                      {sendingQuotation ? "Enviando…" : "Enviar cotización"}
                     </Button>
                     <Button
                       type="button"
@@ -634,24 +647,24 @@ export function QuotationDetailView({
                       }}
                       variant="outline"
                     >
-                      Preparar renegociacion
+                      Preparar renegociación
                     </Button>
                   </ButtonGroup>
                   {!canEditSalePrice ? (
                     <div className="mt-3 text-sm text-[#92400E]">
-                      Tu rol no tiene permiso para capturar venta o enviar esta cotizacion al
+                      Tu rol no tiene permiso para capturar venta o enviar esta cotización al
                       cliente.
                     </div>
                   ) : !hasSendableOption ? (
                     <div className="mt-3 text-sm text-[#92400E]">
-                      Aun no hay una opcion con venta capturada para enviar al cliente.
+                      Aún no hay una opción con venta capturada para enviar al cliente.
                     </div>
                   ) : null}
                 </div>
               </div>
             ) : (
               <div className="mt-5 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-4 text-sm text-[#475569]">
-                Cuando la cotizacion quede{" "}
+                Cuando la cotización quede{" "}
                 <span className="font-medium text-[#111827]">lista para enviar</span>, aqui podras
                 revisar las opciones preparadas por pricing y continuar con la salida comercial.
               </div>
@@ -670,7 +683,7 @@ export function QuotationDetailView({
                   onClick={() => void handleMarkAccepted()}
                   disabled={markingAccepted}
                 >
-                  {markingAccepted ? "Actualizando..." : "Marcar aceptada"}
+                  {markingAccepted ? "Actualizando…" : "Marcar aceptada"}
                 </Button>
               ) : null}
               <Button
@@ -678,7 +691,7 @@ export function QuotationDetailView({
                 onClick={() => void handleCreateBooking()}
                 disabled={creatingBooking || quotation.status !== "aceptada"}
               >
-                {creatingBooking ? "Creando booking..." : "Convertir a booking"}
+                {creatingBooking ? "Creando booking…" : "Convertir a booking"}
               </Button>
               <Button
                 type="button"
@@ -710,7 +723,6 @@ export function QuotationDetailView({
                 Rechazada
               </Button>
             </ButtonGroup>
-          </section>
             </section>
           </TabsContent>
         </Tabs>
@@ -720,17 +732,26 @@ export function QuotationDetailView({
         <Modal
           title={`Venta comercial · ${selectedSalesOptionSummary.optionLabel}`}
           description="Ventas define la propuesta comercial por opcion sin modificar la compra capturada por pricing."
+          size="workspace"
           onClose={() => {
             setShowSalesModal(false)
             setSelectedSalesOption(null)
             setSalesDraft({})
           }}
         >
-          <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="space-y-5">
+            <PrioritySectionAlert title="Objetivo del bloque" variant="info">
+              Define la venta por concepto sin alterar la compra ya capturada por pricing. Guarda primero la opción y luego continúa con el envío al cliente.
+            </PrioritySectionAlert>
+
+            <PriorityFormSection
+              title="Resumen de la opción"
+              description="Verifica proveedor, vigencias y base de compra antes de capturar la venta."
+            >
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Proveedor / opcion
+                  Proveedor / opción
                 </div>
                 <div className="mt-1 text-sm font-medium text-[#111827]">
                   {selectedSalesOptionSummary.optionLabel}
@@ -777,8 +798,13 @@ export function QuotationDetailView({
                   {selectedSalesOptionSummary.salesValidUntil || "No disponible"}
                 </div>
               </div>
-            </div>
+              </div>
+            </PriorityFormSection>
 
+            <PriorityFormSection
+              title="Captura de venta por concepto"
+              description="Completa importes y moneda de venta por cada concepto incluido en esta opción."
+            >
             <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
               <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
                 <thead className="bg-white text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
@@ -870,33 +896,45 @@ export function QuotationDetailView({
                 </tbody>
               </table>
             </div>
+            </PriorityFormSection>
 
-            <div className="flex justify-end">
-              <button
+            <PrioritySubmitBar>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowSalesModal(false)
+                  setSelectedSalesOption(null)
+                  setSalesDraft({})
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
                 type="button"
                 onClick={() => void handleSaveSalesOption()}
                 disabled={savingSales}
-                className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {savingSales ? "Guardando..." : "Guardar venta"}
-              </button>
-            </div>
-          </section>
+                {savingSales ? "Guardando…" : "Guardar venta"}
+              </Button>
+            </PrioritySubmitBar>
+          </div>
         </Modal>
       ) : null}
 
       {showEditModal ? (
         <Modal
-          title="Editar cotizacion"
+          title="Editar cotización"
           description="Actualiza los detalles de carga y las fechas comerciales sin duplicar la ficha principal."
+          size="workspace"
           onClose={() => {
             setShowEditModal(false)
             setQuoteFormValues(buildQuotationFormValues(quotation))
           }}
         >
           <QuotationForm
-            title="Perfil de cotizacion"
-            description="Wave 1 mantiene una sola ficha limpia con popup de edicion."
+            title="Perfil de cotización"
+            description="Mantiene una sola ficha limpia con edición puntual desde este modal."
             values={quoteFormValues}
             clientName={quotation.client_name}
             origin={quotation.origin}
@@ -913,7 +951,7 @@ export function QuotationDetailView({
               }))
             }}
             onSubmit={handleSaveQuotation}
-            submitLabel="Guardar cotizacion"
+            submitLabel="Guardar cotización"
             loading={savingQuote}
           />
         </Modal>
@@ -922,131 +960,172 @@ export function QuotationDetailView({
       {showStatusModal ? (
         <Modal
           title="Actualizar estatus"
-          description="Mueve la cotizacion entre CRM y Pricing usando las reglas comerciales definidas."
+          description="Mueve la cotización entre CRM y Pricing usando las reglas comerciales definidas."
+          size="standard"
           onClose={() => {
             setShowStatusModal(false)
             setStatusFormValues(buildStatusFormValues(quotation))
           }}
         >
-          <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <select
-              className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-              value={statusFormValues.status}
-              onChange={(event) =>
-                setStatusFormValues((current) => ({
-                  ...current,
-                  status: event.target.value as QuotationStatusFormValues["status"],
-                }))
-              }
+          <div className="space-y-5">
+            <PrioritySectionAlert title="Qué cambia" variant="info">
+              Este cambio mueve la cotización entre comercial y pricing. Captura el motivo completo cuando rechaces, canceles o solicites renegociación.
+            </PrioritySectionAlert>
+
+            <PriorityFormSection
+              title="Nuevo estatus"
+              description="Selecciona el siguiente estado operativo de la cotización."
             >
-              {quotationStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <PriorityFormField label="Estatus" required>
+                <PrioritySelectField
+                  value={statusFormValues.status}
+                  onValueChange={(value) =>
+                    setStatusFormValues((current) => ({
+                      ...current,
+                      status: value as QuotationStatusFormValues["status"],
+                    }))
+                  }
+                  placeholder="Selecciona un estatus"
+                  options={quotationStatusOptions.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                />
+              </PriorityFormField>
+            </PriorityFormSection>
 
             {statusFormValues.status === "rechazada" ? (
-              <>
-                <select
-                  className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  value={statusFormValues.rejectionReasonId}
-                  onChange={(event) =>
-                    setStatusFormValues((current) => ({
-                      ...current,
-                      rejectionReasonId: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Motivo de rechazo</option>
-                  {rejectionReasons.map((reason) => (
-                    <option key={reason.id} value={reason.id}>
-                      {reason.reason}
-                    </option>
-                  ))}
-                </select>
-                <textarea
-                  className="min-h-[100px] w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  placeholder="Notas de rechazo"
-                  value={statusFormValues.rejectionNotes}
-                  onChange={(event) =>
-                    setStatusFormValues((current) => ({
-                      ...current,
-                      rejectionNotes: event.target.value,
-                    }))
-                  }
-                />
-              </>
+              <PriorityFormSection
+                title="Motivo de rechazo"
+                description="Explica el motivo para que comercial y pricing puedan dar seguimiento sin texto ambiguo."
+              >
+                <div className="grid gap-4">
+                  <PriorityFormField label="Motivo de rechazo" required>
+                    <PrioritySelectField
+                      value={statusFormValues.rejectionReasonId}
+                      onValueChange={(value) =>
+                        setStatusFormValues((current) => ({
+                          ...current,
+                          rejectionReasonId: value,
+                        }))
+                      }
+                      placeholder="Selecciona un motivo"
+                      options={rejectionReasons.map((reason) => ({
+                        value: reason.id,
+                        label: reason.reason,
+                      }))}
+                    />
+                  </PriorityFormField>
+                  <PriorityFormField label="Notas de rechazo">
+                    <textarea
+                      className="min-h-[120px] w-full rounded-[18px] border border-[#D1D6DF] bg-white px-4 py-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)] focus:ring-2 focus:ring-[rgba(179,58,91,0.12)]"
+                      placeholder="Agrega el contexto comercial del rechazo"
+                      value={statusFormValues.rejectionNotes}
+                      onChange={(event) =>
+                        setStatusFormValues((current) => ({
+                          ...current,
+                          rejectionNotes: event.target.value,
+                        }))
+                      }
+                    />
+                  </PriorityFormField>
+                </div>
+              </PriorityFormSection>
             ) : null}
 
             {statusFormValues.status === "cancelada" ? (
-              <textarea
-                className="min-h-[100px] w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                placeholder="Notas de cancelacion"
-                value={statusFormValues.cancellationNotes}
-                onChange={(event) =>
-                  setStatusFormValues((current) => ({
-                    ...current,
-                    cancellationNotes: event.target.value,
-                  }))
-                }
-              />
+              <PriorityFormSection
+                title="Motivo de cancelación"
+                description="Deja claro por qué se detuvo esta oportunidad para auditoría y seguimiento futuro."
+              >
+                <PriorityFormField label="Notas de cancelación" required>
+                  <textarea
+                    className="min-h-[120px] w-full rounded-[18px] border border-[#D1D6DF] bg-white px-4 py-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)] focus:ring-2 focus:ring-[rgba(179,58,91,0.12)]"
+                    placeholder="Explica por qué se cancela la cotización"
+                    value={statusFormValues.cancellationNotes}
+                    onChange={(event) =>
+                      setStatusFormValues((current) => ({
+                        ...current,
+                        cancellationNotes: event.target.value,
+                      }))
+                    }
+                  />
+                </PriorityFormField>
+              </PriorityFormSection>
             ) : null}
 
             {statusFormValues.status === "renegociar_tarifa" ? (
-              <>
-                <input
-                  className="w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  placeholder="Tarifa target"
-                  inputMode="decimal"
-                  value={statusFormValues.targetRate}
-                  onChange={(event) =>
-                    setStatusFormValues((current) => ({
-                      ...current,
-                      targetRate: event.target.value,
-                    }))
-                  }
-                />
-                <textarea
-                  className="min-h-[100px] w-full rounded-md border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                  placeholder="Comentario para pricing"
-                  value={statusFormValues.rejectionNotes}
-                  onChange={(event) =>
-                    setStatusFormValues((current) => ({
-                      ...current,
-                      rejectionNotes: event.target.value,
-                    }))
-                  }
-                />
-              </>
+              <PriorityFormSection
+                title="Solicitud de renegociación"
+                description="Define la tarifa objetivo y explica qué necesita ajustar pricing."
+              >
+                <div className="grid gap-4">
+                  <PriorityFormField label="Tarifa objetivo" required>
+                    <PriorityInput
+                      placeholder="Tarifa objetivo"
+                      inputMode="decimal"
+                      value={statusFormValues.targetRate}
+                      onChange={(event) =>
+                        setStatusFormValues((current) => ({
+                          ...current,
+                          targetRate: event.target.value,
+                        }))
+                      }
+                    />
+                  </PriorityFormField>
+                  <PriorityFormField label="Comentario para pricing" required>
+                    <textarea
+                      className="min-h-[120px] w-full rounded-[18px] border border-[#D1D6DF] bg-white px-4 py-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)] focus:ring-2 focus:ring-[rgba(179,58,91,0.12)]"
+                      placeholder="Explica el contexto comercial y el ajuste esperado"
+                      value={statusFormValues.rejectionNotes}
+                      onChange={(event) =>
+                        setStatusFormValues((current) => ({
+                          ...current,
+                          rejectionNotes: event.target.value,
+                        }))
+                      }
+                    />
+                  </PriorityFormField>
+                </div>
+              </PriorityFormSection>
             ) : null}
 
-            <div className="flex justify-end">
-              <button
+            <PrioritySubmitBar>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowStatusModal(false)
+                  setStatusFormValues(buildStatusFormValues(quotation))
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
                 type="button"
                 onClick={() => void handleSaveStatus()}
                 disabled={savingStatus}
-                className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {savingStatus ? "Guardando..." : "Guardar estatus"}
-              </button>
-            </div>
-          </section>
+                {savingStatus ? "Guardando…" : "Guardar estatus"}
+              </Button>
+            </PrioritySubmitBar>
+          </div>
         </Modal>
       ) : null}
 
       {showCargoModal ? (
         <Modal
-          title={editingCargoId ? "Editar detalle de carga" : "Anadir detalle de carga"}
-          description="Captura pallets, cajas y dimensiones segun el tipo de servicio para la cotizacion."
+          title={editingCargoId ? "Editar detalle de carga" : "Añadir detalle de carga"}
+          description="Captura pallets, cajas y dimensiones según el tipo de servicio para la cotización."
+          size="workspace"
           onClose={() => {
             setShowCargoModal(false)
             resetCargoForm()
           }}
         >
           <QuotationCargoLineForm
-            title={editingCargoId ? "Editar consolidacion de carga" : "Nueva consolidacion de carga"}
-            description="Usa dimensiones en cm y peso en kg para estandarizar los calculos."
+            title={editingCargoId ? "Editar consolidación de carga" : "Nueva consolidación de carga"}
+            description="Usa dimensiones en cm y peso en kg para estandarizar los cálculos."
             serviceType={quotation.service_type}
             rows={cargoFormRows}
             existingLines={cargoLines}

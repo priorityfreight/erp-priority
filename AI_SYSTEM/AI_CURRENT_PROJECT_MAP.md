@@ -162,18 +162,25 @@ Current route files:
 Current shared layout files:
 
 - frontend/src/components/layout/AppLayout.tsx
-- frontend/src/components/layout/Sidebar.tsx
 - frontend/src/components/layout/Topbar.tsx
 - frontend/src/components/layout/PageContainer.tsx
 - frontend/proxy.ts
-- the shared shell now uses a retractable, permission-aware sidebar with grouped module accordions and a mobile drawer
+- the shared shell is now topbar-first with `NavigationMenu`, `PriorityCommandBar`, and `PriorityWorkspacePath`
+- no live route should depend on a persistent desktop sidebar
+- if `frontend/src/components/layout/Sidebar.tsx` still exists, it must be treated as legacy or secondary/mobile navigation only
 
 Current shared CRM/UI components:
 
 - frontend/src/components/crm/CrmOverview.tsx
 - frontend/src/components/data/StatusBadge.tsx
 - frontend/src/components/forms/ClientForm.tsx
+- frontend/src/components/forms/ContactForm.tsx
+- frontend/src/components/forms/OpportunityForm.tsx
+- frontend/src/components/forms/ProviderForm.tsx
+- frontend/src/components/forms/ProviderContactForm.tsx
+- frontend/src/components/forms/ProviderServiceOfferingForm.tsx
 - frontend/src/components/forms/UserForm.tsx
+- frontend/src/components/forms/ClientLogisticsPartyForm.tsx
 - frontend/src/components/master-data/ServiceTransportTypeManager.tsx
 - frontend/src/components/master-data/UsersManager.tsx
 - frontend/src/components/master-data/RolesPermissionsManager.tsx
@@ -181,6 +188,8 @@ Current shared CRM/UI components:
 - UsersManager now includes admin-only table actions for edit, activate/inactivate, and delete
 - frontend/src/components/priority/index.ts now acts as the public export surface for the approved Priority UI layer
 - frontend/src/components/priority/registry.ts now acts as the typed in-repo registry for approved wrappers and hooks
+- frontend/src/components/priority/collection/PriorityCollectionTable.tsx is now the canonical browse/list table for detail tabs, embedded lists, and master-data tables
+- frontend/src/components/priority/PriorityDataTable.tsx remains only as a legacy compatibility wrapper while older imports are retired
 
 Current frontend visual validation stack:
 

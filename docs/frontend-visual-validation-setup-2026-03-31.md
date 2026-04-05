@@ -32,17 +32,40 @@ This setup is intentionally minimal but useful:
   - clients detail
   - providers detail
   - quotations detail
+- authenticated forms-smoke coverage for:
+  - CRM create/edit modals
+  - client detail subforms
+  - provider detail forms
+  - quotation detail forms
+  - pricing charge capture
+  - admin and catalog modals
+- authenticated workspace coverage for:
+  - pricing quotations v2
+  - status lanes
+  - visible first-column actions
+  - saved views
+- authenticated kanban coverage for:
+  - opportunities board mode
+  - saved board views
+  - clients pipeline readiness via Storybook
 - one Storybook workbench focused on `Priority UI`
 - curated stories for:
   - foundations
   - data entry
   - tables and empty states
+  - pricing workspace v2
+  - browse workspaces v2
+  - kanban boards v2
 
 ## New scripts
 
 - `npm run test:e2e`
 - `npm run test:e2e:critical`
+- `npm run test:e2e:forms`
+- `npm run test:e2e:kanban`
 - `npm run test:e2e:headed`
+- `npm run test:e2e:product`
+- `npm run test:e2e:workspaces`
 - `npm run test:e2e:ui`
 - `npm run test:e2e:report`
 - `npm run test:e2e:install`
@@ -65,6 +88,26 @@ Optional env vars for authenticated smoke:
 
 If they are not present, authenticated smoke tests are skipped automatically.
 
+For normal local headed audits on macOS, prefer inline env vars with single quotes so passwords containing `!` do not break shell parsing:
+
+- `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:critical -- --headed`
+- `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:forms -- --headed`
+- `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:kanban -- --headed`
+- `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:product -- --headed`
+- `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:workspaces -- --headed`
+
+`test:e2e:workspaces` cubre:
+- `pricing quotations`
+- `quotations`
+- `opportunities`
+- `clients`
+- `providers`
+
+`test:e2e:kanban` cubre:
+- `opportunities board mode`
+- `saved board views`
+- `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e -- --headed`
+
 ## Artifacts
 
 Generated locally:
@@ -77,6 +120,7 @@ Artifacts include:
 - screenshots
 - trace files
 - retained videos on failures
+- the shared screenshot helper now hides Next.js development overlays before capture so visual evidence reflects the product surface instead of local dev chrome
 
 ## Recommended usage
 
@@ -88,6 +132,9 @@ Artifacts include:
    - `Priority/Foundations`
    - `Priority/Data Entry`
    - `Priority/Tables And States`
+   - `Priority/Pricing Workspace v2`
+   - `Priority/Browse Workspaces v2`
+   - `Priority/Kanban Boards v2`
 6. Open `playwright-report` after a run when you need evidence or debugging context.
 
 ## Browser selection

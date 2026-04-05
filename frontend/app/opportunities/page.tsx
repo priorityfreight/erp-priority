@@ -1,8 +1,7 @@
 "use client"
 
-import { type ColumnDef } from "@tanstack/react-table"
-import Link from "next/link"
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import {
   createOpportunity,
   deleteOpportunity,
@@ -11,24 +10,79 @@ import {
   getOpportunities,
   getServiceTransportTypes,
   getUsers,
+  getWorkspaceViews,
+  createWorkspaceView,
+  updateWorkspaceView,
+  deleteWorkspaceView,
+  setDefaultWorkspaceView,
+  updateOpportunityStatus,
   type Client,
   type Incoterm,
   type OpportunitySummary,
+  type SavedWorkspaceView,
+  type SavedWorkspaceViewPayload,
   type ServiceTransportType,
   type User,
+  type WorkspaceKey,
 } from "@/lib/db"
 import { getErrorMessage, notifyError, notifyWarning } from "@/lib/feedback"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { Modal } from "@/components/data/Modal"
 import { OpportunityForm, type OpportunityFormValues } from "@/components/forms/OpportunityForm"
 import { PageContainer } from "@/components/layout/PageContainer"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
-import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import {
+  PriorityActionMenu,
+  PriorityActionRail,
+  PriorityKanbanBoard,
+  PriorityKanbanCard,
+  PriorityCollectionWorkspace,
+  PriorityFilterPopover,
+  PrioritySavedViews,
+  PrioritySearchField,
+  PriorityStatusLanes,
+  type PriorityCollectionColumn,
+  type PriorityStatusLaneItem,
+} from "@/components/priority"
+import { PrioritySelectField } from "@/components/priority/PriorityForm"
 import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 
-const statusOptions = [
+type OpportunityWorkspaceLane =
+  | "investigando"
+  | "confirmado"
+  | "cotizando"
+  | "aceptado"
+  | "rechazada"
+  | "vencida"
+
+type OpportunityWorkspaceMode = "table" | "board"
+
+type OpportunityFilterState = {
+  clientId: string | null
+  viewMode: OpportunityWorkspaceMode
+}
+
+const workspaceKey: WorkspaceKey = "opportunities"
+const allFilterValue = "__all__"
+const defaultLane: OpportunityWorkspaceLane = "investigando"
+const defaultFilters: OpportunityFilterState = {
+  clientId: null,
+  viewMode: "table",
+}
+const defaultVisibleColumns = [
+  "quickActions",
+  "title",
+  "client_name",
+  "service",
+  "lane",
+  "salesperson_name",
+  "status",
+  "estimated_value",
+  "expiration_date",
+  "actions",
+]
+
+const statusOptions: OpportunityWorkspaceLane[] = [
   "investigando",
   "confirmado",
   "cotizando",
@@ -53,6 +107,49 @@ const emptyForm: OpportunityFormValues = {
   description: "",
 }
 
+const laneMeta: Record<
+  OpportunityWorkspaceLane,
+  { label: string; helper: string; tone: PriorityStatusLaneItem["tone"] }
+> = {
+  investigando: {
+    label: "Investigando",
+    helper: "Exploración comercial inicial con cliente y lane.",
+    tone: "info",
+  },
+  confirmado: {
+    label: "Confirmadas",
+    helper: "Oportunidades listas para movimiento comercial siguiente.",
+    tone: "neutral",
+  },
+  cotizando: {
+    label: "Cotizando",
+    helper: "Ya pasaron al frente operativo de pricing.",
+    tone: "warning",
+  },
+  aceptado: {
+    label: "Ganadas",
+    helper: "Oportunidades cerradas positivamente.",
+    tone: "success",
+  },
+  rechazada: {
+    label: "Perdidas",
+    helper: "Oportunidades cerradas sin avance comercial.",
+    tone: "danger",
+  },
+  vencida: {
+    label: "Vencidas",
+    helper: "Requieren revisión o reactivación comercial.",
+    tone: "spotlight",
+  },
+}
+
+function parseFilters(raw: Record<string, unknown> | null | undefined): OpportunityFilterState {
+  return {
+    clientId: typeof raw?.clientId === "string" && raw.clientId.trim() ? raw.clientId : null,
+    viewMode: raw?.viewMode === "board" ? "board" : "table",
+  }
+}
+
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<OpportunitySummary[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -62,12 +159,126 @@ export default function OpportunitiesPage() {
   const [formValues, setFormValues] = useState<OpportunityFormValues>(emptyForm)
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [activeLane, setActiveLane] = useState<OpportunityWorkspaceLane>(defaultLane)
+  const [filterState, setFilterState] = useState<OpportunityFilterState>(defaultFilters)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [movingId, setMovingId] = useState<string | null>(null)
+  const [savedViews, setSavedViews] = useState<SavedWorkspaceView[]>([])
+  const [selectedViewId, setSelectedViewId] = useState<string | null>(null)
+  const [isDefaultViewApplied, setIsDefaultViewApplied] = useState(false)
   const { confirm, confirmDialog } = usePriorityConfirm()
+
+  const filteredOpportunities = useMemo(
+    () =>
+      opportunities.filter((opportunity) => {
+        if (filterState.clientId && opportunity.client_id !== filterState.clientId) {
+          return false
+        }
+        return true
+      }),
+    [filterState.clientId, opportunities]
+  )
+
+  const tableOpportunities = useMemo(
+    () => filteredOpportunities.filter((opportunity) => opportunity.status === activeLane),
+    [activeLane, filteredOpportunities]
+  )
+
+  const laneCounts = useMemo(
+    () =>
+      statusOptions.reduce(
+        (accumulator, lane) => ({
+          ...accumulator,
+          [lane]: filteredOpportunities.filter((opportunity) => opportunity.status === lane).length,
+        }),
+        {
+          investigando: 0,
+          confirmado: 0,
+          cotizando: 0,
+          aceptado: 0,
+          rechazada: 0,
+          vencida: 0,
+        }
+      ),
+    [filteredOpportunities]
+  )
+
+  const lanes = useMemo<PriorityStatusLaneItem[]>(
+    () =>
+      statusOptions.map((lane) => ({
+        key: lane,
+        label: laneMeta[lane].label,
+        helper: laneMeta[lane].helper,
+        count: laneCounts[lane],
+        tone: laneMeta[lane].tone,
+      })),
+    [laneCounts]
+  )
+
+  const activeFilterCount = useMemo(
+    () => [filterState.clientId].filter(Boolean).length,
+    [filterState.clientId]
+  )
+
+  const quickViews = useMemo(
+    () => [
+      {
+        key: "investigando",
+        label: "Investigando",
+        active:
+          !selectedViewId &&
+          activeLane === "investigando" &&
+          !filterState.clientId &&
+          !search.trim() &&
+          filterState.viewMode === "table",
+        onSelect: () => {
+          setSelectedViewId(null)
+          setIsDefaultViewApplied(false)
+          setSearch("")
+          setActiveLane("investigando")
+          setFilterState(defaultFilters)
+        },
+      },
+      {
+        key: "cotizando",
+        label: "Cotizando",
+        active:
+          !selectedViewId &&
+          activeLane === "cotizando" &&
+          !filterState.clientId &&
+          !search.trim() &&
+          filterState.viewMode === "table",
+        onSelect: () => {
+          setSelectedViewId(null)
+          setIsDefaultViewApplied(false)
+          setSearch("")
+          setActiveLane("cotizando")
+          setFilterState(defaultFilters)
+        },
+      },
+      {
+        key: "ganadas",
+        label: "Ganadas",
+        active:
+          !selectedViewId &&
+          activeLane === "aceptado" &&
+          !filterState.clientId &&
+          !search.trim() &&
+          filterState.viewMode === "table",
+        onSelect: () => {
+          setSelectedViewId(null)
+          setIsDefaultViewApplied(false)
+          setSearch("")
+          setActiveLane("aceptado")
+          setFilterState(defaultFilters)
+        },
+      },
+    ],
+    [activeLane, filterState.clientId, filterState.viewMode, search, selectedViewId]
+  )
 
   async function loadReferenceData() {
     try {
@@ -91,12 +302,12 @@ export default function OpportunitiesPage() {
     void loadReferenceData()
   }, [])
 
-  async function loadOpportunityList(query = "", status = "all") {
+  const loadOpportunityList = useCallback(async (queryValue = "") => {
     try {
       setLoading(true)
       const opportunitiesData = await getOpportunities({
-        query,
-        status,
+        query: queryValue,
+        status: "all",
       })
       setOpportunities(opportunitiesData)
     } catch (error) {
@@ -105,11 +316,55 @@ export default function OpportunitiesPage() {
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  function applyWorkspaceView(view: SavedWorkspaceView) {
+    setSearch(view.search_query ?? "")
+    setActiveLane((view.status_lane as OpportunityWorkspaceLane | null) ?? defaultLane)
+    setFilterState(parseFilters(view.filters_json))
+    setSelectedViewId(view.id)
+    setIsDefaultViewApplied(view.is_default)
   }
 
+  const bootstrapWorkspace = useCallback(async () => {
+    try {
+      const views = await getWorkspaceViews(workspaceKey)
+      setSavedViews(views)
+      const defaultView = views.find((view) => view.is_default)
+      if (defaultView) {
+        applyWorkspaceView(defaultView)
+      }
+    } catch (error) {
+      console.error(error)
+      setSavedViews([])
+    }
+  }, [])
+
+  const refreshSavedViews = useCallback(async (nextSelectedId?: string | null) => {
+    const views = await getWorkspaceViews(workspaceKey)
+    setSavedViews(views)
+    if (nextSelectedId === null) {
+      setSelectedViewId(null)
+      return views
+    }
+    if (nextSelectedId) {
+      setSelectedViewId(views.some((view) => view.id === nextSelectedId) ? nextSelectedId : null)
+      return views
+    }
+    if (selectedViewId && views.some((view) => view.id === selectedViewId)) {
+      return views
+    }
+    setSelectedViewId(views.find((view) => view.is_default)?.id ?? null)
+    return views
+  }, [selectedViewId])
+
   useEffect(() => {
-    void loadOpportunityList(deferredSearch, statusFilter)
-  }, [deferredSearch, statusFilter])
+    void bootstrapWorkspace()
+  }, [bootstrapWorkspace])
+
+  useEffect(() => {
+    void loadOpportunityList(deferredSearch)
+  }, [deferredSearch, loadOpportunityList])
 
   useEffect(() => {
     const fromClientId = new URLSearchParams(window.location.search).get("clientId")
@@ -140,7 +395,7 @@ export default function OpportunitiesPage() {
     }
 
     if (!formValues.operationType) {
-      notifyWarning("Selecciona el tipo de operacion")
+      notifyWarning("Selecciona el tipo de operación")
       return
     }
 
@@ -165,19 +420,17 @@ export default function OpportunitiesPage() {
         incotermId: formValues.incotermId,
         originUnlocode: formValues.originUnlocode,
         destinationUnlocode: formValues.destinationUnlocode,
-        expectedProfitUsd: formValues.expectedProfitUsd
-          ? Number(formValues.expectedProfitUsd)
-          : null,
+        expectedProfitUsd: formValues.expectedProfitUsd ? Number(formValues.expectedProfitUsd) : null,
         serviceQuantity: formValues.serviceQuantity ? Number(formValues.serviceQuantity) : null,
         description: formValues.description.trim() || null,
       })
 
       setFormValues(emptyForm)
       setShowCreateModal(false)
-      await loadOpportunityList(search, statusFilter)
+      await loadOpportunityList(search)
     } catch (error) {
       console.error(error)
-      notifyError("Error creating opportunity", getErrorMessage(error, "The opportunity could not be saved."))
+      notifyError("No se pudo crear la oportunidad", getErrorMessage(error, "Intenta nuevamente."))
     } finally {
       setCreating(false)
     }
@@ -198,94 +451,152 @@ export default function OpportunitiesPage() {
     try {
       setDeletingId(id)
       await deleteOpportunity(id)
-      await loadOpportunityList(search, statusFilter)
+      await loadOpportunityList(search)
     } catch (error) {
       console.error(error)
-      notifyError("Error deleting opportunity", getErrorMessage(error, "The opportunity could not be deleted."))
+      notifyError("No se pudo eliminar la oportunidad", getErrorMessage(error, "Intenta nuevamente."))
     } finally {
       setDeletingId(null)
     }
-  }, [confirm, search, statusFilter])
+  }, [confirm, loadOpportunityList, search])
 
-  const totalPipeline = opportunities.reduce(
-    (sum, opportunity) => sum + (opportunity.estimated_value ?? 0),
-    0
-  )
+  const handleMoveOpportunity = useCallback(async (id: string, targetLane: OpportunityWorkspaceLane) => {
+    const currentOpportunity = opportunities.find((item) => item.id === id)
+    const previousLane = currentOpportunity?.status as OpportunityWorkspaceLane | null
 
-  const opportunityColumns = useMemo<ColumnDef<OpportunitySummary>[]>(
+    if (!previousLane || previousLane === targetLane) {
+      return
+    }
+
+    setMovingId(id)
+    setOpportunities((current) =>
+      current.map((item) => (item.id === id ? { ...item, status: targetLane } : item))
+    )
+
+    try {
+      await updateOpportunityStatus(id, targetLane)
+      await loadOpportunityList(search)
+      setSelectedViewId(null)
+      setIsDefaultViewApplied(false)
+      setActiveLane(targetLane)
+    } catch (error) {
+      console.error(error)
+      setOpportunities((current) =>
+        current.map((item) => (item.id === id ? { ...item, status: previousLane } : item))
+      )
+      notifyError(
+        "No se pudo mover la oportunidad",
+        getErrorMessage(error, "Intenta nuevamente desde la tabla o el board.")
+      )
+    } finally {
+      setMovingId(null)
+    }
+  }, [loadOpportunityList, opportunities, search])
+
+  function buildCurrentViewPayload(name: string, isDefault: boolean): SavedWorkspaceViewPayload {
+    return {
+      workspace_key: workspaceKey,
+      name,
+      search_query: search.trim() || null,
+      status_lane: activeLane,
+      filters_json: {
+        clientId: filterState.clientId,
+        viewMode: filterState.viewMode,
+      },
+      sort_json: {
+        orderBy: "created_at_desc",
+      },
+      visible_columns_json: defaultVisibleColumns,
+      is_default: isDefault,
+    }
+  }
+
+  const opportunityColumns = useMemo<PriorityCollectionColumn<OpportunitySummary>[]>(
     () => [
       {
-        accessorKey: "title",
-        header: "Oportunidad",
-        cell: ({ row }) => (
-          <Link
-            href={`/opportunities/${row.original.id}`}
-            className="font-medium text-[var(--brand-navy)] hover:text-[var(--brand-burgundy)]"
-          >
-            {row.original.title || "Oportunidad"}
-          </Link>
+        id: "quickActions",
+        header: "Flujo",
+        className: "min-w-[240px]",
+        headClassName: "min-w-[240px]",
+        cell: (item) => (
+          <PriorityActionRail
+            compact
+            actions={[
+              { label: "Ver detalle", href: `/opportunities/${item.id}`, variant: "default" },
+              { label: "Cotizar", href: `/opportunities/${item.id}`, variant: "outline" },
+            ]}
+          />
         ),
       },
       {
-        accessorKey: "client_name",
+        id: "title",
+        header: "Oportunidad",
+        className: "min-w-[220px]",
+        cell: (item) => item.title || "Oportunidad",
+      },
+      {
+        id: "client_name",
         header: "Cliente",
-        cell: ({ row }) => row.original.client_name || "No client",
+        className: "min-w-[180px]",
+        cell: (item) => item.client_name || "Sin cliente",
       },
       {
         id: "service",
         header: "Servicio",
-        cell: ({ row }) =>
-          [row.original.service_type, row.original.transport_type].filter(Boolean).join(" / ") ||
-          "No definido",
+        className: "min-w-[200px]",
+        cell: (item) =>
+          [item.service_type, item.transport_type].filter(Boolean).join(" / ") || "No definido",
       },
       {
         id: "lane",
-        header: "Lane",
-        cell: ({ row }) =>
-          row.original.origin && row.original.destination
-            ? `${row.original.origin} -> ${row.original.destination}`
-            : "No definido",
+        header: "Trayecto",
+        className: "min-w-[220px]",
+        cell: (item) =>
+          item.origin && item.destination ? `${item.origin} -> ${item.destination}` : "No definido",
       },
       {
-        accessorKey: "salesperson_name",
+        id: "salesperson_name",
         header: "Usuario",
-        cell: ({ row }) => row.original.salesperson_name || "No asignado",
+        className: "min-w-[180px]",
+        cell: (item) => item.salesperson_name || "No asignado",
       },
       {
-        accessorKey: "status",
+        id: "status",
         header: "Estatus",
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        className: "min-w-[180px]",
+        cell: (item) => <StatusBadge status={item.status} />,
       },
       {
-        accessorKey: "estimated_value",
-        header: "Estimated value",
-        cell: ({ row }) =>
-          row.original.estimated_value != null
-            ? `$${row.original.estimated_value.toLocaleString()}`
-            : "No value",
+        id: "estimated_value",
+        header: "Valor estimado",
+        className: "min-w-[150px]",
+        cell: (item) =>
+          item.estimated_value != null ? `$${item.estimated_value.toLocaleString()}` : "Sin valor",
       },
       {
-        accessorKey: "expiration_date",
+        id: "expiration_date",
         header: "Vencimiento",
-        cell: ({ row }) => row.original.expiration_date || "No definida",
+        className: "min-w-[160px]",
+        cell: (item) => item.expiration_date || "No definida",
       },
       {
         id: "actions",
-        header: "Acciones",
-        cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
-            <Button asChild type="button" variant="outline" size="sm">
-              <Link href={`/opportunities/${row.original.id}`}>Ver</Link>
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => void handleDeleteOpportunity(row.original.id, row.original.title || "esta oportunidad")}
-              disabled={deletingId === row.original.id}
-            >
-              {deletingId === row.original.id ? "Eliminando..." : "Eliminar"}
-            </Button>
+        header: "Mas",
+        className: "w-[72px]",
+        headClassName: "w-[72px]",
+        cell: (item) => (
+          <div className="flex justify-end">
+            <PriorityActionMenu
+              label={`Mas acciones para ${item.title || "oportunidad"}`}
+              actions={[
+                { label: "Ver detalle", href: `/opportunities/${item.id}` },
+                {
+                  label: deletingId === item.id ? "Eliminando..." : "Eliminar",
+                  onPress: () => void handleDeleteOpportunity(item.id, item.title || "esta oportunidad"),
+                  disabled: deletingId === item.id,
+                },
+              ]}
+            />
           </div>
         ),
       },
@@ -293,104 +604,346 @@ export default function OpportunitiesPage() {
     [deletingId, handleDeleteOpportunity]
   )
 
+  const boardItemsByLane = useMemo(
+    () =>
+      statusOptions.reduce<Record<string, OpportunitySummary[]>>(
+        (accumulator, lane) => ({
+          ...accumulator,
+          [lane]: filteredOpportunities.filter((opportunity) => opportunity.status === lane),
+        }),
+        {}
+      ),
+    [filteredOpportunities]
+  )
+
+  const filteredPipeline = filteredOpportunities.reduce(
+    (sum, opportunity) => sum + (opportunity.estimated_value ?? 0),
+    0
+  )
+  const visibleCount =
+    filterState.viewMode === "board" ? filteredOpportunities.length : tableOpportunities.length
+  const isWorkspaceEmpty = !loading && opportunities.length === 0 && !search.trim() && activeFilterCount === 0
+
+  const workspaceToolbar = (
+    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_auto_auto_auto_auto] xl:items-center">
+      <PrioritySearchField
+        value={search}
+        onChange={(value) => {
+          setSelectedViewId(null)
+          setIsDefaultViewApplied(false)
+          setSearch(value)
+        }}
+        placeholder="Buscar oportunidad por cliente, lane, servicio o usuario"
+        ariaLabel="Buscar oportunidades"
+      />
+      <PriorityFilterPopover
+        title="Filtros del pipeline"
+        description="Refina la vista por cliente sin salir del lane operativo."
+        activeCount={activeFilterCount}
+        onApply={() => undefined}
+        onClear={() => {
+          setSelectedViewId(null)
+          setIsDefaultViewApplied(false)
+          setFilterState((current) => ({
+            ...current,
+            clientId: null,
+          }))
+        }}
+      >
+        <PrioritySelectField
+          value={filterState.clientId ?? allFilterValue}
+          onValueChange={(value) => {
+            setSelectedViewId(null)
+            setIsDefaultViewApplied(false)
+            setFilterState((current) => ({
+              ...current,
+              clientId: value === allFilterValue ? null : value,
+            }))
+          }}
+          placeholder="Cliente"
+          options={[
+            { value: allFilterValue, label: "Todos los clientes" },
+            ...clients.map((client) => ({
+              value: client.id,
+              label: client.company_name,
+            })),
+          ]}
+        />
+      </PriorityFilterPopover>
+      <div className="inline-flex items-center rounded-full border border-[rgba(144,158,174,0.16)] bg-white p-1 shadow-[0_14px_30px_-26px_rgba(3,10,24,0.38)]">
+        <Button
+          type="button"
+          size="sm"
+          variant={filterState.viewMode === "table" ? "default" : "ghost"}
+          onClick={() => {
+            setSelectedViewId(null)
+            setIsDefaultViewApplied(false)
+            setFilterState((current) => ({
+              ...current,
+              viewMode: "table",
+            }))
+          }}
+        >
+          Tabla
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={filterState.viewMode === "board" ? "default" : "ghost"}
+          onClick={() => {
+            setSelectedViewId(null)
+            setIsDefaultViewApplied(false)
+            setFilterState((current) => ({
+              ...current,
+              viewMode: "board",
+            }))
+          }}
+        >
+          Board
+        </Button>
+      </div>
+      <PrioritySavedViews
+        views={savedViews}
+        selectedViewId={selectedViewId}
+        quickViews={quickViews}
+        onSelectView={(viewId) => {
+          const selectedView = savedViews.find((view) => view.id === viewId)
+          if (!selectedView) {
+            return
+          }
+          applyWorkspaceView(selectedView)
+        }}
+        onSaveCurrentView={async ({ name, isDefault }) => {
+          const created = await createWorkspaceView(buildCurrentViewPayload(name, isDefault))
+          await refreshSavedViews(created.id)
+          setSelectedViewId(created.id)
+        }}
+        onRenameView={async (viewId, name) => {
+          await updateWorkspaceView(viewId, { name })
+          await refreshSavedViews(viewId)
+        }}
+        onUpdateCurrentView={async (viewId) => {
+          const currentView = savedViews.find((view) => view.id === viewId)
+          if (!currentView) {
+            return
+          }
+          await updateWorkspaceView(viewId, buildCurrentViewPayload(currentView.name, currentView.is_default))
+          await refreshSavedViews(viewId)
+        }}
+        onDeleteView={async (viewId) => {
+          await deleteWorkspaceView(viewId)
+          await refreshSavedViews(selectedViewId === viewId ? null : undefined)
+        }}
+        onSetDefaultView={async (viewId) => {
+          await setDefaultWorkspaceView(viewId, workspaceKey)
+          const views = await refreshSavedViews(viewId)
+          const selectedView = views.find((view) => view.id === viewId)
+          setIsDefaultViewApplied(Boolean(selectedView?.is_default))
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          setSelectedViewId(null)
+          setIsDefaultViewApplied(false)
+          setSearch("")
+          setActiveLane(defaultLane)
+          setFilterState(defaultFilters)
+        }}
+      >
+        Limpiar
+      </Button>
+    </div>
+  )
+
+  const workspaceLanesNode = (
+    <PriorityStatusLanes
+      lanes={lanes}
+      activeKey={activeLane}
+      onChange={(key) => {
+        setSelectedViewId(null)
+        setIsDefaultViewApplied(false)
+        setActiveLane(key as OpportunityWorkspaceLane)
+      }}
+      className="xl:grid-cols-3"
+    />
+  )
+
   return (
     <PageContainer
-      title="Opportunities"
-      description="Seguimiento comercial de oportunidades con servicio, transporte, lane y vencimiento."
+      density="compact"
+      title="Oportunidades"
+      description="Workspace comercial de oportunidades ya preparado para lanes y futura vista board."
       actions={
-        <Button type="button" size="lg" onClick={() => setShowCreateModal(true)}>
-          Anadir oportunidad
-        </Button>
+        !isWorkspaceEmpty ? (
+          <Button type="button" size="lg" onClick={() => setShowCreateModal(true)}>
+            Añadir oportunidad
+          </Button>
+        ) : null
       }
     >
-      <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Oportunidades
+      <section className="workspace-panel space-y-4 rounded-[24px] p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#607187]">
+              Opportunities workspace
+              {isDefaultViewApplied && selectedViewId ? (
+                <span className="rounded-full bg-[rgba(179,58,91,0.08)] px-2 py-0.5 text-[10px] tracking-[0.14em] text-[var(--brand-burgundy)]">
+                  Vista default aplicada
+                </span>
+              ) : null}
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{opportunities.length}</div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Pipeline estimado
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              ${totalPipeline.toLocaleString()}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Investigando
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {opportunities.filter((item) => item.status === "investigando").length}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
-              Cotizando
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {opportunities.filter((item) => item.status === "cotizando").length}
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.95)] p-5 shadow-[0_28px_60px_-46px_rgba(3,10,24,0.45)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--brand-navy)]">Lista de oportunidades</h2>
-              <p className="mt-1 text-sm text-[#5B6A7D]">
-                Vista comercial con cliente, servicio, lane, owner y fechas clave.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <PriorityInput
-                placeholder="Buscar oportunidad"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <PrioritySelectField
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-                placeholder="Filtra por estatus"
-                options={[
-                  { value: "all", label: "Todos los estatus" },
-                  ...statusOptions.map((status) => ({
-                    value: status,
-                    label: status,
-                  })),
-                ]}
-              />
-            </div>
+            <h2 className="text-[1.24rem] font-semibold tracking-[-0.02em] text-[var(--brand-navy)]">
+              Pipeline operativo por estatus
+            </h2>
+            <p className="max-w-4xl text-[0.95rem] leading-7 text-[#607187]">
+              Esta vista ya organiza el pipeline por lane para que el salto a kanban salga sobre una
+              base consistente y sin rehacer browse.
+            </p>
           </div>
 
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-12 rounded-[20px]" />
-              <Skeleton className="h-12 rounded-[20px]" />
-              <Skeleton className="h-12 rounded-[20px]" />
+          <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[420px]">
+            <div className="rounded-[18px] border border-[rgba(144,158,174,0.16)] bg-[rgba(248,250,252,0.82)] px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#607187]">
+                Lane activa
+              </div>
+              <div className="mt-1 text-[0.98rem] font-semibold text-[var(--brand-navy)]">
+                {laneMeta[activeLane].label}
+              </div>
             </div>
-          ) : (
-            <PriorityDataTable
-              columns={opportunityColumns}
-              data={opportunities}
-              emptyTitle={!deferredSearch.trim() && statusFilter === "all" ? "Sin oportunidades" : "Sin resultados"}
-              emptyDescription={
-                !deferredSearch.trim() && statusFilter === "all"
-                  ? "Todavia no hay oportunidades. Crea la primera desde este popup."
-                  : "No encontramos oportunidades con los filtros actuales."
+            <div className="rounded-[18px] border border-[rgba(144,158,174,0.16)] bg-[rgba(248,250,252,0.82)] px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#607187]">
+                Visibles
+              </div>
+              <div className="mt-1 text-[0.98rem] font-semibold text-[var(--brand-navy)]">
+                {visibleCount}
+              </div>
+            </div>
+            <div className="rounded-[18px] border border-[rgba(144,158,174,0.16)] bg-[rgba(248,250,252,0.82)] px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#607187]">
+                Pipeline estimado
+              </div>
+              <div className="mt-1 text-[0.98rem] font-semibold text-[var(--brand-navy)]">
+                ${filteredPipeline.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {filterState.viewMode === "table" ? (
+          <PriorityCollectionWorkspace
+            toolbar={workspaceToolbar}
+            lanes={workspaceLanesNode}
+            columns={opportunityColumns}
+            items={tableOpportunities}
+            getRowId={(item) => item.id}
+            loading={loading}
+            emptyTitle={
+              isWorkspaceEmpty ? "Sin oportunidades" : "No hay oportunidades con la vista actual"
+            }
+            emptyDescription={
+              isWorkspaceEmpty
+                ? "Crea la primera oportunidad para activar el handoff a pricing y empezar a construir pipeline comercial desde esta misma pantalla."
+                : "Prueba otra combinación de lane, búsqueda o cliente para volver a poblar la tabla."
+            }
+          />
+        ) : (
+          <div className="space-y-4">
+            {workspaceToolbar}
+            {workspaceLanesNode}
+            <PriorityKanbanBoard
+              lanes={lanes}
+              highlightedLaneKey={activeLane}
+              itemsByLane={boardItemsByLane}
+              getItemId={(item) => item.id}
+              loading={loading}
+              emptyTitle={
+                isWorkspaceEmpty ? "Sin oportunidades" : "No hay oportunidades con la vista actual"
               }
+              emptyDescription={
+                isWorkspaceEmpty
+                  ? "Crea la primera oportunidad para empezar a mover el pipeline comercial en formato board."
+                  : "Prueba otra búsqueda o limpia filtros para volver a poblar el board."
+              }
+              onMoveItem={(itemId, _sourceLaneKey, targetLaneKey) =>
+                handleMoveOpportunity(itemId, targetLaneKey as OpportunityWorkspaceLane)
+              }
+              renderCard={(item, helpers) => {
+                const currentLaneIndex = statusOptions.indexOf(item.status as OpportunityWorkspaceLane)
+                const prevLaneLabel =
+                  currentLaneIndex > 0 ? laneMeta[statusOptions[currentLaneIndex - 1]].label : undefined
+                const nextLaneLabel =
+                  currentLaneIndex >= 0 && currentLaneIndex < statusOptions.length - 1
+                    ? laneMeta[statusOptions[currentLaneIndex + 1]].label
+                    : undefined
+
+                return (
+                  <PriorityKanbanCard
+                    title={null}
+                    subtitle={item.client_name || "Sin cliente"}
+                    description={
+                      [item.service_type, item.transport_type].filter(Boolean).join(" / ") ||
+                      "Servicio pendiente"
+                    }
+                    badges={
+                      <>
+                        <StatusBadge status={item.status} />
+                        {item.origin && item.destination ? (
+                          <span className="rounded-full bg-[rgba(11,31,59,0.08)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-navy)]">
+                            {`${item.origin} -> ${item.destination}`}
+                          </span>
+                        ) : null}
+                      </>
+                    }
+                    meta={
+                      <div className="space-y-1">
+                        <div>{item.salesperson_name || "Sin responsable"}</div>
+                        <div className="text-xs text-[#607187]">
+                          {item.estimated_value != null
+                            ? `Pipeline estimado $${item.estimated_value.toLocaleString()}`
+                            : "Sin valor estimado"}
+                        </div>
+                      </div>
+                    }
+                    actions={
+                      <>
+                        <Button type="button" size="sm" variant="outline" asChild>
+                          <Link href={`/opportunities/${item.id}`}>Abrir</Link>
+                        </Button>
+                        {item.client_id ? (
+                          <Button type="button" size="sm" variant="outline" asChild>
+                            <Link href={`/clients/${item.client_id}`}>Cliente</Link>
+                          </Button>
+                        ) : (
+                          <Button type="button" size="sm" variant="outline" asChild>
+                            <Link href={`/opportunities/${item.id}`}>Cotizar</Link>
+                          </Button>
+                        )}
+                      </>
+                    }
+                    footer={
+                      item.expiration_date ? `Vence ${item.expiration_date}` : "Sin fecha de vencimiento"
+                    }
+                    isDragging={helpers.isDragging}
+                    isMoving={movingId === item.id}
+                    onMovePrev={helpers.moveToPrevLane}
+                    onMoveNext={helpers.moveToNextLane}
+                    movePrevLabel={prevLaneLabel ? `Mover a ${prevLaneLabel}` : undefined}
+                    moveNextLabel={nextLaneLabel ? `Mover a ${nextLaneLabel}` : undefined}
+                  />
+                )
+              }}
             />
-          )}
-        </section>
-      </div>
+          </div>
+        )}
+      </section>
 
       {showCreateModal ? (
         <Modal
-          title="Anadir oportunidad"
-          description="Crea una oportunidad comercial usando cliente, servicio, transporte y lane estandarizado."
+          title="Añadir oportunidad"
+          description="Crea una oportunidad comercial usando cliente, servicio, transporte y trayecto estandarizado."
+          size="workspace"
           onClose={() => {
             setShowCreateModal(false)
             setFormValues(emptyForm)
@@ -398,7 +951,7 @@ export default function OpportunitiesPage() {
         >
           <OpportunityForm
             title="Nueva oportunidad"
-            description="La informacion principal se captura en secciones limpias y el valor estimado se calcula automaticamente."
+            description="La información principal se captura en secciones limpias y el valor estimado se calcula automáticamente."
             values={formValues}
             clients={clients}
             users={users}

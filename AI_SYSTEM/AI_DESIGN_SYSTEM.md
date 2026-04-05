@@ -236,15 +236,22 @@ The UI should be built using reusable components.
 
 Core components
 
-- `shadcn/ui` is the only approved component foundation
+- `shadcn/ui` remains the approved primitive foundation for forms, dialogs, and general ERP chrome
+- `react-aria-components` is the approved interaction foundation for browse/discovery workspaces, saved views, lanes, menus, modal shells, and kanban surfaces
 - the ERP-facing layer must continue to use branded `Priority` wrappers
-- official `shadcn` compositions for empty states, comboboxes, and data tables are approved as the technical base below `PriorityEmptyState`, `PrioritySearchCombobox`, and `PriorityDataTable`
+- official `shadcn` compositions for empty states and form primitives remain approved below `PriorityEmptyState` and the form layer
+- React Aria compositions are approved below `PriorityCollectionWorkspace`, `PrioritySavedViews`, `PriorityStatusLanes`, `PriorityActionRail`, and `PriorityKanbanBoard`
+- `react-hook-form + zod` is the approved form-state and validation foundation for all next-generation ERP forms
+- `ag-grid-community` is the approved dense tabular foundation behind `PriorityGrid`
 - semantic typography must be applied through `PriorityTypography` roles before adding new one-off `text-*` or `tracking-*` mixes
 - form headers, section headers, helper text, data-value cards, and sticky submit areas must use shared typography roles so dialogs and sheets do not drift visually from the rest of the ERP
 - date selection should use the shared composed date field pattern (`calendar + popover + button`) instead of browser-default date inputs on premium ERP surfaces
 - hover previews, grouped actions, and resizable panels are approved for dense workspaces when they reduce clicks and scroll, not when they merely add novelty
 - the official `shadcn` primitives for alert, avatar, checkbox, dropdown menu, empty, spinner, switch, and related interaction components are approved as the technical base under `Priority UI`
 - low-contrast secondary actions are not acceptable on premium light surfaces; secondary actions should use approved button variants or row-action menus instead of dark-on-dark micro-buttons
+- live ERP pages should minimize hero tax; headers must orient the user quickly and then give most of the viewport back to the working surface
+- prefer workspace framing through shared wrappers such as `PriorityWorkspaceHeader`, `PriorityMetricStrip`, and `PrioritySummaryRail` instead of repeating ad hoc top banners per page
+- desktop-first workspaces should feel closer to a calm Mac productivity app: clear hierarchy, sparse chrome, dense-but-readable information, and very few competing accents
 
 Button
 Card
@@ -263,18 +270,34 @@ Components must be consistent across all modules.
 
 Approved component foundation
 
-- `shadcn/ui` with `radix` is the only approved primitive foundation for the ERP frontend
+- `shadcn/ui` with `radix` remains the approved primitive foundation for forms, dialogs, sheets, navigation, and general shell composition
+- `react-aria-components` is approved as the workspace interaction foundation for browse workspaces and board-style surfaces
 - Priority branding, spacing, density, and business semantics must be applied on top of that foundation through shared wrappers and tokens
-- do not introduce a second component foundation or competing visual kit
+- do not introduce an additional third component foundation or competing visual kit
 - do not ship raw default kit styling as the final ERP brand language
 
 Tabs rule
 
 - tabs are approved for dense workspaces inside a record or module
 - tabs are not approved as the primary global navigation pattern
-- sidebar + topbar remain the canonical shell navigation model
+- the canonical shell navigation model is now topbar-first without a persistent sidebar
+- `NavigationMenu` is the approved premium module-navigation layer in the topbar
+- `PriorityCommandBar` is the approved fast-navigation and quick-action layer
+- `PriorityWorkspacePath` is the approved interactive breadcrumb/path layer inside workspace headers
+- the desktop topbar should stay globally oriented; route repetition belongs in the workspace header via an interactive breadcrumb/path, not as a second page-title block in the topbar
 - tabs should reduce vertical sprawl in places such as detail screens, pricing/sales workspaces, and permissions workspaces
 - current approved tabbed workspaces already implemented: client detail, provider detail, quotation detail, and roles & permissions
+
+Form and grid rule
+
+- standard record editing should prefer schema-driven forms rendered through `PriorityFormEngine`
+- `PriorityCollectionWorkspace` is now the default browse/list workspace shell for read-mostly operational screens
+- `PriorityCollectionTable` is the default browse/list table when a module needs the table surface without the full workspace shell
+- `PrioritySavedViews`, `PriorityStatusLanes`, and `PriorityActionRail` are part of that default workspace pattern
+- `PriorityKanbanBoard` is the approved board mode for pipeline-style modules
+- `PriorityDataTable` is legacy and should only remain as a compatibility wrapper while older imports are retired
+- `PriorityGrid` should be used only for dense editing, matrix behavior, or header-plus-lines workflows
+- every grid-first workflow must define an approved mobile fallback such as cards, drawer editing, or step-based capture
 
 
 

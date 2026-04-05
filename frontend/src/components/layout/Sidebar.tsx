@@ -141,7 +141,7 @@ export function Sidebar({
     }))
   }
 
-  const shellWidth = collapsed ? "lg:w-24" : "lg:w-80"
+  const shellWidth = collapsed ? "lg:w-20" : "lg:w-64"
   const mobileState = mobileOpen
     ? "translate-x-0 opacity-100"
     : "-translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100"
@@ -158,13 +158,13 @@ export function Sidebar({
 
       <aside
         className={[
-          "brand-shell fixed inset-y-0 left-0 z-50 flex min-h-screen w-[min(88vw,22rem)] shrink-0 flex-col overflow-hidden text-white transition-all duration-300 lg:sticky lg:top-0",
+          "brand-shell fixed inset-y-0 left-0 z-50 flex min-h-screen w-[min(88vw,21rem)] shrink-0 flex-col overflow-hidden text-white transition-all duration-300 lg:sticky lg:top-0",
           shellWidth,
           mobileState,
         ].join(" ")}
       >
-        <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top_left,_rgba(179,58,91,0.38),_transparent_44%)]" />
-        <div className="relative flex items-center justify-between gap-3 px-4 pb-4 pt-6">
+        <div className="absolute inset-x-0 top-0 h-36 bg-[radial-gradient(circle_at_top_left,_rgba(179,58,91,0.24),_transparent_42%)]" />
+        <div className="relative flex items-center justify-between gap-3 border-b border-white/8 px-3 pb-3 pt-4">
           <div className={collapsed ? "mx-auto" : "min-w-0 flex-1"}>
             <Brand compact={collapsed} light />
           </div>
@@ -172,14 +172,14 @@ export function Sidebar({
             <button
               type="button"
               onClick={collapsed ? onToggleCollapsed : onCloseMobile}
-              className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--brand-soft-gray)] hover:bg-white/12 lg:hidden"
+              className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-soft-gray)] hover:bg-white/12 lg:hidden"
             >
               Cerrar
             </button>
             <button
               type="button"
               onClick={onToggleCollapsed}
-              className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-sm font-semibold text-[var(--brand-soft-gray)] hover:bg-white/12 lg:flex"
+              className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-sm font-semibold text-[var(--brand-soft-gray)] hover:bg-white/12 lg:flex"
               title={collapsed ? "Expandir menu" : "Contraer menu"}
             >
               {collapsed ? "+" : "−"}
@@ -187,8 +187,8 @@ export function Sidebar({
           </div>
         </div>
 
-        <nav className="relative flex-1 overflow-y-auto px-3 pb-5 pt-2">
-          <div className="space-y-2.5">
+        <nav className="relative flex-1 overflow-y-auto px-2.5 pb-4 pt-3">
+          <div className="space-y-4">
             {moduleGroups.map((moduleGroup) => {
               const moduleHasActiveRoute = moduleGroup.items.some((item) =>
                 isRouteActive(pathname, normalizeRoute(item.route_path))
@@ -201,28 +201,23 @@ export function Sidebar({
                 moduleGroup.moduleName.slice(0, 2).toUpperCase()
 
               return (
-                <section
-                  key={moduleGroup.moduleCode}
-                  className={[
-                    "rounded-[22px] border transition-all",
-                    moduleHasActiveRoute
-                      ? "border-[rgba(179,58,91,0.34)] bg-[linear-gradient(180deg,_rgba(128,0,32,0.22),_rgba(11,31,59,0.18))] shadow-[0_24px_48px_-32px_rgba(128,0,32,0.85)]"
-                      : "border-white/8 bg-white/[0.025]",
-                  ].join(" ")}
-                >
+                <section key={moduleGroup.moduleCode} className="space-y-2">
                   <button
                     type="button"
                     onClick={() => toggleModule(moduleGroup.moduleCode, isExpanded)}
                     className={[
-                      "flex w-full items-center gap-3 px-3 py-3.5 text-left",
-                      collapsed ? "justify-center" : "justify-between",
+                      "flex w-full items-center gap-3 rounded-[20px] px-2.5 py-2.5 text-left transition-all",
+                      collapsed ? "justify-center border border-transparent" : "justify-between border border-white/6",
+                      moduleHasActiveRoute
+                        ? "bg-[linear-gradient(180deg,_rgba(128,0,32,0.18),_rgba(11,31,59,0.08))] shadow-[0_16px_34px_-28px_rgba(128,0,32,0.85)]"
+                        : "bg-white/[0.03] hover:bg-white/[0.06]",
                     ].join(" ")}
                     title={collapsed ? moduleGroup.moduleName : undefined}
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={[
-                          "flex h-11 w-11 items-center justify-center rounded-2xl border text-[11px] font-semibold uppercase tracking-[0.16em]",
+                          "flex h-10 w-10 items-center justify-center rounded-2xl border text-[10px] font-semibold uppercase tracking-[0.12em]",
                           moduleHasActiveRoute
                             ? "border-[rgba(179,58,91,0.44)] bg-[rgba(179,58,91,0.22)] text-white"
                             : "border-white/10 bg-white/6 text-[var(--brand-soft-gray)]",
@@ -233,6 +228,9 @@ export function Sidebar({
                       {!collapsed ? (
                         <div>
                           <div className="text-sm font-semibold text-white">{moduleGroup.moduleName}</div>
+                          <div className="mt-0.5 text-[11px] text-[var(--brand-gray)]">
+                            {moduleGroup.items.length} vistas
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -244,7 +242,7 @@ export function Sidebar({
                   </button>
 
                   {!collapsed && isExpanded ? (
-                    <div className="space-y-1 px-2 pb-2">
+                    <div className="space-y-1 px-1.5">
                       {moduleGroup.items.map((item) => {
                         const href = normalizeRoute(item.route_path)
                         const active = isRouteActive(pathname, href)
@@ -255,9 +253,9 @@ export function Sidebar({
                             href={href}
                             onClick={onCloseMobile}
                             className={[
-                              "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
+                              "group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all",
                               active
-                                ? "bg-[linear-gradient(135deg,_rgba(179,58,91,0.92),_rgba(128,0,32,0.88))] text-white shadow-[0_20px_34px_-24px_rgba(179,58,91,0.95)]"
+                                ? "bg-white text-[var(--brand-navy)] shadow-[0_20px_34px_-24px_rgba(255,255,255,0.35)]"
                                 : "text-[var(--brand-light-gray)] hover:bg-white/8 hover:text-white",
                             ].join(" ")}
                           >
@@ -265,7 +263,7 @@ export function Sidebar({
                               className={[
                                 "h-2.5 w-2.5 rounded-full",
                                 active
-                                  ? "bg-white"
+                                  ? "bg-[var(--brand-burgundy)]"
                                   : "bg-[var(--brand-gray)]/60 group-hover:bg-[var(--brand-burgundy-light)]",
                               ].join(" ")}
                             />

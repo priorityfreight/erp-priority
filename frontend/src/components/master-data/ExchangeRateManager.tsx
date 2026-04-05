@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Modal } from "@/components/data/Modal"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import {
   PriorityFormField,
   PriorityFormGrid,
@@ -95,7 +95,7 @@ export function ExchangeRateManager() {
       setItems(data)
     } catch (error) {
       console.error(error)
-      notifyError("No se pudo cargar el catalogo de tipos de cambio")
+      notifyError("No se pudo cargar el catálogo de tipos de cambio")
     } finally {
       setLoading(false)
     }
@@ -293,8 +293,9 @@ export function ExchangeRateManager() {
 
   return (
     <PageContainer
+      density="compact"
       title="Tipo de cambio"
-      description="Catalogo canonico para convertir compras, ventas y profit contable a MXN usando la tasa Banxico del dia anterior. La sincronizacion automatica queda programada diariamente a las 6:00 a.m."
+      description="Catálogo canónico para convertir compras, ventas y margen contable a MXN usando la tasa Banxico del día anterior. La sincronización automática queda programada diariamente a las 6:00 a.m."
       actions={
         <div className="flex flex-wrap gap-3">
           <Button type="button" variant="outline" size="lg" onClick={() => void handleSyncBanxico()} disabled={syncing}>
@@ -303,17 +304,17 @@ export function ExchangeRateManager() {
           </Button>
           <Button type="button" size="lg" onClick={openCreateModal}>
             <PlusIcon />
-            Anadir tipo de cambio
+            Añadir tipo de cambio
           </Button>
         </div>
       }
     >
-      <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="space-y-4">
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {latestByCurrency.map(({ currency, item }) => (
             <div
               key={currency}
-              className="rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_48px_-36px_rgba(3,10,24,0.28)]"
+              className="rounded-[22px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-4 shadow-[0_20px_40px_-34px_rgba(3,10,24,0.24)]"
             >
               <div className="flex items-center justify-between">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B6A7D]">
@@ -321,7 +322,7 @@ export function ExchangeRateManager() {
                 </div>
                 <TrendingUpIcon className="size-4 text-[#0F766E]" />
               </div>
-              <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">
+              <div className="mt-2.5 text-[1.9rem] font-semibold text-[var(--brand-navy)]">
                 {item ? item.rate_value.toFixed(4) : "—"}
               </div>
               <div className="mt-2 text-sm text-[#5B6A7D]">
@@ -329,26 +330,26 @@ export function ExchangeRateManager() {
               </div>
             </div>
           ))}
-          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+          <div className="rounded-[22px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-4 shadow-[0_20px_40px_-34px_rgba(37,99,235,0.22)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
               Registros vigentes
             </div>
-            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{items.length}</div>
+            <div className="mt-2.5 text-[1.9rem] font-semibold text-[var(--brand-navy)]">{items.length}</div>
             <div className="mt-2 text-sm text-[#5B6A7D]">
-              El ERP toma la ultima tasa disponible anterior al dia de operacion.
+              El ERP toma la última tasa disponible anterior al día de operación.
             </div>
           </div>
         </section>
 
-        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
-          <div className="flex flex-col gap-4">
+        <section className="space-y-4 rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_44px_-38px_rgba(3,10,24,0.28)]">
+          <div className="flex flex-col gap-3">
             <div>
-              <PriorityCardTitle>Catalogo de tipos de cambio</PriorityCardTitle>
+              <PriorityCardTitle>Catálogo de tipos de cambio</PriorityCardTitle>
               <PriorityTypography variant="bodyMuted" className="mt-1">
-                El ERP toma la ultima tasa disponible anterior al dia de trabajo para convertir todo a MXN.
+                El ERP toma la última tasa disponible anterior al día de trabajo para convertir todo a MXN.
               </PriorityTypography>
             </div>
-            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_auto]">
+            <PriorityToolbar density="compact" className="grid gap-2.5 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_auto]">
               <PriorityInput
                 placeholder="Buscar por fecha, fuente o serie"
                 value={query}
@@ -380,11 +381,11 @@ export function ExchangeRateManager() {
               <Skeleton className="h-12 rounded-[18px]" />
             </div>
           ) : (
-            <PriorityDataTable
+            <PriorityCollectionTable
               columns={columns}
               data={items}
               emptyTitle="No hay tipos de cambio registrados"
-              emptyDescription="Sincroniza Banxico o registra una tasa manual para arrancar el catalogo canonico."
+              emptyDescription="Sincroniza Banxico o registra una tasa manual para arrancar el catálogo canónico."
             />
           )}
         </section>
@@ -392,8 +393,9 @@ export function ExchangeRateManager() {
 
       {showModal ? (
         <Modal
-          title={editingId ? "Editar tipo de cambio" : "Anadir tipo de cambio"}
-          description="Registra la tasa oficial del dia. El ERP usara la ultima disponible anterior al dia de operacion."
+          title={editingId ? "Editar tipo de cambio" : "Añadir tipo de cambio"}
+          description="Registra la tasa oficial del día. El ERP usará la última disponible anterior al día de operación."
+          size="standard"
           onClose={() => {
             setShowModal(false)
             resetForm()
@@ -486,12 +488,12 @@ export function ExchangeRateManager() {
               <div className="mt-4">
                 <PriorityInfoField
                   label="Uso esperado"
-                  value="Conversion canonica de compras, ventas y profit contable hacia MXN."
+                  value="Conversión canónica de compras, ventas y margen contable hacia MXN."
                 />
               </div>
             </PriorityFormSection>
 
-            <PrioritySubmitBar>
+            <PrioritySubmitBar density="compact" mode="inline">
               <Button
                 type="button"
                 variant="outline"
