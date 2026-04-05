@@ -668,6 +668,190 @@ Prevention rule:
 - when a workspace contains multiple sibling sub-processes of the same record, evaluate tabs before adding more stacked sections
 
 
+16. Workspace filters must operate on the backend dataset, not only the current page
+
+Observed problem:
+
+- quotation workspace filters, sort, and presets looked complete in UI, but initially only filtered the already loaded client page
+- views such as "Ganadas ADAN" could silently omit records from other pages while counters and pagination still reflected the unfiltered dataset
+
+Root cause:
+
+- the workspace query contract was split between backend pagination and frontend-only filtering
+- `search_quotations()` had not yet been extended to accept the full workspace state
+
+Approved solution:
+
+- move `query`, `lane/status`, `columnFilters`, `sort`, `page`, and `pageSize` into the backend query contract
+- make `totalCount` and pagination respond to the filtered dataset returned by `search_quotations()`
+- treat frontend filtering as a temporary fallback only, never the canonical path for operational workspaces
+
+Prevention rule:
+
+- a saved view or filter builder is not considered real until the dataset, counters, and pagination all come from the backend contract
+
+
+17. Browse columns, filters, and sorting must come from one shared schema
+
+Observed problem:
+
+- quotation columns, filter options, chips, and sorting behavior drifted because parts of the workspace still used hard-coded lists by column name
+- the filter modal could fall out of sync with the visible table and with saved views
+
+Root cause:
+
+- column labels, filter kinds, backend keys, and visible/default behavior were modeled in multiple places
+
+Approved solution:
+
+- define a single workspace column schema containing:
+  - `id`
+  - `label`
+  - `visible by default`
+  - `sortable`
+  - `filterable`
+  - `filterKind`
+  - `filterOptions`
+  - backend column key
+- derive the filter builder, chips, sorting, and column modal from that one schema
+
+Prevention rule:
+
+- do not hard-code browse workspace behavior by column name in multiple places once a column schema exists
+
+
+18. Column presets must persist in the same workspace system as saved views
+
+Observed problem:
+
+- workspace column layouts originally lived in isolated `localStorage` state, while saved views lived in the shared workspace persistence layer
+- this created split behavior between search/filter presets and column presets
+
+Root cause:
+
+- column preference was treated as a UI-only concern instead of part of workspace state
+
+Approved solution:
+
+- persist column layouts through `workspace_saved_views`, using the same canonical persistence layer as search, lanes, filters, and sorting
+- allow internal system rows when needed, but keep them hidden from normal saved-view lists
+
+Prevention rule:
+
+- user workspace state must not be split across unrelated persistence systems unless the split is explicitly intentional and documented
+
+
+19. Workspace migration SQL must not reintroduce legacy RPC shapes
+
+Observed problem:
+
+- the workspace-saved-views migration attempted to recreate an older `search_quotations()` body that referenced removed quotation header columns such as `commodities`, `quantity`, `weight`, and `volume`
+- `supabase db push` failed only when the migration actually hit the linked remote database
+
+Root cause:
+
+- a newer migration added workspace features, but it still embedded a stale version of the quotation RPC body
+- the migration was not validated against the current canonical schema after quotation-header cleanup
+
+Approved solution:
+
+- update both workspace migrations so the RPC output shape stays compatible without depending on removed physical columns
+- run `supabase db push --dry-run` before pushing live migrations
+- treat migration SQL as versioned code that must stay aligned with current canonical schema, not as a historical dump
+
+Prevention rule:
+
+- any migration that recreates an RPC must be rechecked against the live canonical table shape before release or remote push
+
+
+20. HTML5 drag-and-drop is too brittle for precision workspace ordering
+
+Observed problem:
+
+- the first implementation of workspace column ordering tended to drop items at the end of a list instead of at the user’s intended insertion point
+- card-based layouts also made column ordering visually noisy and harder to control
+
+Root cause:
+
+- native drag-and-drop did not provide a stable insertion model for precise list ordering in this workspace
+- the visual metaphor was too heavy for a utilitarian settings modal
+
+Approved solution:
+
+- move to list-based ordering with explicit insertion handling and clearer vertical structure
+- adopt an open-source sortable stack such as `dnd-kit` for stable drag behavior
+- keep explicit `subir/bajar` controls as a precision fallback when direct drag is inconvenient
+
+Prevention rule:
+
+- do not rely on raw HTML5 drag-and-drop for ERP ordering surfaces that require exact insertion behavior
+
+
+21. Base select/popover primitives must be revalidated inside modal workspaces
+
+Observed problem:
+
+- workspace filter modals could open correctly while the actual select list for choosing a filter column appeared missing or collapsed
+
+Root cause:
+
+- the shared `Select` viewport sizing still respected trigger-height assumptions that failed inside larger modal compositions
+- layering and viewport constraints were validated in ordinary forms but not in workspace overlays
+
+Approved solution:
+
+- fix the base `Select` viewport sizing and z-index behavior at the shared primitive level
+- validate the primitive again inside the actual workspace modal where it will be used
+
+Prevention rule:
+
+- when a primitive is reused inside workspace modals, validate the primitive in that exact overlay context, not only in isolated form fields
+
+
+22. Browser automation failures can come from the host environment, not the product
+
+Observed problem:
+
+- Playwright browser execution from the Codex-hosted macOS environment failed with Chromium launch errors such as `MachPortRendezvousServer ... Permission denied (1100)`
+- list-based test discovery, lint, and build still passed, and the same suites could run from a normal local terminal
+
+Root cause:
+
+- browser launch restrictions in the host environment were independent from the frontend application health
+
+Approved solution:
+
+- treat build, lint, migrations, and Playwright test listing as reliable signals inside Codex
+- treat full browser execution as an environment-sensitive step that may need to run from a normal local terminal or an approved external browser-server path
+- never misclassify host browser-launch failures as app regressions without additional evidence
+
+Prevention rule:
+
+- separate product failures from host-browser failures during release validation, and document the difference explicitly in the final audit
+
+
+23. Legacy wrappers should be reduced to compatibility facades once the new baseline is live
+
+Observed problem:
+
+- `PriorityDataTable` continued to appear as if it were the active standard long after `PriorityCollectionWorkspace` and `PriorityCollectionTable` had become the real browse/list baseline
+- this created documentation drift and kept encouraging the wrong component choice
+
+Root cause:
+
+- the legacy wrapper remained fully functional and still looked like a first-class choice in exports, registry, and docs
+
+Approved solution:
+
+- introduce `PriorityCollectionTable` as the canonical non-workspace browse table
+- keep `PriorityDataTable` only as a compatibility wrapper while older imports are retired
+- update `AI_SYSTEM`, stories, registry, and migration docs in the same change set
+
+Prevention rule:
+
+- once a new UI baseline is live, old wrappers must be demoted explicitly in both code and governance docs, not just informally avoided
+
+
 --------------------------------------------------
 MINIMUM RELEASE MEMORY
 --------------------------------------------------
