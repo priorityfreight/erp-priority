@@ -27,6 +27,7 @@ import { ButtonGroup } from "@/components/ui/button-group"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EntityMailTab } from "@/features/mail/EntityMailTab"
 import {
   buildCargoFormFromLine,
   buildMailToLink,
@@ -281,6 +282,7 @@ export function QuotationDetailView({
               <TabsTrigger value="cargo">Ruta y carga</TabsTrigger>
               <TabsTrigger value="pricing">Pricing / Sales</TabsTrigger>
               <TabsTrigger value="commercial">Documento comercial</TabsTrigger>
+              <TabsTrigger value="emails">Email</TabsTrigger>
             </TabsList>
           </div>
 
@@ -724,6 +726,17 @@ export function QuotationDetailView({
               </Button>
             </ButtonGroup>
             </section>
+          </TabsContent>
+
+          <TabsContent value="emails" className="space-y-8">
+            <EntityMailTab
+              entityType="quotation"
+              entityId={quotation.id}
+              title={`Correo de ${quotation.reference_number}`}
+              description="Vista tipo Outlook de todos los correos ligados automáticamente a esta cotización por referencia exacta en el asunto."
+              emptyTitle="Sin correos ligados a esta cotización"
+              emptyDescription="Cuando el subject incluya la referencia exacta de la cotización, los threads aparecerán aquí para leer, responder y dar seguimiento."
+            />
           </TabsContent>
         </Tabs>
       </div>

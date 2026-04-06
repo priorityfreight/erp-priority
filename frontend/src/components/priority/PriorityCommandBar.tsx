@@ -10,6 +10,7 @@ import {
   ContactRoundIcon,
   DatabaseIcon,
   LayoutGridIcon,
+  MailIcon,
   SearchIcon,
   UserRoundPlusIcon,
 } from "lucide-react"
@@ -98,6 +99,17 @@ const fallbackNavigation: NavigationPermissionItem[] = [
     submodule_sort_order: 3,
   },
   {
+    module_code: "crm",
+    module_name: "CRM",
+    module_icon_key: "crm",
+    module_sort_order: 1,
+    submodule_code: "crm.email",
+    submodule_name: "Correo",
+    route_path: "/mail",
+    route_matchers: ["/mail"],
+    submodule_sort_order: 4,
+  },
+  {
     module_code: "pricing",
     module_name: "Pricing",
     module_icon_key: "pricing",
@@ -127,6 +139,7 @@ function getNavigationIcon(routePath: string | null) {
   if (routePath.startsWith("/contacts")) return ContactRoundIcon
   if (routePath.startsWith("/opportunities")) return BriefcaseBusinessIcon
   if (routePath.startsWith("/quotations")) return CalculatorIcon
+  if (routePath.startsWith("/mail")) return MailIcon
   if (routePath.startsWith("/pricing")) return CalculatorIcon
   if (routePath.startsWith("/master-data")) return DatabaseIcon
   return ArrowRightIcon
@@ -157,6 +170,14 @@ function getQuickActions(pathname: string, router: ReturnType<typeof useRouter>)
       shortcut: "G T",
       icon: ContactRoundIcon,
       onSelect: () => router.push("/contacts"),
+    },
+    {
+      id: "go-mail",
+      label: "Abrir correo",
+      helper: "Entra al inbox compartido y sigue conversaciones desde el ERP.",
+      shortcut: "G E",
+      icon: MailIcon,
+      onSelect: () => router.push("/mail"),
     },
   ]
 

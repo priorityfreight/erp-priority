@@ -16,6 +16,7 @@ import { normalizeContactStatus } from "@/components/forms/contact-form-utils"
 import { OpportunityForm } from "@/components/forms/OpportunityForm"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EntityMailTab } from "@/features/mail/EntityMailTab"
 import {
   InfoCard,
   InfoField,
@@ -431,7 +432,7 @@ export function ClientDetailView({
           <Tabs
             value={activeTab}
             onValueChange={(value) =>
-              setActiveTab(value as "contacts" | "logistics" | "opportunities")
+              setActiveTab(value as "contacts" | "logistics" | "opportunities" | "emails")
             }
             className="space-y-4"
           >
@@ -444,6 +445,9 @@ export function ClientDetailView({
               </TabsTrigger>
               <TabsTrigger value="opportunities" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
                 Oportunidades ({opportunities.length})
+              </TabsTrigger>
+              <TabsTrigger value="emails" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
+                Email
               </TabsTrigger>
             </TabsList>
 
@@ -523,6 +527,17 @@ export function ClientDetailView({
                 data={opportunities}
                 emptyTitle="Sin oportunidades comerciales"
                 emptyDescription="Este cliente todavía no tiene oportunidades abiertas o históricas. Crea la primera oportunidad desde aquí para iniciar el flujo comercial."
+              />
+            </TabsContent>
+
+            <TabsContent value="emails" className="space-y-4">
+              <EntityMailTab
+                entityType="client"
+                entityId={client.id}
+                title={`Correo ligado a ${client.company_name}`}
+                description="Threads vinculados al cliente por referencia de cotización, contactos participantes y seguimiento comercial."
+                emptyTitle="Sin conversaciones vinculadas"
+                emptyDescription="Cuando el inbox detecte referencias de cotización o contactos de este cliente, los hilos aparecerán aquí para dar seguimiento desde el ERP."
               />
             </TabsContent>
           </Tabs>

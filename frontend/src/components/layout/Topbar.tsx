@@ -61,6 +61,17 @@ const fallbackNavigation: NavigationPermissionItem[] = [
     submodule_sort_order: 0,
   },
   {
+    module_code: "crm",
+    module_name: "CRM",
+    module_icon_key: "crm",
+    module_sort_order: 1,
+    submodule_code: "crm.email",
+    submodule_name: "Correo",
+    route_path: "/mail",
+    route_matchers: ["/mail"],
+    submodule_sort_order: 4,
+  },
+  {
     module_code: "pricing",
     module_name: "Pricing",
     module_icon_key: "pricing",
