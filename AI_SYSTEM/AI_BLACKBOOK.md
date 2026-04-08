@@ -926,6 +926,69 @@ Prevention rule:
 
 
 --------------------------------------------------
+31. CLEAN PROD MUST NOT REPLAY THE FULL MIGRATION HISTORY
+--------------------------------------------------
+
+Problem:
+
+- the historical migration chain evolved on top of a live `TRAIN` backend and was not consistently written to replay from a completely blank database
+- when a clean `PROD` project was created and the full chain was replayed, migrations failed because some files assumed intermediate table shapes or object existence from earlier live states
+
+Examples observed:
+
+- `20260322093000_canonical_backend_upgrade.sql` assumed `providers.service_type` existed in a way that was not true for the original clean order
+- `20260323110000_realign_quotation_crm_pricing_flow.sql` touched `quotation_cargo_lines` before that table existed in the clean replay path
+- `20260327190000_train_cleanup_purge_ephemeral_clients.sql` is operational cleanup for `TRAIN`, not clean bootstrap logic
+
+Approved solution:
+
+- treat the historical migration chain as legacy evolution history for `DEV/TRAIN`
+- generate a canonical clean bootstrap baseline from the current SQL sources
+- keep that baseline outside `supabase/migrations/`
+- repair legacy migration history as applied after the baseline is loaded into a clean `PROD`
+- keep controlled production seed data separate from any future `TRAIN` fixtures
+
+Prevention rule:
+
+- do not assume a long-lived migration chain is automatically safe for clean-environment bootstrap
+- before any real production cutover, validate replay against a blank backend
+- once a clean baseline exists, do not append it to the normal delta migration chain
+
+
+--------------------------------------------------
+32. A BASELINE IS ONLY AS GOOD AS THE CANONICAL SQL THAT FEEDS IT
+--------------------------------------------------
+
+Problem:
+
+- the first clean `PROD` baseline was generated from the canonical SQL files and loaded successfully, but post-bootstrap verification showed that two recent production features were still missing:
+  - `public.workspace_saved_views`
+  - `public.mailboxes.signature_image_url`
+
+Root cause:
+
+- the latest product changes existed as delta migrations and working code, but the canonical SQL sources had not been updated to include them
+
+Approved solution:
+
+- treat the canonical SQL files as first-class architecture, not as stale references
+- when a feature becomes part of the production baseline, update:
+  - schema
+  - functions
+  - triggers
+  - policies
+- regenerate the clean `PROD` baseline immediately after that update
+- add an idempotent sync migration if any live environment is already missing the newly canonicalized objects
+
+Prevention rule:
+
+- never assume that "migration exists" means "canonical SQL is current"
+- every production bootstrap change must be validated in both directions:
+  - clean baseline generation
+  - live env delta synchronization
+
+
+--------------------------------------------------
 MINIMUM RELEASE MEMORY
 --------------------------------------------------
 

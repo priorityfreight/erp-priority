@@ -77,6 +77,7 @@ Status summary:
 - UI/design/component documents still contain target-state guidance beyond the current implementation
 - the Priority UI layer now also has a formal registry document plus a typed in-repo registry for reusable component ownership
 - production closeout guidance for the current live baseline is centralized in `docs/PRODUCTION_RELEASE_CLOSEOUT.md`
+- canonical branch and environment strategy is now centralized in `docs/BRANCHING_AND_ENVIRONMENT_STRATEGY.md`
 
 
 --------------------------------------------------
@@ -94,6 +95,9 @@ Canonical files:
 - ERP_triggers.sql
 - ERP_views.sql
 - ERP_policies.sql
+- baselines/20260408120000_prod_bootstrap_baseline.sql
+- seeds/prod_seed.sql
+- seeds/train_seed.sql
 - migrations/20260307000432_initial_erp_schema.sql
 - migrations/20260322093000_canonical_backend_upgrade.sql
 - migrations/20260322101500_dev_observability_policies.sql
@@ -223,6 +227,37 @@ Current query layer:
 - frontend/src/lib/server/mail/service.ts
 - frontend/src/lib/server/mail/gmail.ts
 - frontend brand assets now render from frontend/public/assets/ and must originate from the repository-level ASSETS/ folder
+
+
+--------------------------------------------------
+BRANCH AND ENVIRONMENT STRATEGY
+--------------------------------------------------
+
+Canonical long-lived branches:
+
+- `main`
+- `dev`
+
+Meaning:
+
+- `main` is the production branch
+- `dev` is the stable shared development integration branch
+
+Canonical deployment mapping:
+
+- `main` -> Vercel `Production`
+- `dev` -> stable shared Vercel `Preview`
+
+Canonical database mapping:
+
+- current linked Supabase backend = `DEV/TRAIN`
+- future clean Supabase backend = `PROD`
+
+Promotion rule:
+
+- promote structure from `DEV/TRAIN` into `PROD`
+- do not promote incidental working data
+- bootstrap clean `PROD` from `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
 
 Current mail/workbench surfaces:
 

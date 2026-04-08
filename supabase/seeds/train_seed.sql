@@ -1,0 +1,3 @@
+-- TRAIN-only fixtures belong here.
+-- Keep this file empty until a controlled DEV/TRAIN-only seed is explicitly approved.
+-- Never load this file into PROD.

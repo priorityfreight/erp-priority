@@ -4,6 +4,18 @@ This checklist defines the controlled bootstrap path for the clean `PROD` backen
 
 Use it only after `TRAIN` passes the current hardening gate.
 
+The canonical branch and environment mapping now is:
+
+- `main` -> Vercel `Production` -> `PROD`
+- `dev` -> stable Vercel `Preview` -> `DEV/TRAIN`
+
+The canonical clean bootstrap sources now are:
+
+- [`supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/supabase/baselines/20260408120000_prod_bootstrap_baseline.sql)
+- [`supabase/seeds/prod_seed.sql`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/supabase/seeds/prod_seed.sql)
+- [`scripts/repair-prod-baseline-history.sh`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/scripts/repair-prod-baseline-history.sh)
+- [`PROD_BASELINE_BOOTSTRAP_AUDIT.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/PROD_BASELINE_BOOTSTRAP_AUDIT.md)
+
 
 --------------------------------------------------
 PRINCIPLES
@@ -66,19 +78,37 @@ SUPABASE PROD CREATION
 SCHEMA PROMOTION
 --------------------------------------------------
 
-1. Dry-run the current backend state
+1. Link the repo temporarily to the clean `PROD` project
 
 ```bash
-supabase db push --dry-run
+supabase link --project-ref <prod-ref> --password '<prod-db-password>'
 ```
 
-2. Apply canonical migrations only
+2. Apply the canonical baseline to the clean `PROD` database
+
+```bash
+psql "$PROD_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/baselines/20260408120000_prod_bootstrap_baseline.sql
+```
+
+3. Apply the controlled `PROD` seed
+
+```bash
+psql "$PROD_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seeds/prod_seed.sql
+```
+
+4. Mark legacy migrations as already represented by the baseline
+
+```bash
+./scripts/repair-prod-baseline-history.sh <prod-ref>
+```
+
+5. Apply any future migrations created after the baseline
 
 ```bash
 supabase db push
 ```
 
-3. Verify structure was promoted
+6. Verify structure was promoted
 
 - tables
 - views
@@ -87,7 +117,7 @@ supabase db push
 - RLS policies
 - grants
 
-4. If backend contracts changed before release:
+7. If backend contracts changed before release:
 
 ```bash
 cd frontend
@@ -110,6 +140,7 @@ Allowed in `PROD`:
 - accounting concepts if managed canonically
 - quotation rejection reasons if managed canonically
 - required branch bootstrap records only if the business needs them to operate day one
+- approved production seed data from `supabase/seeds/prod_seed.sql`
 
 Not allowed from `TRAIN`:
 
@@ -121,6 +152,7 @@ Not allowed from `TRAIN`:
 - validation users
 - exchange-rate test rows
 - any `TEST_`, `LOADTEST_`, `QA_`, `STRESS_` data
+- any optional fixtures from `supabase/seeds/train_seed.sql`
 
 
 --------------------------------------------------
@@ -147,6 +179,8 @@ Before pointing `LIVE` to `PROD`, verify in Vercel:
 - Gmail OAuth redirect points to the production domain
 - `NEXT_PUBLIC_APP_URL` matches the public production domain
 - `Master Data > Mail` signature previews resolve through `/api/mail/signature-image`
+- `main` is the only branch allowed to drive Vercel `Production`
+- `dev` is the stable shared preview branch and continues to point to `DEV/TRAIN`
 
 
 --------------------------------------------------
@@ -178,6 +212,8 @@ Then run manual smoke against `PROD`:
 - outbound/reply smoke from one connected mailbox
 
 Do not run destructive stress or ephemeral validation writes on `PROD`.
+
+If a newly created `PROD` project already saw failed historical replay attempts, treat it as contaminated and recreate or reset it before applying the baseline.
 
 
 --------------------------------------------------
