@@ -2,11 +2,25 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/types/supabase"
 
+const publicRouteMatchers = [
+  "/login",
+  "/api/mail/oauth/google/callback",
+  "/api/mail/signature-image",
+]
+
 function createLoginRedirect(request: NextRequest) {
   const redirectUrl = request.nextUrl.clone()
   redirectUrl.pathname = "/login"
   redirectUrl.searchParams.set("redirectedFrom", request.nextUrl.pathname)
   return redirectUrl
+}
+
+function isPublicRoute(pathname: string) {
+  if (publicRouteMatchers.includes(pathname)) {
+    return true
+  }
+
+  return pathname.startsWith("/api/cron/")
 }
 
 export async function proxy(request: NextRequest) {
@@ -33,8 +47,14 @@ export async function proxy(request: NextRequest) {
     }
   )
 
+  const isPublicPath = isPublicRoute(request.nextUrl.pathname)
   const isLoginRoute = request.nextUrl.pathname === "/login"
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/")
+
+  if (isPublicPath) {
+    return response
+  }
+
   const { data: authData } = await supabase.auth.getUser()
   const authUser = authData.user
 
