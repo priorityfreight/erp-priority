@@ -225,6 +225,7 @@ Frontend foundation rule:
 - the current canonical clean bootstrap baseline is `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
 - the controlled production seed is `supabase/seeds/prod_seed.sql`
 - `supabase/seeds/train_seed.sql` is reserved for non-production fixtures and must never be loaded into `PROD`
+- approved operational `PROD` master data for `unlocodes` and `exchange_rates` is promoted from `DEV/TRAIN` with `scripts/build-prod-operational-master-data-seed.mjs`
 - the final production handoff for workspaces + mailing + Vercel must follow `docs/PRODUCTION_RELEASE_CLOSEOUT.md`
 - `npm run validation:release` is now the canonical automated pre-smoke gate for production envs, mailing contracts, Vercel cron config, and the extended quotation workspace RPC
 - quotation email context rules are now explicit:
