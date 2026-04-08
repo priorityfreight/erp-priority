@@ -96,19 +96,38 @@ psql "$PROD_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/baselines/2026040812000
 psql "$PROD_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seeds/prod_seed.sql
 ```
 
-4. Mark legacy migrations as already represented by the baseline
+4. Generate and apply the approved operational master-data snapshot
+
+Generate from the approved `DEV/TRAIN` source of truth:
+
+```bash
+node scripts/build-prod-operational-master-data-seed.mjs
+```
+
+Apply to `PROD`:
+
+```bash
+psql "$PROD_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seeds/generated/prod_operational_master_data.sql
+```
+
+This snapshot currently promotes:
+
+- `unlocodes`
+- `exchange_rates`
+
+5. Mark legacy migrations as already represented by the baseline
 
 ```bash
 ./scripts/repair-prod-baseline-history.sh <prod-ref>
 ```
 
-5. Apply any future migrations created after the baseline
+6. Apply any future migrations created after the baseline
 
 ```bash
 supabase db push
 ```
 
-6. Verify structure was promoted
+7. Verify structure was promoted
 
 - tables
 - views
@@ -117,7 +136,7 @@ supabase db push
 - RLS policies
 - grants
 
-7. If backend contracts changed before release:
+8. If backend contracts changed before release:
 
 ```bash
 cd frontend
@@ -141,6 +160,7 @@ Allowed in `PROD`:
 - quotation rejection reasons if managed canonically
 - required branch bootstrap records only if the business needs them to operate day one
 - approved production seed data from `supabase/seeds/prod_seed.sql`
+- approved operational master-data snapshot from `supabase/seeds/generated/prod_operational_master_data.sql`
 
 Not allowed from `TRAIN`:
 
