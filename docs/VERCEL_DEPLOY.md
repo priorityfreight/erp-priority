@@ -14,6 +14,12 @@ Priority Logistics ERP deploys from the `frontend/` directory.
 
    `Next.js`
 
+4. Local linking note:
+
+   - `frontend/.vercel` is local-only and must stay untracked
+   - run `vercel link` locally when you need CLI access to the correct project
+   - the linked Vercel project must also use `frontend` as Root Directory
+
 
 ## Required Environment Variables
 
@@ -62,3 +68,4 @@ Use `frontend/.env.example` as the reference shape.
 5. Confirm `MASTER DATA / MAIL` can load, save a mailbox, and preview a signature image
 6. Confirm `/mail` loads and authorized users can read/reply from a connected mailbox
 7. Confirm `npm run build` passes locally before promoting
+8. Use [`PRODUCTION_RELEASE_CLOSEOUT.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/PRODUCTION_RELEASE_CLOSEOUT.md) as the final production sign-off checklist

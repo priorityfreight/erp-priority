@@ -76,6 +76,7 @@ Status summary:
 - AI_BACKEND_SYNC_RULES.md defines how SQL, types, query modules, and fallback safety must remain synchronized
 - UI/design/component documents still contain target-state guidance beyond the current implementation
 - the Priority UI layer now also has a formal registry document plus a typed in-repo registry for reusable component ownership
+- production closeout guidance for the current live baseline is centralized in `docs/PRODUCTION_RELEASE_CLOSEOUT.md`
 
 
 --------------------------------------------------

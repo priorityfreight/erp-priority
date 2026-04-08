@@ -66,6 +66,7 @@
 - Google Drive shared links are normalized automatically, but Drive still requires the ERP proxy route to render reliably in the app.
 - The canonical signature proxy route is `/api/mail/signature-image`.
 - `NEXT_PUBLIC_APP_URL` must point to the public ERP domain so signature images in outbound emails resolve correctly outside the app.
+- final production smoke and sign-off should follow [`PRODUCTION_RELEASE_CLOSEOUT.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/PRODUCTION_RELEASE_CLOSEOUT.md)
 
 ## Current Tradeoffs
 - This MVP prioritizes cost and simplicity over true real-time updates.

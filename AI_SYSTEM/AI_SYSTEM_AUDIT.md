@@ -54,6 +54,7 @@ Latest browse-baseline note:
   - mailbox signatures were formalized through `mailboxes.signature_image_url`
   - `/api/mail/signature-image` was added as the approved proxy path for remote signature images such as Google Drive
   - quotation email tabs were tightened so sales sees customer-facing threads and pricing sees provider-facing threads
+  - production sign-off for the merged baseline now routes through `docs/PRODUCTION_RELEASE_CLOSEOUT.md` so Vercel, DB, workspace smoke, and mailing smoke stay on one checklist
 
 Latest stabilization note:
 
