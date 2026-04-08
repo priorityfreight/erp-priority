@@ -207,6 +207,7 @@ Frontend foundation rule:
   - `/api/mail/signature-image` is the approved render path for remote signatures such as Google Drive
   - `NEXT_PUBLIC_APP_URL` must point to the public ERP domain so outbound emails can resolve the proxied signature outside the app
 - the final production handoff for workspaces + mailing + Vercel must follow `docs/PRODUCTION_RELEASE_CLOSEOUT.md`
+- `npm run validation:release` is now the canonical automated pre-smoke gate for production envs, mailing contracts, Vercel cron config, and the extended quotation workspace RPC
 - quotation email context rules are now explicit:
   - sales quotation detail must show customer-facing threads only
   - pricing/provider outreach must show provider-facing threads only

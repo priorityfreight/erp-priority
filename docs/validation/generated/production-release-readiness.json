@@ -1,0 +1,175 @@
+{
+  "generatedAt": "2026-04-08T05:39:21.944Z",
+  "target": {
+    "kind": "train",
+    "projectRef": "chnxpajsawbfevuakhsm",
+    "protected": true
+  },
+  "failures": 0,
+  "checks": [
+    {
+      "name": "env:NEXT_PUBLIC_SUPABASE_URL",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "https://chnxpajsawbfevuakhsm.supabase.co"
+      }
+    },
+    {
+      "name": "env:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobnhwYWpzYXdiZmV2dWFraHNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzE3ODMsImV4cCI6MjA4ODQwNzc4M30.gJPTwtUXN4DJOWYY2hRRaGrTObEArEU2j7U12HAXsIw"
+      }
+    },
+    {
+      "name": "env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "sb_publishable_O9S-_sFf8SXN4UMndjm2Fg_SNr1DnDO"
+      }
+    },
+    {
+      "name": "env:SUPABASE_SERVICE_ROLE_KEY",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "eyJh…jvg0"
+      }
+    },
+    {
+      "name": "env:GMAIL_CLIENT_ID",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "6034….com"
+      }
+    },
+    {
+      "name": "env:GMAIL_CLIENT_SECRET",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "GOCS…YONm"
+      }
+    },
+    {
+      "name": "env:GMAIL_OAUTH_REDIRECT_URI",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "http://127.0.0.1:3000/api/mail/oauth/google/callback"
+      }
+    },
+    {
+      "name": "env:MAIL_ENCRYPTION_KEY",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "E/MT…K/k="
+      }
+    },
+    {
+      "name": "env:CRON_SECRET",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "your…cret"
+      }
+    },
+    {
+      "name": "env:NEXT_PUBLIC_APP_URL",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "present": true,
+        "maskedValue": "http://127.0.0.1:3000"
+      }
+    },
+    {
+      "name": "env:NEXT_PUBLIC_APP_URL format",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "origin": "http://127.0.0.1:3000"
+      }
+    },
+    {
+      "name": "env:GMAIL_OAUTH_REDIRECT_URI shape",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "redirectUri": "http://127.0.0.1:3000/api/mail/oauth/google/callback"
+      }
+    },
+    {
+      "name": "env:MAIL_ENCRYPTION_KEY length",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "length": 44
+      }
+    },
+    {
+      "name": "env:CRON_SECRET length",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "length": 28
+      }
+    },
+    {
+      "name": "file:vercel.json cron",
+      "ok": true,
+      "durationMs": 1,
+      "details": {
+        "cronPaths": [
+          "/api/cron/exchange-rates?days=7"
+        ]
+      }
+    },
+    {
+      "name": "file:signature proxy route",
+      "ok": true,
+      "durationMs": 0,
+      "details": {
+        "routePath": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/app/api/mail/signature-image/route.ts"
+      }
+    },
+    {
+      "name": "db:workspace_saved_views",
+      "ok": true,
+      "durationMs": 235,
+      "details": {
+        "rows": 1
+      }
+    },
+    {
+      "name": "db:mailboxes signature_image_url",
+      "ok": true,
+      "durationMs": 354,
+      "details": {
+        "rows": 1
+      }
+    },
+    {
+      "name": "db:search_quotations extended signature",
+      "ok": true,
+      "durationMs": 369,
+      "details": {
+        "rows": 0
+      }
+    }
+  ]
+}

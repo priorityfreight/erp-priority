@@ -68,4 +68,5 @@ Use `frontend/.env.example` as the reference shape.
 5. Confirm `MASTER DATA / MAIL` can load, save a mailbox, and preview a signature image
 6. Confirm `/mail` loads and authorized users can read/reply from a connected mailbox
 7. Confirm `npm run build` passes locally before promoting
-8. Use [`PRODUCTION_RELEASE_CLOSEOUT.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/PRODUCTION_RELEASE_CLOSEOUT.md) as the final production sign-off checklist
+8. Confirm `npm run validation:release` passes from `frontend/`
+9. Use [`PRODUCTION_RELEASE_CLOSEOUT.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/PRODUCTION_RELEASE_CLOSEOUT.md) as the final production sign-off checklist

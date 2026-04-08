@@ -39,6 +39,7 @@
     "validation:cleanup": "node scripts/validation/cleanup-live-local-test-data.mjs",
     "validation:cleanup:qa-preview": "node scripts/validation/cleanup-qa-example-data.mjs",
     "validation:cleanup:qa-apply": "QA_EXAMPLE_CLEANUP_APPLY=true node scripts/validation/cleanup-qa-example-data.mjs --apply",
+    "validation:release": "node scripts/validation/run-production-release-readiness.mjs",
     "validation:repo-gate": "node scripts/validation/run-repo-gate.mjs",
     "validation:repo-gate:headed": "VALIDATION_REPO_GATE_HEADED=true node scripts/validation/run-repo-gate.mjs",
     "validation:repo-gate:auto": "node scripts/validation/run-repo-gate-auto.mjs",

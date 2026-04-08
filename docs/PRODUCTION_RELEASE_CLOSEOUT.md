@@ -98,6 +98,7 @@ Run this before final production sign-off:
 
 ```bash
 cd frontend
+npm run validation:release
 npm run lint
 npm run build
 npm run build-storybook
@@ -107,6 +108,7 @@ UI_TEST_LOGIN='...' UI_TEST_PASSWORD='...' npm run test:e2e:kanban -- --headed
 
 Expected outcome:
 
+- release-readiness gate passes with `0 failures`
 - lint clean
 - build clean
 - Storybook build succeeds
