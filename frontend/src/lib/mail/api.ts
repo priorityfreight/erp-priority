@@ -1,5 +1,7 @@
 import type {
   MailboxRoleOption,
+  MailSendPayload,
+  MailSendResult,
   MailboxSummary,
   MailboxUpsertPayload,
   MailEntityType,
@@ -62,6 +64,18 @@ export async function getMailThread(threadId: string) {
 export async function replyToMailThread(threadId: string, payload: MailReplyPayload) {
   return parseJson<{ ok: true }>(
     await fetch(`/api/mail/threads/${threadId}/reply`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  )
+}
+
+export async function sendMail(payload: MailSendPayload) {
+  return parseJson<MailSendResult>(
+    await fetch("/api/mail/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

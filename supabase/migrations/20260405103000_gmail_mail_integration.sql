@@ -287,6 +287,34 @@ set
   sort_order = excluded.sort_order,
   active = excluded.active;
 
+insert into permission_submodules (
+  module_id,
+  code,
+  name,
+  route_path,
+  route_matchers,
+  sort_order,
+  active
+)
+select
+  pm.id,
+  'master_data.mail',
+  'Mail',
+  '/master-data/mail',
+  array['/master-data/mail']::text[],
+  35,
+  true
+from permission_modules pm
+where pm.code = 'master_data'
+on conflict (code) do update
+set
+  module_id = excluded.module_id,
+  name = excluded.name,
+  route_path = excluded.route_path,
+  route_matchers = excluded.route_matchers,
+  sort_order = excluded.sort_order,
+  active = excluded.active;
+
 insert into permission_resources (
   module_id,
   submodule_id,
@@ -325,9 +353,14 @@ join (
     ('crm.email', 'Email', 'submodule', 'Navigation', 'mailboxes', null, null, null, null, 155, true),
     ('crm.email.list', 'Email Inbox', 'resource', 'Communication', 'mail_threads', null, null, null, null, 156, true),
     ('crm.email.thread', 'Email Thread', 'resource', 'Communication', 'mail_messages', null, null, null, null, 157, true),
-    ('crm.email.mailboxes', 'Mailbox Management', 'resource', 'Communication', 'mailboxes', null, null, null, null, 158, true)
+    ('crm.email.mailboxes', 'Mailbox Management', 'resource', 'Communication', 'mailboxes', null, null, null, null, 158, true),
+    ('master_data.mail', 'Mail', 'submodule', 'Navigation', 'mailboxes', null, null, null, null, 344, true),
+    ('master_data.mail.mailboxes', 'Mailboxes Manager', 'resource', 'Administration', 'mailboxes', null, null, null, null, 345, true)
 ) as data(resource_key, name, resource_type, resource_group, table_name, view_name, rpc_name, entity_owner_field, entity_branch_field, sort_order, active)
-  on pm.code = 'crm'
+  on (
+    (pm.code = 'crm' and data.resource_key like 'crm.email%')
+    or (pm.code = 'master_data' and data.resource_key like 'master_data.mail%')
+  )
 on conflict (resource_key) do update
 set
   module_id = excluded.module_id,
@@ -362,7 +395,9 @@ with desired_permissions as (
       ('Admin', 'crm.email.mailboxes', 'view', 'all', true),
       ('Admin', 'crm.email.mailboxes', 'create', 'all', true),
       ('Admin', 'crm.email.mailboxes', 'edit', 'all', true),
-      ('Admin', 'crm.email.mailboxes', 'delete', 'all', true)
+      ('Admin', 'crm.email.mailboxes', 'delete', 'all', true),
+      ('Admin', 'master_data.mail', 'view', 'all', true),
+      ('Admin', 'master_data.mail.mailboxes', 'view', 'all', true)
   ) as t(role_name, resource_key, action_code, condition_code, allowed)
 )
 insert into role_resource_permissions (

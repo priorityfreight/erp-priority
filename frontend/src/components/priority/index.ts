@@ -1,5 +1,4 @@
 export * from "./PriorityCommandBar"
-export * from "./PriorityDataTable"
 export * from "./PriorityDateField"
 export * from "./PriorityDialog"
 export * from "./PriorityEmptyState"

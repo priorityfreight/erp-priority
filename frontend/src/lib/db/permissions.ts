@@ -9,6 +9,40 @@ import type {
   RoleResourcePermissionMatrixRow,
 } from "./models"
 
+const supplementalNavigationItems: NavigationPermissionItem[] = [
+  {
+    module_code: "master_data",
+    module_name: "Master Data",
+    module_icon_key: "master_data",
+    module_sort_order: 50,
+    submodule_code: "master_data.mail",
+    submodule_name: "Mail",
+    route_path: "/master-data/mail",
+    route_matchers: ["/master-data/mail"],
+    submodule_sort_order: 35,
+  },
+]
+
+function mergeSupplementalNavigationItems(items: NavigationPermissionItem[]) {
+  const byRoutePath = new Set(
+    items
+      .map((item) => item.route_path?.trim())
+      .filter((value): value is string => Boolean(value))
+  )
+  const bySubmoduleCode = new Set(items.map((item) => item.submodule_code))
+  const merged = [...items]
+
+  supplementalNavigationItems.forEach((item) => {
+    if (byRoutePath.has(String(item.route_path)) || bySubmoduleCode.has(item.submodule_code)) {
+      return
+    }
+
+    merged.push(item)
+  })
+
+  return merged
+}
+
 function mapNavigationItem(row: Record<string, unknown>): NavigationPermissionItem {
   return {
     module_code: String(row.module_code ?? ""),
@@ -169,7 +203,9 @@ export async function getCurrentNavigationItems(): Promise<NavigationPermissionI
     throw error
   }
 
-  return ((data ?? []) as Record<string, unknown>[]).map(mapNavigationItem)
+  return mergeSupplementalNavigationItems(
+    ((data ?? []) as Record<string, unknown>[]).map(mapNavigationItem)
+  )
 }
 
 export async function canCurrentUserAccessRoute(routePath: string): Promise<boolean> {

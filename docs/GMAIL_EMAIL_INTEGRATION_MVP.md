@@ -19,6 +19,7 @@
 - `MAIL_ENCRYPTION_KEY`
 - `CRON_SECRET`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_APP_URL`
 
 ## Operational Model
 - `manual` sync:
@@ -46,17 +47,31 @@
 - Admin manages mailbox configuration and OAuth connection.
 
 ## Main Surfaces
+- `/master-data/mail`
+  - mailbox setup, role assignment, Gmail OAuth, sync mode, and mailbox signature image
 - `/mail`
   - shared inbox with mailbox selector, sync, connect/reconnect, thread reading, and reply
 - quotation detail
   - `Email` tab showing threads linked to the quotation
+  - sales context must show only customer-facing threads
 - client detail
   - `Email` tab showing threads linked to the client
+- pricing quotations
+  - provider outreach and sourcing email flows
+  - pricing context must show only provider-facing threads
+
+## Mailbox Signatures
+- Signatures are configured per mailbox in `Master Data > Mail`.
+- The current production strategy is `public image URL + ERP proxy`.
+- Google Drive shared links are normalized automatically, but Drive still requires the ERP proxy route to render reliably in the app.
+- The canonical signature proxy route is `/api/mail/signature-image`.
+- `NEXT_PUBLIC_APP_URL` must point to the public ERP domain so signature images in outbound emails resolve correctly outside the app.
 
 ## Current Tradeoffs
 - This MVP prioritizes cost and simplicity over true real-time updates.
 - Sync currently indexes recent inbox traffic rather than building a full historical mirror.
 - Search is optimized for the local indexed slice, not for full-mailbox discovery.
+- Remote image signatures depend on a public URL or a proxied URL that the recipient can fetch.
 
 ## Go / No-Go Criteria
 - Go:

@@ -131,6 +131,27 @@ export function getPrimaryProviderContact(candidate: ProviderPricingCandidate) {
 
 type ProviderMessageLanguage = "es" | "en"
 
+export type ProviderEmailDraft = {
+  to: string
+  subject: string
+  body: string
+}
+
+function formatSubjectLocation(value: string | null | undefined, unlocode: string | null | undefined) {
+  const location = value?.trim()
+  const code = unlocode?.trim()
+
+  return location || code || "No disponible"
+}
+
+function buildProviderEmailSubject(quotation: QuotationSummary) {
+  const reference = quotation.reference_number?.trim() || "Sin referencia"
+  const origin = formatSubjectLocation(quotation.origin, quotation.origin_unlocode)
+  const destination = formatSubjectLocation(quotation.destination, quotation.destination_unlocode)
+
+  return `${reference} // ${origin} - ${destination} //`
+}
+
 function buildCargoDetailsSection(
   cargoLines: QuotationCargoLine[],
   language: ProviderMessageLanguage
@@ -227,12 +248,12 @@ function buildProviderMessageBody(
   ].join("\n")
 }
 
-export function buildProviderEmailLink(
+export function buildProviderEmailDraft(
   candidate: ProviderPricingCandidate,
   quotation: QuotationSummary,
   cargoLines: QuotationCargoLine[],
   language: ProviderMessageLanguage
-) {
+): ProviderEmailDraft | null {
   const primaryContact = getPrimaryProviderContact(candidate)
   const targetEmail = primaryContact?.email || candidate.provider.company_email
 
@@ -240,14 +261,11 @@ export function buildProviderEmailLink(
     return null
   }
 
-  const subjectText =
-    language === "es"
-      ? `Solicitud de tarifa ${quotation.reference_number || ""} | ${quotation.service_type || ""}`.trim()
-      : `Rate request ${quotation.reference_number || ""} | ${quotation.service_type || ""}`.trim()
-
-  return `mailto:${targetEmail}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(
-    buildProviderMessageBody(candidate, quotation, cargoLines, language)
-  )}`
+  return {
+    to: targetEmail,
+    subject: buildProviderEmailSubject(quotation),
+    body: buildProviderMessageBody(candidate, quotation, cargoLines, language),
+  }
 }
 
 export function buildProviderWhatsAppLink(

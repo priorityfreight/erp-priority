@@ -852,6 +852,79 @@ Prevention rule:
 - once a new UI baseline is live, old wrappers must be demoted explicitly in both code and governance docs, not just informally avoided
 
 
+24. QA/example cleanup must be scripted, previewable, and backend-safe
+
+Observed problem:
+
+- UI and E2E flows created realistic QA artifacts in TRAIN, including `Cliente QA Proceso`, `Proveedor QA`, `@priority.test`, `example.com`, and `Vista QA`
+- manual cleanup worked, but ad hoc one-off deletion is too easy to forget and too risky to repeat by hand
+- client records could not be hard-deleted because backend policy correctly forced the safer `soft_delete_client()` path
+
+Root cause:
+
+- example data creation was easy and repeatable, but the project lacked one canonical reusable script for non-ledger QA/example cleanup outside the live-validation harness
+- cleanup assumptions were split between manual DB operations and ledger-based validation cleanup
+
+Approved solution:
+
+- add a reusable script at `frontend/scripts/validation/cleanup-qa-example-data.mjs`
+- support two modes:
+  - preview: `cd frontend && npm run validation:cleanup:qa-preview`
+  - apply: `cd frontend && npm run validation:cleanup:qa-apply`
+- make the script delete dependent records first (`workspace_saved_views`, quotations, cargo/cost children, opportunities, provider artifacts)
+- for clients, neutralize identifying fields and then call `soft_delete_client()` instead of hard delete
+- emit JSON and Markdown cleanup summaries under `docs/validation/`
+
+Prevention rule:
+
+- do not manually purge QA/example UI data from ERP tables when the reusable cleanup script can target it safely
+- any new QA/example naming pattern must be added to the cleanup script in the same change that introduces the pattern
+
+
+25. Remote signature images must be treated as a rendering integration, not just a saved URL
+
+Observed problem:
+
+- mailbox signatures based on Google Drive links still rendered as broken images in the ERP and would remain fragile in outbound mail
+
+Root cause:
+
+- a shared Drive URL is not enough by itself
+- Drive may require URL normalization and can still block direct browser embedding through cross-origin resource rules
+
+Approved solution:
+
+- persist the mailbox signature as a normalized public URL
+- render remote signatures through the ERP-owned proxy route `/api/mail/signature-image` when the upstream host is hotlink-sensitive
+- require `NEXT_PUBLIC_APP_URL` in production so outbound emails can resolve the proxied signature from the public ERP domain
+
+Prevention rule:
+
+- do not treat "store image URL" as a complete signature feature if the chosen host does not guarantee stable direct embedding from the ERP domain
+
+
+26. Email tabs linked by quotation reference still need participant-context filtering
+
+Observed problem:
+
+- quotation email views in sales showed provider-sourcing emails just because the subject contained the quotation reference
+
+Root cause:
+
+- automatic mail linking by exact quotation reference is useful, but it is not sufficient to decide whether a thread belongs in the sales or pricing context
+
+Approved solution:
+
+- keep subject-reference linking as the indexing/linking strategy
+- additionally filter quotation email views by participant context:
+  - sales sees customer-facing threads
+  - pricing/provider workflows see provider-facing threads
+
+Prevention rule:
+
+- any embedded ERP mail view must combine entity linking with operational participant rules before it is treated as the final user-facing thread set
+
+
 --------------------------------------------------
 MINIMUM RELEASE MEMORY
 --------------------------------------------------

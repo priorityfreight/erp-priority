@@ -18,7 +18,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const redirectUri = new URL("/api/mail/oauth/google/callback", request.url).toString()
+    const redirectUri =
+      process.env.GMAIL_OAUTH_REDIRECT_URI?.trim() ||
+      new URL("/api/mail/oauth/google/callback", request.url).toString()
     await completeMailboxOAuth({
       code,
       state,

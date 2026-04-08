@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import type {
   MailAddress,
   MailboxRoleOption,
+  MailSendPayload,
+  MailSendResult,
   MailboxSummary,
   MailboxUpsertPayload,
   MailEntityType,
@@ -13,6 +15,11 @@ import type {
   MailThreadMessage,
   MailThreadSummary,
 } from "@/lib/mail/types"
+import {
+  buildSignatureImageRenderUrl,
+  getMailAppBaseUrl,
+  normalizeSignatureImageUrl,
+} from "@/lib/mail/signatures"
 import { decryptMailSecret, encryptMailSecret, signMailOAuthState, verifyMailOAuthState } from "./crypto"
 import {
   buildGmailOAuthUrl,
@@ -23,6 +30,7 @@ import {
   listRecentInboxMessages,
   normalizeMailSubject,
   refreshGmailAccessToken,
+  sendGmailMessage,
   sendGmailReply,
 } from "./gmail"
 
@@ -43,6 +51,7 @@ type MailboxRow = {
   last_synced_at: string | null
   last_sync_status: string | null
   last_sync_error: string | null
+  signature_image_url: string | null
 }
 
 type MailThreadRow = {
@@ -102,6 +111,7 @@ function mapMailboxSummary(
     lastSyncedAt: row.last_synced_at,
     lastSyncStatus: row.last_sync_status,
     lastSyncError: row.last_sync_error,
+    signatureImageUrl: row.signature_image_url,
     roleIds,
     roleNames,
     hasRefreshToken: Boolean(row.gmail_refresh_token_encrypted),
@@ -216,6 +226,7 @@ function normalizeMailboxRow(row: Record<string, unknown>): MailboxRow {
     last_synced_at: (row.last_synced_at as string | null | undefined) ?? null,
     last_sync_status: (row.last_sync_status as string | null | undefined) ?? null,
     last_sync_error: (row.last_sync_error as string | null | undefined) ?? null,
+    signature_image_url: (row.signature_image_url as string | null | undefined) ?? null,
   }
 }
 
@@ -257,7 +268,7 @@ async function getAccessibleMailboxes(sessionClient: Awaited<ReturnType<typeof c
   const { data, error } = await sessionClient
     .from("mailboxes" as never)
     .select(
-      "id,email,display_name,provider,status,sync_mode,gmail_refresh_token_encrypted,connected_email,last_synced_at,last_sync_status,last_sync_error"
+      "id,email,display_name,provider,status,sync_mode,gmail_refresh_token_encrypted,connected_email,last_synced_at,last_sync_status,last_sync_error,signature_image_url"
     )
     .order("display_name", { ascending: true })
 
@@ -465,6 +476,211 @@ async function getMailboxAccessToken(mailbox: MailboxRow) {
   }
 
   return refreshGmailAccessToken(decryptMailSecret(mailbox.gmail_refresh_token_encrypted))
+}
+
+function buildParticipantsFromMessage(message: {
+  from: MailAddress | null
+  to: MailAddress[]
+  cc: MailAddress[]
+  bcc?: MailAddress[]
+}) {
+  return dedupeAddresses(
+    ([message.from].filter(Boolean) as MailAddress[]).concat(message.to, message.cc, message.bcc ?? [])
+  )
+}
+
+async function upsertThreadAndMessageFromMetadata(
+  adminClient: ReturnType<typeof createSupabaseAdminClient>,
+  mailbox: MailboxRow,
+  message: Awaited<ReturnType<typeof getGmailMessageMetadata>>
+) {
+  const participants = buildParticipantsFromMessage(message)
+  const { data: existingThreadData } = await adminClient
+    .from("mail_threads" as never)
+    .select("id, mailbox_id, gmail_thread_id, subject, snippet, participants_json, latest_message_at, oldest_message_at, unread_count, message_count, has_attachments")
+    .eq("mailbox_id", mailbox.id)
+    .eq("gmail_thread_id", message.gmailThreadId)
+    .maybeSingle()
+
+  const existingThread = existingThreadData
+    ? normalizeInboxThread(existingThreadData as Record<string, unknown>)
+    : null
+  const { data: existingMessageData } = await adminClient
+    .from("mail_messages" as never)
+    .select("id")
+    .eq("mailbox_id", mailbox.id)
+    .eq("gmail_message_id", message.gmailMessageId)
+    .maybeSingle()
+  const alreadyIndexed = Boolean(existingMessageData)
+  const latestMessageAt =
+    existingThread?.latest_message_at && message.receivedAt
+      ? existingThread.latest_message_at > message.receivedAt
+        ? existingThread.latest_message_at
+        : message.receivedAt
+      : existingThread?.latest_message_at ?? message.receivedAt
+  const oldestMessageAt =
+    existingThread?.oldest_message_at && message.receivedAt
+      ? existingThread.oldest_message_at < message.receivedAt
+        ? existingThread.oldest_message_at
+        : message.receivedAt
+      : existingThread?.oldest_message_at ?? message.receivedAt
+  const unreadCount = existingThread
+    ? Math.max(existingThread.unread_count, message.labelIds.includes("UNREAD") ? 1 : 0)
+    : message.labelIds.includes("UNREAD")
+      ? 1
+      : 0
+  const messageCount = existingThread
+    ? existingThread.message_count + (alreadyIndexed ? 0 : 1)
+    : 1
+
+  const { error: threadUpsertError } = await adminClient.from("mail_threads" as never).upsert(
+    {
+      mailbox_id: mailbox.id,
+      gmail_thread_id: message.gmailThreadId,
+      subject: message.subject,
+      subject_normalized: normalizeMailSubject(message.subject).toLowerCase(),
+      snippet: message.snippet,
+      participants_json: dedupeAddresses((existingThread?.participants_json ?? []).concat(participants)),
+      latest_message_at: latestMessageAt,
+      oldest_message_at: oldestMessageAt,
+      unread_count: unreadCount,
+      message_count: messageCount,
+      has_attachments: Boolean(existingThread?.has_attachments) || message.hasAttachments,
+      last_synced_at: new Date().toISOString(),
+    } as never,
+    {
+      onConflict: "mailbox_id,gmail_thread_id",
+    }
+  )
+
+  if (threadUpsertError) {
+    throw threadUpsertError
+  }
+
+  const { data: threadData, error: threadError } = await adminClient
+    .from("mail_threads" as never)
+    .select("id, mailbox_id, gmail_thread_id, subject, snippet, participants_json, latest_message_at, oldest_message_at, unread_count, message_count, has_attachments")
+    .eq("mailbox_id", mailbox.id)
+    .eq("gmail_thread_id", message.gmailThreadId)
+    .single()
+
+  if (threadError) {
+    throw threadError
+  }
+
+  const thread = normalizeInboxThread(threadData as Record<string, unknown>)
+  const direction =
+    message.from?.address && message.from.address.toLowerCase() === mailbox.email.toLowerCase()
+      ? "outbound"
+      : "inbound"
+
+  const { error: messageError } = await adminClient.from("mail_messages" as never).upsert(
+    {
+      mailbox_id: mailbox.id,
+      thread_id: thread.id,
+      gmail_message_id: message.gmailMessageId,
+      gmail_thread_id: message.gmailThreadId,
+      internet_message_id: message.internetMessageId,
+      direction,
+      from_name: message.from?.name ?? null,
+      from_address: message.from?.address ?? null,
+      to_json: message.to,
+      cc_json: message.cc,
+      bcc_json: message.bcc,
+      reply_to_json: message.replyTo,
+      subject: message.subject,
+      snippet: message.snippet,
+      sent_at: message.sentAt,
+      received_at: message.receivedAt,
+      label_ids: message.labelIds,
+      has_attachments: message.hasAttachments,
+    } as never,
+    {
+      onConflict: "mailbox_id,gmail_message_id",
+    }
+  )
+
+  if (messageError) {
+    throw messageError
+  }
+
+  await rebuildAutomaticLinks(adminClient, {
+    mailboxId: mailbox.id,
+    threadId: thread.id,
+    subject: thread.subject || "",
+    participants: thread.participants_json,
+  })
+
+  return thread
+}
+
+async function upsertManualThreadLinks(
+  adminClient: ReturnType<typeof createSupabaseAdminClient>,
+  input: {
+    mailboxId: string
+    threadId: string
+    links: Array<{ entityType: MailEntityType; entityId: string; isPrimary?: boolean }>
+  }
+) {
+  if (input.links.length === 0) {
+    return
+  }
+
+  const { data: existingRows, error: existingError } = await adminClient
+    .from("mail_entity_links" as never)
+    .select("entity_type, entity_id, link_source")
+    .eq("thread_id", input.threadId)
+    .is("message_id", null)
+    .eq("link_source", "manual")
+
+  if (existingError) {
+    throw existingError
+  }
+
+  const existingKeys = new Set(
+    ((existingRows ?? []) as Record<string, unknown>[]).map(
+      (row) => `${String(row.entity_type)}:${String(row.entity_id)}:${String(row.link_source)}`
+    )
+  )
+  const inserts = input.links
+    .filter((link) => link.entityId.trim())
+    .filter((link) => !existingKeys.has(`${link.entityType}:${link.entityId}:manual`))
+    .map((link) => ({
+      mailbox_id: input.mailboxId,
+      thread_id: input.threadId,
+      entity_type: link.entityType,
+      entity_id: link.entityId,
+      link_source: "manual",
+      confidence: 1,
+      is_primary: Boolean(link.isPrimary),
+    }))
+
+  if (inserts.length === 0) {
+    return
+  }
+
+  const { error } = await adminClient.from("mail_entity_links" as never).insert(inserts as never)
+  if (error) {
+    throw error
+  }
+}
+
+function chooseDefaultOutgoingMailbox(mailboxes: MailboxRow[]) {
+  const connected = mailboxes.filter(
+    (mailbox) => mailbox.status === "active" && Boolean(mailbox.gmail_refresh_token_encrypted)
+  )
+
+  if (connected.length === 0) {
+    return null
+  }
+
+  const preferredKeywords = ["pricing", "quote", "cotiza", "rates", "procurement"]
+  return (
+    connected.find((mailbox) => {
+      const haystack = `${mailbox.display_name} ${mailbox.email}`.toLowerCase()
+      return preferredKeywords.some((keyword) => haystack.includes(keyword))
+    }) ?? connected[0]
+  )
 }
 
 async function rebuildAutomaticLinks(adminClient: ReturnType<typeof createSupabaseAdminClient>, input: {
@@ -954,11 +1170,26 @@ export async function upsertMailbox(payload: MailboxUpsertPayload) {
     throw new Error("Select at least one role for mailbox access.")
   }
 
+  const signatureImageUrl = normalizeSignatureImageUrl(payload.signatureImageUrl)
+  if (signatureImageUrl) {
+    try {
+      const parsedUrl = new URL(signatureImageUrl)
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        throw new Error("Signature image URL must be http or https.")
+      }
+    } catch {
+      throw new Error("Signature image URL must be a valid public URL.")
+    }
+  } else if (payload.signatureImageUrl?.trim()) {
+    throw new Error("Signature image URL must be a valid public URL.")
+  }
+
   const mailboxRecord = {
     email: normalizedEmail,
     display_name: payload.displayName.trim() || normalizedEmail,
     sync_mode: payload.syncMode,
     status: payload.status ?? "draft",
+    signature_image_url: signatureImageUrl,
     connected_by_user_id: currentUser.id,
   }
 
@@ -1271,7 +1502,7 @@ export async function replyToThread(threadId: string, payload: MailReplyPayload)
   const accessToken = await getMailboxAccessToken(fullMailbox)
   const { data: latestMessageRow } = await adminClient
     .from("mail_messages" as never)
-    .select("internet_message_id")
+    .select("internet_message_id, subject")
     .eq("thread_id", threadId)
     .order("received_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
@@ -1282,19 +1513,140 @@ export async function replyToThread(threadId: string, payload: MailReplyPayload)
     latestMessageRow && typeof latestMessageRow === "object"
       ? ((latestMessageRow as { internet_message_id?: string | null }).internet_message_id ?? null)
       : null
+  let replySubject = detail.thread.subject
+  let replyInReplyTo = latestInternetMessageId
+  let replyReferences = latestInternetMessageId
 
-  await sendGmailReply({
+  try {
+    const liveThread = await getGmailThread(accessToken, detail.thread.gmailThreadId)
+    const messagesWithDates = liveThread.messages.map((message) => ({
+      message,
+      date: message.sentAt || message.receivedAt || "",
+    }))
+    const latestInboundLiveMessage = messagesWithDates
+      .filter(({ message }) => {
+        const fromAddress = message.from?.address?.trim().toLowerCase()
+        return Boolean(message.internetMessageId) && fromAddress !== fullMailbox.email
+      })
+      .sort((left, right) => right.date.localeCompare(left.date))[0]?.message ?? null
+    const latestReferencedLiveMessage =
+      latestInboundLiveMessage ??
+      liveThread.messages.reduce<
+      (typeof liveThread.messages)[number] | null
+      >((latest, message) => {
+        if (!message.internetMessageId) {
+          return latest
+        }
+        const latestDate = latest?.sentAt || latest?.receivedAt || ""
+        const messageDate = message.sentAt || message.receivedAt || ""
+        return !latest || messageDate > latestDate ? message : latest
+      }, null)
+
+    replySubject =
+      liveThread.messages.find((message) => message.subject?.trim())?.subject ||
+      detail.thread.subject
+    replyInReplyTo = latestReferencedLiveMessage?.internetMessageId ?? replyInReplyTo
+    replyReferences = [latestReferencedLiveMessage?.references, replyInReplyTo]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value))
+      .join(" ") || replyReferences
+  } catch {
+    replySubject =
+      latestMessageRow && typeof latestMessageRow === "object"
+        ? ((latestMessageRow as { subject?: string | null }).subject ?? detail.thread.subject)
+        : detail.thread.subject
+  }
+
+  const sentMessage = await sendGmailReply({
     accessToken,
     gmailThreadId: detail.thread.gmailThreadId,
-    subject: detail.thread.subject,
+    subject: replySubject,
     to: payload.to,
     cc: payload.cc,
-    inReplyTo: latestInternetMessageId,
-    references: latestInternetMessageId,
+    inReplyTo: replyInReplyTo,
+    references: replyReferences,
     body: payload.body,
+    signatureImageUrl: buildSignatureImageRenderUrl(fullMailbox.signature_image_url, {
+      appBaseUrl: getMailAppBaseUrl(),
+      forEmail: true,
+    }),
   })
 
+  const sentMetadata = await getGmailMessageMetadata(accessToken, sentMessage.gmailMessageId)
+  await upsertThreadAndMessageFromMetadata(adminClient, fullMailbox, sentMetadata)
   await syncMailboxInternal(adminClient, fullMailbox, "manual")
+}
+
+export async function sendMail(payload: MailSendPayload) {
+  const normalizedSubject = normalizeMailSubject(payload.subject)
+  const normalizedBody = payload.body.trim()
+  const normalizedTo = Array.from(
+    new Set(payload.to.map((entry) => entry.trim().toLowerCase()).filter(Boolean))
+  )
+  const normalizedCc = Array.from(
+    new Set((payload.cc ?? []).map((entry) => entry.trim().toLowerCase()).filter(Boolean))
+  )
+
+  if (!normalizedSubject) {
+    throw new Error("Mail subject is required.")
+  }
+
+  if (!normalizedBody) {
+    throw new Error("Mail body is required.")
+  }
+
+  if (normalizedTo.length === 0) {
+    throw new Error("At least one recipient is required.")
+  }
+
+  const { sessionClient } = await getCurrentSessionUser()
+  const accessibleMailboxes = await getAccessibleMailboxes(sessionClient)
+  const selectedMailbox = payload.mailboxId
+    ? accessibleMailboxes.find((mailbox) => mailbox.id === payload.mailboxId)
+    : chooseDefaultOutgoingMailbox(accessibleMailboxes)
+
+  if (!selectedMailbox) {
+    throw new Error("No connected mailbox is available for sending.")
+  }
+
+  const adminClient = createSupabaseAdminClient()
+  const fullMailbox = await getMailboxByIdForAdmin(adminClient, selectedMailbox.id)
+
+  if (!fullMailbox) {
+    throw new Error("Mailbox not found.")
+  }
+
+  const accessToken = await getMailboxAccessToken(fullMailbox)
+  const sentMessage = await sendGmailMessage({
+    accessToken,
+    subject: normalizedSubject,
+    body: normalizedBody,
+    to: normalizedTo,
+    cc: normalizedCc,
+    signatureImageUrl: buildSignatureImageRenderUrl(fullMailbox.signature_image_url, {
+      appBaseUrl: getMailAppBaseUrl(),
+      forEmail: true,
+    }),
+  })
+  const metadata = await getGmailMessageMetadata(accessToken, sentMessage.gmailMessageId)
+  const thread = await upsertThreadAndMessageFromMetadata(adminClient, fullMailbox, metadata)
+
+  await upsertManualThreadLinks(adminClient, {
+    mailboxId: fullMailbox.id,
+    threadId: thread.id,
+    links: (payload.entityLinks ?? []).map((link) => ({
+      entityType: link.entityType,
+      entityId: link.entityId,
+      isPrimary: link.isPrimary,
+    })),
+  })
+
+  return {
+    mailboxId: fullMailbox.id,
+    mailboxEmail: fullMailbox.email,
+    threadId: thread.id,
+    gmailThreadId: thread.gmail_thread_id,
+  } satisfies MailSendResult
 }
 
 export async function syncMailboxes(mailboxId?: string) {

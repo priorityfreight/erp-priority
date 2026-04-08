@@ -1,4 +1,5 @@
 import type { MailAddress } from "@/lib/mail/types"
+import { normalizeSignatureImageUrl } from "@/lib/mail/signatures"
 
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -65,6 +66,65 @@ function decodeBase64Url(value: string) {
   return Buffer.from(value, "base64url").toString("utf8")
 }
 
+function encodeMimeHeader(value: string) {
+  return /^[\x00-\x7F]*$/.test(value)
+    ? value
+    : `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+function buildHtmlBodyWithSignature(body: string, signatureImageUrl: string) {
+  const escapedBody = escapeHtml(body.trim()).replace(/\r?\n/g, "<br />")
+  const escapedSignatureUrl = escapeHtml(signatureImageUrl)
+
+  return [
+    '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">',
+    `<div>${escapedBody}</div>`,
+    '<br />',
+    '<div>',
+    `<img src="${escapedSignatureUrl}" alt="Firma" style="display:block;max-width:520px;width:100%;height:auto;border:0;" />`,
+    '</div>',
+    '</div>',
+  ].join("")
+}
+
+function buildOutgoingMailLines(input: {
+  to: string[]
+  cc?: string[]
+  subject: string
+  body: string
+  signatureImageUrl?: string | null
+  extraHeaders?: Array<string | null>
+}) {
+  const signatureImageUrl = normalizeSignatureImageUrl(input.signatureImageUrl)
+  const body = input.body.trim()
+  const contentType = signatureImageUrl
+    ? "Content-Type: text/html; charset=UTF-8"
+    : "Content-Type: text/plain; charset=UTF-8"
+  const renderedBody = signatureImageUrl
+    ? buildHtmlBodyWithSignature(body, signatureImageUrl)
+    : body
+
+  return [
+    `To: ${input.to.join(", ")}`,
+    input.cc && input.cc.length > 0 ? `Cc: ${input.cc.join(", ")}` : null,
+    `Subject: ${encodeMimeHeader(input.subject)}`,
+    contentType,
+    "MIME-Version: 1.0",
+    ...(input.extraHeaders ?? []),
+    "",
+    renderedBody,
+  ].filter((line): line is string => line !== null)
+}
+
 function stripHtmlToText(value: string) {
   return value
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -80,6 +140,26 @@ function stripHtmlToText(value: string) {
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
     .trim()
+}
+
+function stripQuotedReplyText(value: string) {
+  const lines = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")
+  const quoteStartIndex = lines.findIndex((line) => {
+    const trimmed = line.trim()
+
+    return (
+      /^>/.test(trimmed) ||
+      /^-{2,}\s*Original Message\s*-{2,}$/i.test(trimmed) ||
+      /^On .+ wrote:$/i.test(trimmed) ||
+      /^El\s+.+\sescribi[oó]:$/i.test(trimmed)
+    )
+  })
+
+  if (quoteStartIndex <= 0) {
+    return value.trim()
+  }
+
+  return lines.slice(0, quoteStartIndex).join("\n").trim()
 }
 
 function findPayloadByMimeType(payload: GmailMessagePayload | undefined, mimeType: string): GmailMessagePayload | null {
@@ -156,16 +236,16 @@ export function parseMailAddressList(value: string | null | undefined): MailAddr
 function getMessageBodyText(payload: GmailMessagePayload | undefined) {
   const plain = findPayloadByMimeType(payload, "text/plain")
   if (plain?.body?.data) {
-    return decodeBase64Url(plain.body.data)
+    return stripQuotedReplyText(decodeBase64Url(plain.body.data))
   }
 
   const html = findPayloadByMimeType(payload, "text/html")
   if (html?.body?.data) {
-    return stripHtmlToText(decodeBase64Url(html.body.data))
+    return stripQuotedReplyText(stripHtmlToText(decodeBase64Url(html.body.data)))
   }
 
   if (payload?.body?.data) {
-    return stripHtmlToText(decodeBase64Url(payload.body.data))
+    return stripQuotedReplyText(stripHtmlToText(decodeBase64Url(payload.body.data)))
   }
 
   return null
@@ -242,7 +322,7 @@ export async function refreshGmailAccessToken(refreshToken: string) {
 
 async function gmailRequest<T>(path: string, accessToken: string, searchParams?: URLSearchParams, init?: RequestInit) {
   const url = new URL(`https://gmail.googleapis.com/gmail/v1/${path}`)
-  searchParams?.forEach((value, key) => url.searchParams.set(key, value))
+  searchParams?.forEach((value, key) => url.searchParams.append(key, value))
 
   const response = await fetch(url, {
     ...init,
@@ -381,23 +461,25 @@ export async function sendGmailReply(input: {
   inReplyTo?: string | null
   references?: string | null
   body: string
+  signatureImageUrl?: string | null
 }) {
-  const normalizedSubject = /^re:/i.test(input.subject) ? input.subject : `Re: ${input.subject}`
-  const lines = [
-    `To: ${input.to.join(", ")}`,
-    input.cc && input.cc.length > 0 ? `Cc: ${input.cc.join(", ")}` : null,
-    `Subject: ${normalizedSubject}`,
-    "Content-Type: text/plain; charset=UTF-8",
-    "MIME-Version: 1.0",
-    input.inReplyTo ? `In-Reply-To: ${input.inReplyTo}` : null,
-    input.references ? `References: ${input.references}` : null,
-    "",
-    input.body.trim(),
-  ].filter(Boolean)
+  const subject = normalizeMailSubject(input.subject) || "Sin asunto"
+  const normalizedSubject = /^re:/i.test(subject) ? subject : `Re: ${subject}`
+  const lines = buildOutgoingMailLines({
+    to: input.to,
+    cc: input.cc,
+    subject: normalizedSubject,
+    body: input.body,
+    signatureImageUrl: input.signatureImageUrl,
+    extraHeaders: [
+      input.inReplyTo ? `In-Reply-To: ${input.inReplyTo}` : null,
+      input.references ? `References: ${input.references}` : null,
+    ],
+  })
 
   const raw = toBase64Url(lines.join("\r\n"))
 
-  await gmailRequest(
+  const response = await gmailRequest<GmailMessage>(
     "users/me/messages/send",
     input.accessToken,
     undefined,
@@ -409,4 +491,45 @@ export async function sendGmailReply(input: {
       }),
     }
   )
+
+  return {
+    gmailMessageId: response.id,
+    gmailThreadId: response.threadId,
+  }
+}
+
+export async function sendGmailMessage(input: {
+  accessToken: string
+  subject: string
+  to: string[]
+  cc?: string[]
+  body: string
+  signatureImageUrl?: string | null
+}) {
+  const lines = buildOutgoingMailLines({
+    to: input.to,
+    cc: input.cc,
+    subject: normalizeMailSubject(input.subject),
+    body: input.body,
+    signatureImageUrl: input.signatureImageUrl,
+  })
+
+  const raw = toBase64Url(lines.join("\r\n"))
+
+  const response = await gmailRequest<GmailMessage>(
+    "users/me/messages/send",
+    input.accessToken,
+    undefined,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        raw,
+      }),
+    }
+  )
+
+  return {
+    gmailMessageId: response.id,
+    gmailThreadId: response.threadId,
+  }
 }

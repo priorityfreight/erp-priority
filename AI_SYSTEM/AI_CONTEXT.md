@@ -198,6 +198,17 @@ Frontend foundation rule:
 - `PriorityCollectionTable` is the canonical browse/list table for detail tabs, embedded lists, and admin/master-data lists that do not need the full workspace shell
 - `PriorityDataTable` is now a legacy compatibility wrapper and should only remain where migration has not happened yet
 - `PriorityGrid` on top of `ag-grid-community` is the approved dense editing shell for ERP-grade row, matrix, and inline-editing workflows
+- internal mailing is now a first-class ERP capability, not an external experiment:
+  - `Master Data > Mail` owns mailbox setup, role access, OAuth connection, sync mode, and mailbox signature configuration
+  - `/mail` is the shared inbox/workbench for authorized users
+  - embedded `Email` tabs in ERP entities must respect operational context instead of showing every linked thread indiscriminately
+- mailbox signatures now use the canonical `public URL + ERP proxy` strategy:
+  - the mailbox record stores `signature_image_url`
+  - `/api/mail/signature-image` is the approved render path for remote signatures such as Google Drive
+  - `NEXT_PUBLIC_APP_URL` must point to the public ERP domain so outbound emails can resolve the proxied signature outside the app
+- quotation email context rules are now explicit:
+  - sales quotation detail must show customer-facing threads only
+  - pricing/provider outreach must show provider-facing threads only
 - every `PriorityGrid` workflow must define a mobile fallback pattern before it is approved for live use
 - the approved Priority UI catalog is documented in `AI_PRIORITY_UI_REGISTRY.md` and mirrored in `frontend/src/components/priority/registry.ts`
 - live ERP screens should now prefer a workspace-first framing:
@@ -242,6 +253,11 @@ Frontend foundation rule:
   - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e -- --headed`
 - the official local handoff gate for repository closeout is `npm run validation:repo-gate`
 - `READY_FOR_REPO` or `NOT_READY_FOR_REPO` must come from that reproducible gate artifact, not from subjective review alone
+- the approved reusable cleanup path for ad hoc UI/E2E QA example data is:
+  - preview: `cd frontend && npm run validation:cleanup:qa-preview`
+  - apply: `cd frontend && npm run validation:cleanup:qa-apply`
+- that cleanup targets example artifacts created through patterns such as `Cliente QA Proceso`, `Proveedor QA`, `@priority.test`, `example.com`, and `Vista QA`
+- the cleanup script deletes dependent quotation/provider artifacts first and then neutralizes plus soft-deletes QA clients through backend-safe flows; do not hard-delete clients directly
 - the current live schema-driven forms already migrated to `PriorityFormEngine` are:
   - login access
   - client profile

@@ -10,7 +10,9 @@ export async function GET(
 ) {
   try {
     const { mailboxId } = await context.params
-    const redirectUri = new URL("/api/mail/oauth/google/callback", request.url).toString()
+    const redirectUri =
+      process.env.GMAIL_OAUTH_REDIRECT_URI?.trim() ||
+      new URL("/api/mail/oauth/google/callback", request.url).toString()
     const url = await getMailboxOAuthStartUrl(mailboxId, redirectUri)
     return NextResponse.redirect(url)
   } catch (error) {

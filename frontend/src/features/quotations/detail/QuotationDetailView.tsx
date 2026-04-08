@@ -159,6 +159,13 @@ export function QuotationDetailView({
     (summary) => summary.includeInCustomerQuote && summary.hasCompleteSale
   )
   const primaryContact = getPrimaryContact(clientContacts)
+  const customerParticipantEmails = Array.from(
+    new Set(
+      clientContacts
+        .map((contact) => contact.email?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email))
+    )
+  )
   const documentHref = `/quotations/${quotation.id}/document/pdf`
   const documentUrl =
     typeof window === "undefined" ? documentHref : `${window.location.origin}${documentHref}`
@@ -732,10 +739,11 @@ export function QuotationDetailView({
             <EntityMailTab
               entityType="quotation"
               entityId={quotation.id}
+              participantEmailFilter={customerParticipantEmails}
               title={`Correo de ${quotation.reference_number}`}
-              description="Vista tipo Outlook de todos los correos ligados automáticamente a esta cotización por referencia exacta en el asunto."
-              emptyTitle="Sin correos ligados a esta cotización"
-              emptyDescription="Cuando el subject incluya la referencia exacta de la cotización, los threads aparecerán aquí para leer, responder y dar seguimiento."
+              description="Vista tipo Outlook solo de correos con contactos del cliente ligados a esta cotización."
+              emptyTitle="Sin correos de cliente ligados a esta cotización"
+              emptyDescription="Cuando el thread incluya la referencia exacta y un contacto del cliente, aparecerá aquí para leer, responder y dar seguimiento desde ventas."
             />
           </TabsContent>
         </Tabs>

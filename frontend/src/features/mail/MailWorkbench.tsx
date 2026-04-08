@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, type ReactNode } from "react"
-import { MailIcon, PaperclipIcon, RefreshCcwIcon, ReplyIcon, SearchIcon } from "lucide-react"
+import { MailIcon, PaperclipIcon, RefreshCcwIcon, ReplyIcon, SearchIcon, XIcon } from "lucide-react"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
 import { PriorityTypography } from "@/components/priority/PriorityTypography"
-import type { MailReplyPayload, MailThreadDetail, MailThreadSummary } from "@/lib/mail/types"
+import type { MailAddress, MailReplyPayload, MailThreadDetail, MailThreadSummary } from "@/lib/mail/types"
 
 function formatMailDate(value: string | null) {
   if (!value) {
@@ -48,15 +48,123 @@ type MailWorkbenchProps = {
   emptyDescription: string
 }
 
+function normalizeRecipientAddress(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? ""
+}
+
+function dedupeRecipients(recipients: MailAddress[]) {
+  const seen = new Set<string>()
+  return recipients.filter((recipient) => {
+    const address = normalizeRecipientAddress(recipient.address)
+    if (!address || seen.has(address)) {
+      return false
+    }
+
+    seen.add(address)
+    return true
+  })
+}
+
+function formatRecipientLabel(recipient: MailAddress) {
+  return recipient.name ? `${recipient.name} <${recipient.address}>` : recipient.address
+}
+
 function buildReplyDefaults(threadDetail: MailThreadDetail) {
+  const mailboxEmail = normalizeRecipientAddress(threadDetail.thread.mailboxEmail)
   const latestInbound = [...threadDetail.messages]
     .reverse()
     .find((message) => message.direction === "inbound" && message.from?.address)
+  const sourceMessage =
+    latestInbound ??
+    [...threadDetail.messages].reverse().find((message) => message.from?.address) ??
+    null
+  const toRecipients = dedupeRecipients(
+    latestInbound?.from && normalizeRecipientAddress(latestInbound.from.address) !== mailboxEmail
+      ? [latestInbound.from]
+      : []
+  )
+  const toAddresses = new Set(toRecipients.map((recipient) => normalizeRecipientAddress(recipient.address)))
+  const chainRecipients = threadDetail.messages.flatMap((message) =>
+    ([message.from].filter(Boolean) as MailAddress[]).concat(message.to, message.cc)
+  )
+  const ccRecipients = dedupeRecipients(
+    chainRecipients.filter((recipient) => {
+      const address = normalizeRecipientAddress(recipient.address)
+      return address && address !== mailboxEmail && !toAddresses.has(address)
+    })
+  )
 
   return {
-    to: latestInbound?.from?.address ?? "",
-    cc: latestInbound?.cc.map((entry) => entry.address).join(", ") ?? "",
+    sourceMessage,
+    to: toRecipients,
+    cc: ccRecipients,
   }
+}
+
+function RecipientPicker({
+  label,
+  recipients,
+  placeholder,
+  draftValue,
+  onDraftChange,
+  onAdd,
+  onRemove,
+}: {
+  label: string
+  recipients: MailAddress[]
+  placeholder: string
+  draftValue: string
+  onDraftChange: (value: string) => void
+  onAdd: (value: string) => void
+  onRemove: (address: string) => void
+}) {
+  function commitDraft() {
+    if (!draftValue.trim()) {
+      return
+    }
+
+    onAdd(draftValue)
+    onDraftChange("")
+  }
+
+  return (
+    <div className="grid gap-2">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">
+        {label}
+      </div>
+      <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-[22px] border border-[#E5E7EB] bg-white px-3 py-2 focus-within:border-[rgba(179,58,91,0.45)] focus-within:ring-4 focus-within:ring-[rgba(179,58,91,0.14)]">
+        {recipients.map((recipient) => (
+          <span
+            key={recipient.address}
+            className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#CBD5E1] bg-[#F8FAFC] px-3 py-1.5 text-xs font-medium text-[#334155]"
+          >
+            <span className="truncate">{formatRecipientLabel(recipient)}</span>
+            <button
+              type="button"
+              onClick={() => onRemove(recipient.address)}
+              className="rounded-full text-[#64748B] hover:text-[var(--brand-navy)]"
+              aria-label={`Quitar ${recipient.address}`}
+            >
+              <XIcon className="size-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={draftValue}
+          onChange={(event) => onDraftChange(event.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === ",") {
+              event.preventDefault()
+              commitDraft()
+            }
+          }}
+          placeholder={recipients.length === 0 ? placeholder : "Agregar otro correo"}
+          className="min-w-[220px] flex-1 bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#94A3B8]"
+        />
+      </div>
+    </div>
+  )
 }
 
 function ReplyComposer({
@@ -70,18 +178,55 @@ function ReplyComposer({
 }) {
   const defaults = buildReplyDefaults(threadDetail)
   const [replyBody, setReplyBody] = useState("")
-  const [replyTo, setReplyTo] = useState(defaults.to)
-  const [replyCc, setReplyCc] = useState(defaults.cc)
+  const [replyTo, setReplyTo] = useState<MailAddress[]>(defaults.to)
+  const [replyCc, setReplyCc] = useState<MailAddress[]>(defaults.cc)
+  const [replyToDraft, setReplyToDraft] = useState("")
+  const [replyCcDraft, setReplyCcDraft] = useState("")
+
+  function addRecipients(target: "to" | "cc", value: string) {
+    const parsed = value
+      .split(",")
+      .map((entry) => normalizeRecipientAddress(entry))
+      .filter(Boolean)
+      .map((address) => ({ name: null, address }))
+
+    if (parsed.length === 0) {
+      return
+    }
+
+    if (target === "to") {
+      const parsedAddresses = new Set(parsed.map((recipient) => normalizeRecipientAddress(recipient.address)))
+      setReplyTo((current) => dedupeRecipients(current.concat(parsed)))
+      setReplyCc((current) =>
+        current.filter((recipient) => !parsedAddresses.has(normalizeRecipientAddress(recipient.address)))
+      )
+      return
+    }
+
+    setReplyCc((current) => {
+      const toAddresses = new Set(replyTo.map((recipient) => normalizeRecipientAddress(recipient.address)))
+      return dedupeRecipients(current.concat(parsed)).filter(
+        (recipient) => !toAddresses.has(normalizeRecipientAddress(recipient.address))
+      )
+    })
+  }
+
+  function removeRecipient(target: "to" | "cc", address: string) {
+    const normalizedAddress = normalizeRecipientAddress(address)
+    const updater = (current: MailAddress[]) =>
+      current.filter((recipient) => normalizeRecipientAddress(recipient.address) !== normalizedAddress)
+
+    if (target === "to") {
+      setReplyTo(updater)
+      return
+    }
+
+    setReplyCc(updater)
+  }
 
   async function handleReplySubmit() {
-    const to = replyTo
-      .split(",")
-      .map((entry) => entry.trim().toLowerCase())
-      .filter(Boolean)
-    const cc = replyCc
-      .split(",")
-      .map((entry) => entry.trim().toLowerCase())
-      .filter(Boolean)
+    const to = replyTo.map((recipient) => recipient.address)
+    const cc = replyCc.map((recipient) => recipient.address)
 
     await onReply({
       body: replyBody,
@@ -94,10 +239,39 @@ function ReplyComposer({
 
   return (
     <div className="border-t border-[rgba(144,158,174,0.16)] px-5 py-4">
-      <PriorityTypography variant="eyebrow">Responder</PriorityTypography>
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <PriorityTypography variant="eyebrow">Responder a todos</PriorityTypography>
+          <div className="mt-2 text-sm text-[#475569]">
+            Viene de:{" "}
+            <span className="font-semibold text-[var(--brand-navy)]">
+              {defaults.sourceMessage?.from ? formatRecipientLabel(defaults.sourceMessage.from) : "Sin remitente detectado"}
+            </span>
+          </div>
+        </div>
+        <div className="rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B]">
+          {replyTo.length + replyCc.length} destinatarios
+        </div>
+      </div>
       <div className="mt-3 grid gap-3">
-        <Input value={replyTo} onChange={(event) => setReplyTo(event.target.value)} placeholder="Destinatarios separados por coma" />
-        <Input value={replyCc} onChange={(event) => setReplyCc(event.target.value)} placeholder="CC opcional" />
+        <RecipientPicker
+          label="Para"
+          recipients={replyTo}
+          placeholder="Destinatarios separados por coma"
+          draftValue={replyToDraft}
+          onDraftChange={setReplyToDraft}
+          onAdd={(value) => addRecipients("to", value)}
+          onRemove={(address) => removeRecipient("to", address)}
+        />
+        <RecipientPicker
+          label="CC"
+          recipients={replyCc}
+          placeholder="Correos en copia separados por coma"
+          draftValue={replyCcDraft}
+          onDraftChange={setReplyCcDraft}
+          onAdd={(value) => addRecipients("cc", value)}
+          onRemove={(address) => removeRecipient("cc", address)}
+        />
         <Textarea
           value={replyBody}
           onChange={(event) => setReplyBody(event.target.value)}
@@ -108,10 +282,10 @@ function ReplyComposer({
           <Button
             type="button"
             onClick={() => void handleReplySubmit()}
-            disabled={replying || !replyBody.trim() || !replyTo.trim()}
+            disabled={replying || !replyBody.trim() || replyTo.length === 0}
           >
             <ReplyIcon className="mr-2 size-4" />
-            {replying ? "Enviando…" : "Responder"}
+            {replying ? "Enviando…" : "Responder a todos"}
           </Button>
         </div>
       </div>

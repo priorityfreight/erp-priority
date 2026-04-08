@@ -216,7 +216,22 @@ Current query layer:
 - frontend/src/lib/supabase/server.ts
 - frontend/src/lib/db/permissions.ts
 - frontend/src/lib/db/users.ts
+- frontend/src/lib/mail/api.ts
+- frontend/src/lib/mail/types.ts
+- frontend/src/lib/mail/signatures.ts
+- frontend/src/lib/server/mail/service.ts
+- frontend/src/lib/server/mail/gmail.ts
 - frontend brand assets now render from frontend/public/assets/ and must originate from the repository-level ASSETS/ folder
+
+Current mail/workbench surfaces:
+
+- frontend/app/mail/page.tsx
+- frontend/app/master-data/mail/page.tsx
+- frontend/app/api/mail/send/route.ts
+- frontend/app/api/mail/signature-image/route.ts
+- frontend/src/components/master-data/MailboxesManager.tsx
+- frontend/src/features/mail/MailWorkbench.tsx
+- frontend/src/features/mail/EntityMailTab.tsx
 
 Current server-side master data utilities:
 

@@ -297,6 +297,10 @@ Form and grid rule
 - `PriorityKanbanBoard` is the approved board mode for pipeline-style modules
 - `PriorityDataTable` is legacy and should only remain as a compatibility wrapper while older imports are retired
 - `PriorityGrid` should be used only for dense editing, matrix behavior, or header-plus-lines workflows
+- internal mail surfaces should follow the same premium workspace language:
+  - mailbox setup belongs in `Master Data > Mail`
+  - shared inbox lives at `/mail`
+  - entity email tabs must inherit ERP context rules instead of showing every linked thread
 - every grid-first workflow must define an approved mobile fallback such as cards, drawer editing, or step-based capture
 
 

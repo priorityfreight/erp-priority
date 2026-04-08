@@ -16,6 +16,7 @@ export type MailboxSummary = {
   lastSyncedAt: string | null
   lastSyncStatus: string | null
   lastSyncError: string | null
+  signatureImageUrl: string | null
   roleIds: string[]
   roleNames: string[]
   hasRefreshToken: boolean
@@ -78,6 +79,7 @@ export type MailboxUpsertPayload = {
   email: string
   displayName: string
   syncMode: "manual" | "polling"
+  signatureImageUrl?: string | null
   roleIds: string[]
   status?: "draft" | "active" | "disabled" | "error"
 }
@@ -86,6 +88,28 @@ export type MailReplyPayload = {
   body: string
   to: string[]
   cc?: string[]
+}
+
+export type MailSendEntityLink = {
+  entityType: MailEntityType
+  entityId: string
+  isPrimary?: boolean
+}
+
+export type MailSendPayload = {
+  mailboxId?: string | null
+  subject: string
+  body: string
+  to: string[]
+  cc?: string[]
+  entityLinks?: MailSendEntityLink[]
+}
+
+export type MailSendResult = {
+  mailboxId: string
+  mailboxEmail: string
+  threadId: string
+  gmailThreadId: string
 }
 
 export type MailSyncResult = {

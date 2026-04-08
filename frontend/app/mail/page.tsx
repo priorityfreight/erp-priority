@@ -3,47 +3,20 @@
 import { Suspense, useDeferredValue, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Link2Icon, MailPlusIcon } from "lucide-react"
+import { Settings2Icon } from "lucide-react"
 import { PageContainer } from "@/components/layout/PageContainer"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { getCurrentErpUser } from "@/lib/auth"
 import {
   getInboxThreads,
   getMailThread,
-  getMailboxRoleOptions,
   getMailboxes,
   replyToMailThread,
-  saveMailbox,
   syncMailbox,
 } from "@/lib/mail/api"
-import type { MailThreadDetail, MailThreadSummary, MailboxRoleOption, MailboxSummary } from "@/lib/mail/types"
+import type { MailThreadDetail, MailThreadSummary, MailboxSummary } from "@/lib/mail/types"
 import { notifyError, notifySuccess } from "@/lib/feedback"
 import { MailWorkbench } from "@/features/mail/MailWorkbench"
-
-type MailboxFormState = {
-  id?: string
-  email: string
-  displayName: string
-  syncMode: "manual" | "polling"
-  roleIds: string[]
-}
-
-const emptyMailboxForm: MailboxFormState = {
-  email: "",
-  displayName: "",
-  syncMode: "manual",
-  roleIds: [],
-}
 
 function MailPageContent() {
   const searchParams = useSearchParams()
@@ -51,7 +24,6 @@ function MailPageContent() {
   const mailOAuthError = searchParams.get("mail_oauth_error")
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const [mailboxes, setMailboxes] = useState<MailboxSummary[]>([])
-  const [roleOptions, setRoleOptions] = useState<MailboxRoleOption[]>([])
   const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const deferredQuery = useDeferredValue(searchQuery)
@@ -62,9 +34,6 @@ function MailPageContent() {
   const [loadingThread, setLoadingThread] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [replying, setReplying] = useState(false)
-  const [mailboxDialogOpen, setMailboxDialogOpen] = useState(false)
-  const [mailboxForm, setMailboxForm] = useState<MailboxFormState>(emptyMailboxForm)
-  const [savingMailbox, setSavingMailbox] = useState(false)
 
   const selectedMailbox = useMemo(
     () => mailboxes.find((entry) => entry.id === selectedMailboxId) ?? null,
@@ -78,12 +47,7 @@ function MailPageContent() {
     async function bootstrap() {
       try {
         const currentUser = await getCurrentErpUser()
-        const [mailboxResponse, roleResponse] = await Promise.all([
-          getMailboxes(),
-          currentUser?.role_name === "Admin"
-            ? getMailboxRoleOptions()
-            : Promise.resolve({ items: [] as MailboxRoleOption[] }),
-        ])
+        const mailboxResponse = await getMailboxes()
 
         if (cancelled) {
           return
@@ -91,7 +55,6 @@ function MailPageContent() {
 
         setCurrentUserRole(currentUser?.role_name ?? null)
         setMailboxes(mailboxResponse.items)
-        setRoleOptions(roleResponse.items)
         setSelectedMailboxId((current) => current ?? mailboxResponse.items[0]?.id ?? null)
       } catch (error) {
         if (!cancelled) {
@@ -269,27 +232,10 @@ function MailPageContent() {
     }
   }
 
-  async function handleSaveMailbox() {
-    try {
-      setSavingMailbox(true)
-      const response = await saveMailbox(mailboxForm)
-      await refreshMailboxes()
-      setSelectedMailboxId(response.mailbox.id)
-      setMailboxDialogOpen(false)
-      setMailboxForm(emptyMailboxForm)
-      notifySuccess("Buzón guardado.")
-    } catch (error) {
-      console.error(error)
-      notifyError("No se pudo guardar el buzón.")
-    } finally {
-      setSavingMailbox(false)
-    }
-  }
-
   return (
     <PageContainer
       title="Correo"
-      description="Inbox operativo estilo Outlook, sin duplicar el storage completo de Gmail."
+      description="Inbox operativo estilo Outlook para buzones compartidos del ERP, con linking por entidad y separación de contexto entre ventas y pricing."
       actions={
         <div className="flex flex-wrap items-center gap-3">
           <select
@@ -307,36 +253,12 @@ function MailPageContent() {
             ))}
           </select>
 
-          {selectedMailbox ? (
-            <Button asChild type="button" variant="outline">
-              <Link href={`/api/mail/mailboxes/${selectedMailbox.id}/oauth/start`}>
-                <Link2Icon className="mr-2 size-4" />
-                {selectedMailbox.hasRefreshToken ? "Reconectar Gmail" : "Conectar Gmail"}
-              </Link>
-            </Button>
-          ) : null}
-
           {isAdmin ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setMailboxForm(
-                  selectedMailbox
-                    ? {
-                        id: selectedMailbox.id,
-                        email: selectedMailbox.email,
-                        displayName: selectedMailbox.displayName,
-                        syncMode: selectedMailbox.syncMode,
-                        roleIds: selectedMailbox.roleIds,
-                      }
-                    : emptyMailboxForm
-                )
-                setMailboxDialogOpen(true)
-              }}
-            >
-              <MailPlusIcon className="mr-2 size-4" />
-              {selectedMailbox ? "Editar buzón" : "Añadir buzón"}
+            <Button asChild type="button" variant="outline">
+              <Link href="/master-data/mail">
+                <Settings2Icon className="mr-2 size-4" />
+                Configurar buzones
+              </Link>
             </Button>
           ) : null}
         </div>
@@ -348,7 +270,9 @@ function MailPageContent() {
           selectedMailbox
             ? selectedMailbox.hasRefreshToken
               ? "Lee y responde conversaciones desde el ERP usando cache liviano y fetch completo bajo demanda."
-              : "Este buzón aún no está conectado a Gmail. Conéctalo para empezar a sincronizar."
+              : isAdmin
+                ? "Este buzón aún no está conectado a Gmail. Conéctalo desde Master Data / Mail para empezar a sincronizar."
+                : "Este buzón aún no está conectado a Gmail. Solicita a un admin que lo conecte desde Master Data / Mail."
             : "Selecciona un buzón disponible para ver el inbox."
         }
         searchValue={searchQuery}
@@ -366,96 +290,12 @@ function MailPageContent() {
         emptyTitle="Sin conversaciones sincronizadas"
         emptyDescription={
           selectedMailbox
-            ? "Sincroniza el buzón o conéctalo primero para traer sus threads recientes al ERP."
+            ? isAdmin
+              ? "Sincroniza el buzón o termínalo de configurar en Master Data / Mail para traer sus threads recientes al ERP."
+              : "Este buzón aún no está listo. Solicita a un admin que lo configure en Master Data / Mail."
             : "No hay un buzón seleccionado todavía."
         }
       />
-
-      <Dialog open={mailboxDialogOpen} onOpenChange={setMailboxDialogOpen}>
-        <DialogContent className="sm:max-w-[640px]">
-          <DialogHeader>
-            <DialogTitle>{mailboxForm.id ? "Editar buzón" : "Añadir buzón"}</DialogTitle>
-            <DialogDescription>
-              Configura un buzón compartido, define qué roles pueden verlo y elige si se sincroniza manualmente o por cron.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="mailbox-email">Correo</Label>
-              <Input
-                id="mailbox-email"
-                value={mailboxForm.email}
-                onChange={(event) => setMailboxForm((current) => ({ ...current, email: event.target.value }))}
-                placeholder="ventas@tuempresa.com"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="mailbox-display-name">Nombre visible</Label>
-              <Input
-                id="mailbox-display-name"
-                value={mailboxForm.displayName}
-                onChange={(event) =>
-                  setMailboxForm((current) => ({ ...current, displayName: event.target.value }))
-                }
-                placeholder="Ventas"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="mailbox-sync-mode">Modo de sync</Label>
-              <select
-                id="mailbox-sync-mode"
-                value={mailboxForm.syncMode}
-                onChange={(event) =>
-                  setMailboxForm((current) => ({
-                    ...current,
-                    syncMode: event.target.value === "polling" ? "polling" : "manual",
-                  }))
-                }
-                className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#111827] outline-none"
-              >
-                <option value="manual">Manual</option>
-                <option value="polling">Polling</option>
-              </select>
-            </div>
-            <div className="grid gap-3">
-              <Label>Roles con acceso</Label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {roleOptions.map((role) => {
-                  const checked = mailboxForm.roleIds.includes(role.id)
-                  return (
-                    <label
-                      key={role.id}
-                      className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-3 py-3 text-sm text-[#334155]"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(nextChecked) =>
-                          setMailboxForm((current) => ({
-                            ...current,
-                            roleIds: nextChecked
-                              ? [...current.roleIds, role.id]
-                              : current.roleIds.filter((entry) => entry !== role.id),
-                          }))
-                        }
-                      />
-                      <span>{role.name}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => setMailboxDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={() => void handleSaveMailbox()} disabled={savingMailbox}>
-                {savingMailbox ? "Guardando…" : "Guardar buzón"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   )
 }

@@ -1,5 +1,7 @@
 import { useDeferredValue, useEffect, useEffectEvent, useMemo, useState } from "react"
 import { getCurrentErpUser, type CurrentErpUser } from "@/lib/auth"
+import { getMailboxes, sendMail } from "@/lib/mail/api"
+import type { MailboxSummary } from "@/lib/mail/types"
 import {
   createWorkspaceView,
   deleteQuotationChargeLine,
@@ -33,8 +35,9 @@ import {
 } from "@/lib/db"
 import type { QuotationChargeLineFormValues } from "@/components/forms/QuotationChargeLineForm"
 import { usePriorityConfirm } from "@/components/priority/usePriorityConfirm"
-import { getErrorMessage, notifyError, notifyWarning } from "@/lib/feedback"
+import { getErrorMessage, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback"
 import {
+  buildProviderEmailDraft,
   buildChargeFormFromLine,
   buildNextOptionLabel,
   createEmptyChargeForm,
@@ -67,6 +70,24 @@ const defaultFilterState: WorkspaceFilterState = {
   serviceType: null,
   transportType: null,
   mineOnly: false,
+}
+
+function pickPreferredPricingMailbox(mailboxes: MailboxSummary[]) {
+  const connected = mailboxes.filter(
+    (mailbox) => mailbox.status === "active" && mailbox.hasRefreshToken
+  )
+
+  if (connected.length === 0) {
+    return null
+  }
+
+  const preferredKeywords = ["pricing", "quote", "cotiza", "rates", "procurement"]
+  return (
+    connected.find((mailbox) => {
+      const haystack = `${mailbox.displayName} ${mailbox.email}`.toLowerCase()
+      return preferredKeywords.some((keyword) => haystack.includes(keyword))
+    }) ?? connected[0]
+  )
 }
 
 function parseWorkspaceFilterState(raw: Record<string, unknown> | null | undefined): WorkspaceFilterState {
@@ -118,6 +139,9 @@ export function usePricingQuotationsController() {
   const [showChargesModal, setShowChargesModal] = useState(false)
   const [providerCandidates, setProviderCandidates] = useState<ProviderPricingCandidate[]>([])
   const [providerCargoLines, setProviderCargoLines] = useState<QuotationCargoLine[]>([])
+  const [providerMailboxes, setProviderMailboxes] = useState<MailboxSummary[]>([])
+  const [selectedProviderMailboxId, setSelectedProviderMailboxId] = useState<string | null>(null)
+  const [sendingProviderEmailKey, setSendingProviderEmailKey] = useState<string | null>(null)
   const [allProviders, setAllProviders] = useState<Provider[]>([])
   const [chargeLines, setChargeLines] = useState<QuotationChargeLine[]>([])
   const [concepts, setConcepts] = useState<SalesAccountingConcept[]>([])
@@ -451,21 +475,73 @@ export function usePricingQuotationsController() {
       setSelectedQuotation(quotation)
       setShowProvidersModal(true)
       setLoadingProviders(true)
-      const [candidates, cargoLines] = await Promise.all([
+      const [candidates, cargoLines, mailboxResponse] = await Promise.all([
         getProviderPricingCandidates({
           serviceType: quotation.service_type,
           transportType: quotation.transport_type,
         }),
         getQuotationCargoLines(quotation.id),
+        getMailboxes().catch(() => ({ items: [] as MailboxSummary[] })),
       ])
       setProviderCandidates(candidates)
       setProviderCargoLines(cargoLines)
+      setProviderMailboxes(mailboxResponse.items)
+      setSelectedProviderMailboxId(pickPreferredPricingMailbox(mailboxResponse.items)?.id ?? null)
     } catch (error) {
       console.error(error)
       notifyError("No se pudieron cargar los proveedores sugeridos")
     } finally {
       setLoadingProviders(false)
     }
+  }
+
+  async function handleSendProviderEmail(
+    candidate: ProviderPricingCandidate,
+    language: "es" | "en"
+  ) {
+    if (!selectedQuotation) {
+      return
+    }
+
+    const draft = buildProviderEmailDraft(candidate, selectedQuotation, providerCargoLines, language)
+    if (!draft) {
+      notifyWarning("Este proveedor no tiene correo disponible para enviar la solicitud.")
+      return
+    }
+
+    if (!selectedProviderMailboxId) {
+      notifyWarning("Primero configura o selecciona un buzón interno conectado en Master Data / Mail.")
+      return
+    }
+
+    const sendKey = `${candidate.service_offering.id}:${language}`
+
+    try {
+      setSendingProviderEmailKey(sendKey)
+      await sendMail({
+        mailboxId: selectedProviderMailboxId,
+        to: [draft.to],
+        subject: draft.subject,
+        body: draft.body,
+        entityLinks: [
+          {
+            entityType: "quotation",
+            entityId: selectedQuotation.id,
+            isPrimary: true,
+          },
+        ],
+      })
+    } catch (error) {
+      console.error(error)
+      notifyError("No se pudo enviar el correo al proveedor", getErrorMessage(error, "Intenta nuevamente."))
+      return
+    } finally {
+      setSendingProviderEmailKey(null)
+    }
+
+    notifySuccess(
+      language === "es" ? "Correo enviado al proveedor." : "Email sent to provider."
+    )
   }
 
   async function handleOpenCharges(quotation: QuotationSummary) {
@@ -786,6 +862,10 @@ export function usePricingQuotationsController() {
     providerCandidates,
     setProviderCandidates,
     providerCargoLines,
+    providerMailboxes,
+    selectedProviderMailboxId,
+    setSelectedProviderMailboxId,
+    sendingProviderEmailKey,
     allProviders,
     setAllProviders,
     chargeLines,
@@ -808,6 +888,7 @@ export function usePricingQuotationsController() {
     openNewChargeOptionEditor,
     handleTakeQuotation,
     handleOpenProviders,
+    handleSendProviderEmail,
     handleOpenCharges,
     reloadChargeContext,
     handleSaveChargeLine,

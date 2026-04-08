@@ -119,7 +119,8 @@ Data display
 - use `PriorityActionMenu` or `PriorityRowActions` for secondary actions
 - use `PriorityKanbanBoard` for board/pipeline mode in modules such as opportunities
 - use `PriorityCollectionTable` for detail tabs, embedded lists, and browse/list surfaces that do not need the full workspace shell
-- `PriorityDataTable` is legacy for browse/list shells and should not be used for new workspace migrations
+- `PriorityDataTable` is legacy for browse/list shells, is no longer part of the preferred barrel export path, and should not be used for new workspace migrations
+- `Master Data > Mail` and `/mail` should reuse the same Priority workspace language instead of inventing a parallel email UI kit
 - use `PriorityGrid` for dense editable workflows, matrices, and header-plus-lines ERP surfaces
 - use `PriorityEmptyState` for empty, search-empty, blocked, and recoverable error states
 - use `PriorityTypography` for semantic text roles

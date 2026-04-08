@@ -194,6 +194,14 @@ Quotation-specific write rules:
 - CRM list screens should use search_quotations(scope = crm) instead of direct full-view reads
 - Pricing list screens should use search_quotations(scope = pricing) instead of direct full-view reads
 - workspace saved views and column presets must persist through workspace_saved_views rather than isolated local-only frontend state
+- mailbox configuration is now part of the canonical ERP query layer:
+  - mailbox setup persists in `mailboxes`
+  - role visibility persists in `mailbox_role_access`
+  - outbound signatures persist in `mailboxes.signature_image_url`
+- quotation-linked email views must not rely only on reference matching:
+  - sales quotation email views must filter to customer participants
+  - pricing/provider outreach views must filter to provider participants
+- when a mailbox signature points to a remote source that is blocked by browser hotlink/CORS rules, use `/api/mail/signature-image` as the canonical render path
 - detail screens should read quotation_summary_view for masked economic summary fields
 - charge-line detail screens should read quotation_cost_line_secure_view instead of direct quotation_costs reads when rendering sensitive economics
 - detail screens may read quotation_summary_view plus quotation_cost_line_secure_view and quotation_cargo_lines rows

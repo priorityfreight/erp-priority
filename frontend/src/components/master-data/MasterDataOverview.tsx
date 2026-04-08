@@ -23,6 +23,13 @@ const processGroups = [
         coverage: "Workspace visual de permisos por rol",
         notes: "Configura acceso por modulo, submodulo, recurso y campos sensibles desde una matriz visual.",
       },
+      {
+        title: "Mail",
+        href: "/master-data/mail",
+        status: "Activo",
+        coverage: "Buzones internos, OAuth Gmail y firma por buzón",
+        notes: "Da de alta buzones compartidos, asigna roles, conecta Gmail y configura la firma visual que se usa al responder o enviar correos desde el ERP.",
+      },
     ],
   },
   {
@@ -96,7 +103,7 @@ export function MasterDataOverview() {
     >
       <div className="space-y-8">
         <PriorityMetricStrip className="xl:grid-cols-3">
-          <PriorityMetricCard label="Submódulos activos" value="7" helper="Cobertura viva del backbone actual." tone="info" />
+          <PriorityMetricCard label="Submódulos activos" value="8" helper="Cobertura viva del backbone actual." tone="info" />
           <PriorityMetricCard
             label="Áreas operativas"
             value="3"

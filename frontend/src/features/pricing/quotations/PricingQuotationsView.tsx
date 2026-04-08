@@ -17,9 +17,11 @@ import {
 } from "@/components/priority"
 import { PrioritySelectField } from "@/components/priority/PriorityForm"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EntityMailTab } from "@/features/mail/EntityMailTab"
 import type { PricingQuotationLane } from "@/lib/db"
 import {
-  buildProviderEmailLink,
+  buildProviderEmailDraft,
   buildProviderWhatsAppLink,
   createEmptyChargeForm,
   formatCurrency,
@@ -88,6 +90,10 @@ export function PricingQuotationsView({
     providerCandidates,
     setProviderCandidates,
     providerCargoLines,
+    providerMailboxes,
+    selectedProviderMailboxId,
+    setSelectedProviderMailboxId,
+    sendingProviderEmailKey,
     setAllProviders,
     chargeLines,
     setChargeLines,
@@ -104,6 +110,7 @@ export function PricingQuotationsView({
     setChargeFormRows,
     handleTakeQuotation,
     handleOpenProviders,
+    handleSendProviderEmail,
     handleOpenCharges,
     handleSaveChargeLine,
     handleDeleteChargeLine,
@@ -137,6 +144,21 @@ export function PricingQuotationsView({
 
   const hasSearch = Boolean(query.trim())
   const hasActiveFilters = hasSearch || activeFilterCount > 0
+  const providerParticipantEmails = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          providerCandidates
+            .flatMap((candidate) => [
+              getPrimaryProviderContact(candidate)?.email,
+              candidate.provider.company_email,
+            ])
+            .map((email) => email?.trim().toLowerCase())
+            .filter((email): email is string => Boolean(email))
+        )
+      ),
+    [providerCandidates]
+  )
 
   const lanes = useMemo<PriorityStatusLaneItem[]>(
     () =>
@@ -609,6 +631,43 @@ export function PricingQuotationsView({
               </div>
             </div>
 
+            <Tabs defaultValue="sourcing" className="gap-4">
+              <TabsList className="h-auto w-full flex-wrap justify-start rounded-[22px] border border-[rgba(144,158,174,0.16)] bg-[rgba(11,31,59,0.04)] p-1.5">
+                <TabsTrigger value="sourcing" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
+                  Proveedores
+                </TabsTrigger>
+                <TabsTrigger value="emails" className="rounded-[16px] px-4 py-2.5 text-sm font-medium">
+                  Correos proveedores
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="sourcing" className="space-y-3">
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+              <div className="text-sm font-semibold text-[#111827]">Buzón interno para enviar</div>
+              <div className="mt-1 text-sm text-[#6B7280]">
+                El correo saldrá desde Gmail interno y quedará ligado a la cotización dentro del ERP.
+              </div>
+              {providerMailboxes.filter((mailbox) => mailbox.status === "active" && mailbox.hasRefreshToken).length > 0 ? (
+                <div className="mt-3 max-w-[420px]">
+                  <PrioritySelectField
+                    value={selectedProviderMailboxId ?? ""}
+                    onValueChange={(value) => setSelectedProviderMailboxId(value || null)}
+                    options={providerMailboxes
+                      .filter((mailbox) => mailbox.status === "active" && mailbox.hasRefreshToken)
+                      .map((mailbox) => ({
+                        value: mailbox.id,
+                        label: `${mailbox.displayName} · ${mailbox.email}`,
+                      }))}
+                    placeholder="Selecciona un buzón"
+                  />
+                </div>
+              ) : (
+                <div className="mt-3 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-3 py-3 text-sm text-[#92400E]">
+                  No hay un buzón interno conectado y disponible para pricing. Configúralo en Master Data / Mail antes de enviar solicitudes a proveedores.
+                </div>
+              )}
+            </div>
+
             {loadingProviders ? (
               <p className="text-sm text-[#6B7280]">Cargando proveedores sugeridos...</p>
             ) : providerCandidates.length === 0 ? (
@@ -620,13 +679,13 @@ export function PricingQuotationsView({
               <div className="space-y-3">
                 {providerCandidates.map((candidate) => {
                   const primaryContact = getPrimaryProviderContact(candidate)
-                  const mailToLinkEs = buildProviderEmailLink(
+                  const providerEmailDraftEs = buildProviderEmailDraft(
                     candidate,
                     selectedQuotation,
                     providerCargoLines,
                     "es"
                   )
-                  const mailToLinkEn = buildProviderEmailLink(
+                  const providerEmailDraftEn = buildProviderEmailDraft(
                     candidate,
                     selectedQuotation,
                     providerCargoLines,
@@ -677,21 +736,30 @@ export function PricingQuotationsView({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                          {mailToLinkEs ? (
-                            <a
-                              href={mailToLinkEs}
-                              className="rounded-md bg-[#2563EB] px-3 py-2 text-sm font-medium text-white hover:bg-[#1D4ED8]"
+                          {providerEmailDraftEs ? (
+                            <Button
+                              type="button"
+                              onClick={() => void handleSendProviderEmail(candidate, "es")}
+                              disabled={!selectedProviderMailboxId || sendingProviderEmailKey === `${candidate.service_offering.id}:es`}
+                              className="bg-[#2563EB] hover:bg-[#1D4ED8]"
                             >
-                              Correo ES
-                            </a>
+                              {sendingProviderEmailKey === `${candidate.service_offering.id}:es`
+                                ? "Enviando ES…"
+                                : "Correo interno ES"}
+                            </Button>
                           ) : null}
-                          {mailToLinkEn ? (
-                            <a
-                              href={mailToLinkEn}
-                              className="rounded-md border border-[#93C5FD] bg-[#EFF6FF] px-3 py-2 text-sm font-medium text-[#1D4ED8] hover:bg-[#DBEAFE]"
+                          {providerEmailDraftEn ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => void handleSendProviderEmail(candidate, "en")}
+                              disabled={!selectedProviderMailboxId || sendingProviderEmailKey === `${candidate.service_offering.id}:en`}
+                              className="border-[#93C5FD] bg-[#EFF6FF] text-[#1D4ED8] hover:bg-[#DBEAFE]"
                             >
-                              Correo EN
-                            </a>
+                              {sendingProviderEmailKey === `${candidate.service_offering.id}:en`
+                                ? "Enviando EN…"
+                                : "Correo interno EN"}
+                            </Button>
                           ) : null}
                           {whatsAppLinkEs ? (
                             <a
@@ -727,6 +795,20 @@ export function PricingQuotationsView({
                 })}
               </div>
             )}
+              </TabsContent>
+
+              <TabsContent value="emails" className="space-y-3">
+                <EntityMailTab
+                  entityType="quotation"
+                  entityId={selectedQuotation.id}
+                  participantEmailFilter={providerParticipantEmails}
+                  title={`Correos proveedores · ${selectedQuotation.reference_number || "Cotización"}`}
+                  description="Seguimiento interno de correos con proveedores vinculados a esta cotización. Visible solo para roles con acceso al buzón de sourcing."
+                  emptyTitle="Sin correos de proveedores"
+                  emptyDescription="Cuando envíes solicitudes desde correo interno o recibas respuestas de proveedores, aparecerán aquí."
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </Modal>
       ) : null}

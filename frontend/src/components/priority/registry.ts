@@ -59,14 +59,6 @@ export const priorityComponentRegistry: PriorityComponentRegistryItem[] = [
     approvedFor: ["detail tabs", "master data lists", "embedded browse tables", "CRM sublists"],
   },
   {
-    name: "PriorityDataTable",
-    category: "data-display",
-    path: "@/components/priority/PriorityDataTable",
-    base: "ui/data-table.tsx",
-    purpose: "Legacy compatibility wrapper that forwards to PriorityCollectionTable while older imports are migrated.",
-    approvedFor: ["temporary backward compatibility only"],
-  },
-  {
     name: "PriorityFormEngine",
     category: "form",
     path: "@/components/priority/forms/PriorityFormEngine",

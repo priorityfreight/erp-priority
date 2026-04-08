@@ -87,6 +87,10 @@ Current administrative workspace pattern
 - use `DropdownMenu`-backed `PriorityRowActions` for secondary row actions instead of stacking small action buttons with low contrast
 - keep this pattern as the default for new master data modules unless a workflow clearly needs a denser custom workspace
 - current approved browse workspaces using this pattern: pricing quotations, quotations, opportunities, clients, and providers
+- current approved operational mail surfaces:
+  - `Master Data > Mail` for mailbox setup, role access, OAuth, sync mode, and signature image
+  - `/mail` for the shared inbox and reply flow
+  - embedded `Email` tabs on entities when the workflow benefits from linked thread context
 - destructive actions must route through the shared `usePriorityConfirm` hook instead of `window.confirm`
 - blocking `alert()` is deprecated in live frontend code; use `notifyWarning`, `notifyError`, `notifySuccess`, or `notifyInfo`
 - use `Switch` for real boolean state toggles in admin/workspace surfaces when immediate on/off intent is clearer than a button label
@@ -106,6 +110,9 @@ Composition rule
   - `PrioritySearchCombobox` stays the ERP-facing contract while delegating to the shared combobox pattern
   - `PriorityCollectionWorkspace` is the ERP-facing browse contract on top of React Aria compositions
   - `PrioritySavedViews`, `PriorityStatusLanes`, `PriorityActionRail`, and `PriorityKanbanBoard` are the approved workspace interaction layer
+- mailbox-signature rendering is approved as an ERP service capability:
+  - mailbox records persist the source URL
+  - the app may proxy remote images through `/api/mail/signature-image` before rendering them in UI or outbound mail
 - `PriorityCollectionTable` is the canonical browse/list table for non-workspace list surfaces
 - `PriorityDataTable` is now a legacy compatibility wrapper around `PriorityCollectionTable` and should not be chosen for new live workspace migrations
 - dense record workspaces should prefer tabs, section cards, drawers, dialogs, and sticky submit rails over long unstructured vertical pages

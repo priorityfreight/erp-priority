@@ -201,6 +201,8 @@ Quotation current rules:
 - cargo lines are shown as table-first related data when the service uses consolidation lines
 - quotation list workspaces persist search, lane/tab, filters, sorting, and visible columns through workspace_saved_views-backed saved views
 - quotation list filtering and sorting should be resolved by search_quotations(), not by slicing only the current client page in React
+- mailbox configuration, thread indexing, and outbound signature state now belong to the live ERP capability and should not be treated as ad hoc UI-only state
+- quotation email views must separate customer-facing and provider-facing threads by participant context, not just by quotation-reference subject matching
 - the client-facing web preview route lives at frontend/app/quotations/[id]/document/page.tsx
 - the real customer-facing PDF download route lives at frontend/app/quotations/[id]/document/pdf/route.ts
 - the internal pricing-request web preview route lives at frontend/app/quotations/[id]/pricing-request/page.tsx

@@ -14,6 +14,7 @@ const routeLabels: Record<string, string> = {
   "/pricing/providers": "Proveedores",
   "/master-data": "Master Data",
   "/master-data/users": "Usuarios",
+  "/master-data/mail": "Mail",
   "/master-data/unlocode": "UN/LOCODE",
 }
 

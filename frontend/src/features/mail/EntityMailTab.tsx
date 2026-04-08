@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { getInboxThreads, getMailThread, replyToMailThread } from "@/lib/mail/api"
 import type { MailEntityType, MailThreadDetail, MailThreadSummary } from "@/lib/mail/types"
 import { notifyError, notifySuccess } from "@/lib/feedback"
@@ -9,15 +9,40 @@ import { MailWorkbench } from "./MailWorkbench"
 type EntityMailTabProps = {
   entityType: MailEntityType
   entityId: string
+  participantEmailFilter?: string[]
   title: string
   description: string
   emptyTitle: string
   emptyDescription: string
 }
 
+function filterThreadsByParticipants(
+  threads: MailThreadSummary[],
+  participantEmailFilter: string[] | undefined
+) {
+  if (!participantEmailFilter) {
+    return threads
+  }
+
+  const normalizedFilter = new Set(
+    participantEmailFilter.map((email) => email.trim().toLowerCase()).filter(Boolean)
+  )
+
+  if (normalizedFilter.size === 0) {
+    return []
+  }
+
+  return threads.filter((thread) =>
+    thread.participants.some((participant) =>
+      normalizedFilter.has(participant.address.trim().toLowerCase())
+    )
+  )
+}
+
 export function EntityMailTab({
   entityType,
   entityId,
+  participantEmailFilter,
   title,
   description,
   emptyTitle,
@@ -29,6 +54,29 @@ export function EntityMailTab({
   const [loadingThreads, setLoadingThreads] = useState(true)
   const [loadingThread, setLoadingThread] = useState(false)
   const [replying, setReplying] = useState(false)
+  const participantEmailFilterKey =
+    participantEmailFilter === undefined
+      ? "__all__"
+      : Array.from(
+          new Set(
+            participantEmailFilter
+              .map((email) => email.trim().toLowerCase())
+              .filter(Boolean)
+          )
+        )
+          .sort()
+          .join("|")
+  const normalizedParticipantEmailFilter = useMemo(() => {
+    if (participantEmailFilterKey === "__all__") {
+      return undefined
+    }
+
+    if (!participantEmailFilterKey) {
+      return []
+    }
+
+    return participantEmailFilterKey.split("|")
+  }, [participantEmailFilterKey])
 
   useEffect(() => {
     let cancelled = false
@@ -45,8 +93,17 @@ export function EntityMailTab({
           return
         }
 
-        setThreads(response.items)
-        setSelectedThreadId((current) => current ?? response.items[0]?.id ?? null)
+        const filteredItems = filterThreadsByParticipants(
+          response.items,
+          normalizedParticipantEmailFilter
+        )
+
+        setThreads(filteredItems)
+        setSelectedThreadId((current) =>
+          current && filteredItems.some((item) => item.id === current)
+            ? current
+            : filteredItems[0]?.id ?? null
+        )
       } catch (error) {
         if (!cancelled) {
           console.error(error)
@@ -64,7 +121,7 @@ export function EntityMailTab({
     return () => {
       cancelled = true
     }
-  }, [entityId, entityType])
+  }, [entityId, entityType, normalizedParticipantEmailFilter])
 
   useEffect(() => {
     if (!selectedThreadId) {
@@ -118,7 +175,12 @@ export function EntityMailTab({
         }),
         getMailThread(threadId),
       ])
-      setThreads(threadsResponse.items)
+      setThreads(
+        filterThreadsByParticipants(
+          threadsResponse.items,
+          normalizedParticipantEmailFilter
+        )
+      )
       setThreadDetail(detailResponse)
       notifySuccess("Respuesta enviada.")
     } catch (error) {
