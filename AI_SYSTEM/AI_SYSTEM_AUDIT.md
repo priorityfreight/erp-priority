@@ -43,6 +43,18 @@ Overall status:
 Partially aligned, materially improved after Sprint 1 through Sprint 3 remediation, with the
 quotation RPC stabilization pass completed on 2026-03-25.
 
+Latest browse-baseline note:
+
+- on 2026-04-05 the browse/list baseline was tightened again around `PriorityCollectionWorkspace`, `PriorityCollectionTable`, `PrioritySavedViews`, and `PriorityKanbanBoard`
+- quotation workspaces now push lane/status, column filters, sorting, pagination, and page size through `search_quotations()` instead of filtering only the current client page
+- `workspace_saved_views` is now the canonical persistence layer for search, filters, sorting, lanes/tabs, and visible-column preferences
+- `PriorityDataTable` no longer acts as the approved browse standard; it remains only as a compatibility wrapper around `PriorityCollectionTable`
+- on 2026-04-07 mailing was promoted into the live baseline:
+  - `Master Data > Mail` became the canonical mailbox admin surface
+  - mailbox signatures were formalized through `mailboxes.signature_image_url`
+  - `/api/mail/signature-image` was added as the approved proxy path for remote signature images such as Google Drive
+  - quotation email tabs were tightened so sales sees customer-facing threads and pricing sees provider-facing threads
+
 Latest stabilization note:
 
 - quotation cargo capture was simplified again on 2026-03-26

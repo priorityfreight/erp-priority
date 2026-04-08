@@ -45,7 +45,7 @@ export function useClientDetailController(clientId: string | undefined) {
   const [showContactModal, setShowContactModal] = useState(false)
   const [showOpportunityModal, setShowOpportunityModal] = useState(false)
   const [showLogisticsPartyModal, setShowLogisticsPartyModal] = useState(false)
-  const [activeTab, setActiveTab] = useState<"contacts" | "logistics" | "opportunities">(
+  const [activeTab, setActiveTab] = useState<"contacts" | "logistics" | "opportunities" | "emails">(
     "contacts"
   )
   const [companyName, setCompanyName] = useState("")

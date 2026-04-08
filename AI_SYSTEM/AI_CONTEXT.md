@@ -168,17 +168,115 @@ Frontend foundation rule:
 - current canonical internal bases for the approved wrapper layer include `frontend/src/components/ui/combobox.tsx`, `frontend/src/components/ui/data-table.tsx`, and `frontend/src/components/ui/empty.tsx`
 - semantic typography is part of the frontend foundation and must be applied through shared roles, not improvised per page
 - live forms must use the shared Priority form layer (`PriorityFormHeader`, `PriorityFormSection`, `PriorityFormField`, `PriorityInfoField`, `PrioritySubmitBar`) instead of raw input/button markup
+- the canonical next-generation form stack is now `react-hook-form + zod + PriorityFormEngine`
+- feature teams must define schemas and field definitions instead of inventing ad hoc stateful form engines inside pages
+- dynamic catalogs and dependent fields must flow through shared adapters or custom schema-field renderers instead of per-screen imperative glue
+- required markers must reflect actual schema or workflow requirements; do not visually overstate optional capture
+- helper text inside forms should be sparse and operational: keep it only when it reduces a user error or clarifies derived behavior
+- approved modal sizing for live ERP forms is:
+  - `compact` for short utility or catalog forms
+  - `standard` for most create/edit dialogs
+  - `workspace` for long record forms and hybrid form-plus-grid workflows
+- approved form density modes for live ERP forms are:
+  - `compact` for short modals with inline submit actions
+  - `workspace` for long create/edit flows with wider multi-column capture
+- desktop dialogs should prefer generous horizontal room and slightly tighter internal spacing over narrow, overly vertical form stacks
+- `PriorityDialog` and `PriorityForm` are the canonical density controls for live form UX; do not compensate per screen with ad hoc padding overrides unless the workflow truly requires it
+- live ERP forms are desktop-first by default: on large screens they should visually occupy most of the available workspace, typically around 80% of the viewport width once the dialog shell is open
+- do not preserve mobile-like max widths in desktop dialogs just because the same form also supports mobile; mobile should collapse by breakpoint, not constrain desktop
+- sticky submit rails should be reserved for long workspace forms; compact modal forms should prefer an inline footer with lower visual weight
 - `ToggleGroup` is the preferred control for short mutually exclusive choices; `Switch` is the preferred control for true on/off states
+- `PriorityCollectionWorkspace` is now the default shell for read-mostly browse/list surfaces
+- the default browse workspace stack is:
+  - `PrioritySearchField`
+  - `PriorityFilterPopover`
+  - `PrioritySavedViews`
+  - `PriorityStatusLanes`
+  - `PriorityActionRail`
+  - active table or board surface inside `PriorityCollectionWorkspace`
+- `PriorityKanbanBoard` is the approved board mode for pipeline-style modules such as opportunities
+- `PriorityCollectionTable` is the canonical browse/list table for detail tabs, embedded lists, and admin/master-data lists that do not need the full workspace shell
+- `PriorityDataTable` is now a legacy compatibility wrapper and should only remain where migration has not happened yet
+- `PriorityGrid` on top of `ag-grid-community` is the approved dense editing shell for ERP-grade row, matrix, and inline-editing workflows
+- internal mailing is now a first-class ERP capability, not an external experiment:
+  - `Master Data > Mail` owns mailbox setup, role access, OAuth connection, sync mode, and mailbox signature configuration
+  - `/mail` is the shared inbox/workbench for authorized users
+  - embedded `Email` tabs in ERP entities must respect operational context instead of showing every linked thread indiscriminately
+- mailbox signatures now use the canonical `public URL + ERP proxy` strategy:
+  - the mailbox record stores `signature_image_url`
+  - `/api/mail/signature-image` is the approved render path for remote signatures such as Google Drive
+  - `NEXT_PUBLIC_APP_URL` must point to the public ERP domain so outbound emails can resolve the proxied signature outside the app
+- quotation email context rules are now explicit:
+  - sales quotation detail must show customer-facing threads only
+  - pricing/provider outreach must show provider-facing threads only
+- every `PriorityGrid` workflow must define a mobile fallback pattern before it is approved for live use
 - the approved Priority UI catalog is documented in `AI_PRIORITY_UI_REGISTRY.md` and mirrored in `frontend/src/components/priority/registry.ts`
+- live ERP screens should now prefer a workspace-first framing:
+  - compact contextual headers
+  - metric strips only when they help decision-making
+  - summary rails for orientation on dense detail/admin screens
+  - less hero chrome and less card mosaic behavior on product surfaces
+- list workspaces with no records should switch into a compact empty-workspace mode:
+  - denser header
+  - toolbar first
+  - no decorative metric strip
+  - empty state visible near the fold
+- the current approved workspace framing layer includes `PriorityWorkspaceHeader`, `PriorityMetricStrip`, `PriorityMetricCard`, and `PrioritySummaryRail`
+- `PriorityWorkspacePath` is the approved interactive breadcrumb/path layer inside workspace headers; do not duplicate that context again in the desktop topbar
+- the approved cross-workspace navigation assist layer now includes `PriorityCommandBar` for fast desktop movement and lower training cost
+- the canonical shell is now topbar-first:
+  - `NavigationMenu` in the topbar for module navigation
+  - `PriorityCommandBar` for global movement and quick actions
+  - `PriorityWorkspacePath` inside workspace headers for local backtracking
+  - no persistent desktop sidebar
 - frontend visual validation is now a two-layer system:
   - `Playwright` for real route/auth/browser validation under `frontend/tests/e2e/`
   - `Storybook` for isolated visual review of Priority UI under `frontend/src/stories/priority/`
+- the current Playwright suites are organized by intent:
+  - `test:e2e` for broad browser smoke
+  - `test:e2e:critical` for critical authenticated workspaces
+  - `test:e2e:forms` for create/edit form coverage across CRM, providers, quotations, pricing, and admin catalogs
+  - `test:e2e:grids` for list tables, dense admin grids, provider offerings, and quotation/pricing capture grids
+  - `test:e2e:product` for final product-level screenshots across shell, representative forms, and dense grids
+  - `test:e2e:process` for full cross-role workflow audits from CRM to pricing to sales and renegotiation
+  - `test:e2e:workspaces` for browse workspace lanes, visible CTAs, saved views, and empty-state behavior
+  - `test:e2e:kanban` for board mode validation and saved-view persistence in pipeline screens
+- after major form or modal changes, run `test:e2e:forms` before broader visual signoff so form regressions surface early
+- after major table, empty-workspace, or dense-grid changes, run `test:e2e:grids` before broader visual signoff so list/grid regressions surface early
+- before final release-style UX review, run `test:e2e:product` to capture a single fresh evidence set for shell, forms, and grids
 - Storybook does not replace route-level validation; it exists to inspect typography, actions, forms, tables, and empty states before or alongside live-screen audits
 - when macOS prevents direct Playwright browser launch under Codex or another non-terminal host runtime, the approved fallback is an external Playwright browser server started from a normal local terminal via `npm run test:e2e:server`
 - when `.playwright/browser-server.json` exists, Playwright config and `validation:repo-gate` may connect through that websocket instead of launching a browser process directly
 - `npm run validation:repo-gate:auto` and `npm run validation:repo-gate:auto:headed` are the preferred operational wrappers for repository handoff because they can bootstrap that browser server automatically and clean it afterward
+- when running headed local browser audits with credentials that contain shell-sensitive characters such as `!`, prefer inline env vars with single quotes:
+  - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:critical -- --headed`
+  - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e -- --headed`
 - the official local handoff gate for repository closeout is `npm run validation:repo-gate`
 - `READY_FOR_REPO` or `NOT_READY_FOR_REPO` must come from that reproducible gate artifact, not from subjective review alone
+- the approved reusable cleanup path for ad hoc UI/E2E QA example data is:
+  - preview: `cd frontend && npm run validation:cleanup:qa-preview`
+  - apply: `cd frontend && npm run validation:cleanup:qa-apply`
+- that cleanup targets example artifacts created through patterns such as `Cliente QA Proceso`, `Proveedor QA`, `@priority.test`, `example.com`, and `Vista QA`
+- the cleanup script deletes dependent quotation/provider artifacts first and then neutralizes plus soft-deletes QA clients through backend-safe flows; do not hard-delete clients directly
+- the current live schema-driven forms already migrated to `PriorityFormEngine` are:
+  - login access
+  - client profile
+  - contact create/edit
+  - opportunity create/edit
+  - provider profile
+  - provider contact
+  - provider service offering
+  - user create/edit
+  - client logistics party
+  - quotation header
+- quotation status updates, quotation sales-option capture, and role-permission clone flows are approved shared-shell modals even when they are not full schema-rendered forms
+- the current live browse workspace migrations completed on the new foundation are:
+  - pricing quotations
+  - quotations
+  - opportunities
+  - clients
+  - providers
+- the current live `PriorityGrid` workflows remain quotation charge line capture, quotation cargo line capture, provider offerings detail capture, and roles/permissions-style dense editing
 
 
 --------------------------------------------------
@@ -227,15 +325,15 @@ Current shared layout components:
 
 - frontend/src/components/layout/AppLayout.tsx
 - frontend/src/components/layout/Brand.tsx
-- frontend/src/components/layout/Sidebar.tsx
 - frontend/src/components/layout/Topbar.tsx
 - frontend/src/components/layout/PageContainer.tsx
 - frontend/proxy.ts
+- frontend/src/components/layout/Sidebar.tsx remains legacy-only and is no longer the canonical shell path
 
 Current brand assets:
 
 - root source of truth: ASSETS/
-- official shell, login, topbar, and sidebar lockup: frontend/public/assets/logo_vSVG.svg
+- official shell, login, and topbar lockup: frontend/public/assets/logo_vSVG.svg
 - document and PDF runtime assets: frontend/public/assets/
 - canonical asset registry and metadata source: frontend/src/lib/brand.ts
 - live routes, layout components, and PDF routes must not hardcode logo paths directly
@@ -247,7 +345,7 @@ Current UI foundation:
 - primitives live under `frontend/src/components/ui/`
 - branded ERP wrappers and compositions live under `frontend/src/components/priority/`
 - new UI work must prefer the Priority wrapper layer over ad hoc raw primitive usage when wrappers already exist
-- the global navigation model remains sidebar + topbar
+- the global navigation model is now topbar-first without a persistent sidebar
 - tabs are approved only as internal organization inside dense workspaces, not as a replacement for shell navigation
 
 Current database modules:
@@ -337,8 +435,9 @@ Authentication:
 Authorization:
 
 - route access is enforced through frontend/proxy.ts and erp_can_access_route()
-- sidebar visibility is driven by get_current_navigation_items()
-- the main sidebar is now a permission-aware retractable shell with grouped accordion modules, desktop collapse memory, and mobile drawer behavior
+- topbar module navigation is driven by the permission-aware navigation registry
+- the canonical shell no longer uses a persistent desktop sidebar
+- if a sidebar-like surface exists, it is only a secondary or mobile navigation helper
 - permission_modules and permission_submodules define the visible ERP navigation surface
 - permission_resources and role_resource_permissions define the live coarse-grained security layer
 - permission_fields and role_field_permissions define the current field-permission registry

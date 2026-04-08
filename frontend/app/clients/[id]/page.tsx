@@ -6,6 +6,8 @@ import { StatusBadge } from "@/components/data/StatusBadge"
 import { ClientDetailView } from "@/features/client-detail/ClientDetailView"
 import { clientStatusOptions } from "@/features/client-detail/helpers"
 import { useClientDetailController } from "@/features/client-detail/useClientDetailController"
+import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 
 export default function ClientDetailPage() {
   const params = useParams()
@@ -14,25 +16,25 @@ export default function ClientDetailPage() {
 
   if (!clientId) {
     return (
-      <PageContainer title="Client" description="Invalid client id.">
-        <p className="text-sm text-[#6B7280]">Client id is missing from the URL.</p>
+      <PageContainer title="Cliente" description="ID de cliente inválido.">
+        <p className="text-sm text-[#6B7280]">Falta el identificador del cliente en la URL.</p>
       </PageContainer>
     )
   }
 
   if (controller.loading && !controller.clientDetails) {
     return (
-      <PageContainer title="Client" description="Loading client data...">
-        <p className="text-sm text-[#6B7280]">Loading client information.</p>
+      <PageContainer title="Cliente" description="Cargando información del cliente…">
+        <p className="text-sm text-[#6B7280]">Estamos preparando la ficha del cliente.</p>
       </PageContainer>
     )
   }
 
   if (!controller.clientDetails) {
     return (
-      <PageContainer title="Client" description="Client not found.">
+      <PageContainer title="Cliente" description="Cliente no encontrado.">
         <p className="text-sm text-[#6B7280]">
-          We could not find a client with this id. It may have been deleted.
+          No encontramos un cliente con este identificador. Es posible que ya no exista.
         </p>
       </PageContainer>
     )
@@ -43,42 +45,39 @@ export default function ClientDetailPage() {
   return (
     <PageContainer
       title={client.company_name}
-      description="Client overview with related contacts and opportunities."
-      actions={
-        <>
-          <div className="min-w-[220px] rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[#1D4ED8]">
-              Estatus del cliente
-            </div>
-            <div className="mt-2 flex items-center gap-3">
-              <select
-                value={controller.status}
-                onChange={(event) => {
-                  void controller.handleUpdateStatus(event.target.value)
-                }}
-                disabled={controller.savingStatus}
-                className="w-full rounded-md border border-[#93C5FD] bg-white px-3 py-2 text-sm font-medium text-[#1E3A8A] outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#DBEAFE]"
-              >
-                {clientStatusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <StatusBadge status={controller.status} />
-            </div>
-            <div className="mt-2 text-[11px] text-[#1D4ED8]">
-              {controller.savingStatus ? "Guardando estatus..." : "Seguimiento principal del cliente"}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => controller.setShowEditModal(true)}
-            className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
+      description="Resumen comercial de la cuenta con contactos, registros operativos y oportunidades relacionadas."
+      meta={
+        <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-white/10 bg-white/8 px-3 py-2 text-sm text-[var(--brand-light-gray)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-gray)]">Estatus comercial</span>
+          <select
+            value={controller.status}
+            onChange={(event) => {
+              void controller.handleUpdateStatus(event.target.value)
+            }}
+            disabled={controller.savingStatus}
+            className="rounded-xl border border-white/10 bg-[rgba(255,255,255,0.08)] px-3 py-2 text-sm font-medium text-white outline-none focus:border-[rgba(179,58,91,0.45)]"
           >
-            Editar informacion
-          </button>
-          <button
+            {clientStatusOptions.map((option) => (
+              <option key={option.value} value={option.value} className="text-[#111827]">
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <StatusBadge status={controller.status} />
+          <span className="text-xs text-[var(--brand-soft-gray)]">
+            {controller.savingStatus ? "Guardando estatus…" : "Seguimiento principal del cliente"}
+          </span>
+        </div>
+      }
+      actions={
+        <ButtonGroup className="flex flex-wrap items-center gap-3 bg-transparent p-0">
+          <Button type="button" variant="outline" onClick={() => history.back()}>
+            Volver
+          </Button>
+          <Button type="button" variant="outline" onClick={() => controller.setShowEditModal(true)}>
+            Editar perfil
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               controller.setOpportunityForm((current) => ({
@@ -88,19 +87,18 @@ export default function ClientDetailPage() {
               }))
               controller.setShowOpportunityModal(true)
             }}
-            className="rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1D4ED8]"
           >
-            Anadir oportunidad
-          </button>
-          <button
+            Añadir oportunidad
+          </Button>
+          <Button
             type="button"
+            variant="destructive"
             onClick={controller.handleDeleteClient}
             disabled={controller.deletingClient}
-            className="rounded-md border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-2 text-sm font-medium text-[#B91C1C] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {controller.deletingClient ? "Deleting..." : "Delete Client"}
-          </button>
-        </>
+            {controller.deletingClient ? "Eliminando…" : "Eliminar cliente"}
+          </Button>
+        </ButtonGroup>
       }
     >
       <ClientDetailView controller={controller} />

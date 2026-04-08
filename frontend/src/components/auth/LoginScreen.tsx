@@ -1,21 +1,35 @@
 "use client"
 
-import { FormEvent, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { getCurrentErpUser, linkCurrentAuthUser, resolveLoginIdentity } from "@/lib/auth"
+import { usePrioritySchemaForm } from "@/lib/forms/usePrioritySchemaForm"
+import { loginFormSchema, type LoginFormSchemaValues } from "@/features/auth/schemas/login-form"
 import { Brand } from "@/components/layout/Brand"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 type LoginScreenProps = {
   reason?: string
 }
 
+const defaultValues: LoginFormSchemaValues = {
+  login: "",
+  password: "",
+}
+
 export function LoginScreen({ reason }: LoginScreenProps) {
   const router = useRouter()
-  const [login, setLogin] = useState("")
-  const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const form = usePrioritySchemaForm({
+    schema: loginFormSchema,
+    defaultValues,
+    disabled: submitting,
+  })
 
   const statusMessage = useMemo(() => {
     if (reason === "inactive") {
@@ -25,13 +39,15 @@ export function LoginScreen({ reason }: LoginScreenProps) {
     return null
   }, [reason])
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  const loginError = form.formState.errors.login?.message
+  const passwordError = form.formState.errors.password?.message
+
+  async function handleSubmit(values: LoginFormSchemaValues) {
     setSubmitting(true)
     setErrorMessage(null)
 
     try {
-      const email = await resolveLoginIdentity(login)
+      const email = await resolveLoginIdentity(values.login)
 
       if (!email) {
         throw new Error("Usuario o contraseña incorrectos.")
@@ -39,7 +55,7 @@ export function LoginScreen({ reason }: LoginScreenProps) {
 
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password: values.password,
       })
 
       if (error) {
@@ -57,7 +73,7 @@ export function LoginScreen({ reason }: LoginScreenProps) {
       router.replace("/")
       router.refresh()
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo iniciar sesion.")
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo iniciar sesión.")
     } finally {
       setSubmitting(false)
     }
@@ -68,47 +84,46 @@ export function LoginScreen({ reason }: LoginScreenProps) {
       <div className="absolute inset-0 bg-[linear-gradient(135deg,_rgba(255,255,255,0.03),_transparent_28%),linear-gradient(320deg,_rgba(179,58,91,0.12),_transparent_30%)]" />
 
       <div className="relative mx-auto flex min-h-screen max-w-7xl items-center px-6 py-12 lg:px-10">
-        <div className="grid w-full gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid w-full gap-10 lg:grid-cols-[1.2fr_0.8fr]">
           <section className="flex flex-col justify-center">
-            <div className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.34em] text-[var(--brand-soft-gray)]">
-              Secure Access Portal
+            <div className="w-fit rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-soft-gray)]">
+              Acceso seguro al ERP
             </div>
 
             <div className="mt-8">
               <Brand showTagline light />
             </div>
 
-            <h1 className="mt-8 max-w-3xl text-4xl font-semibold tracking-[0.02em] text-white sm:text-5xl">
-              El centro corporativo para ventas, pricing y operación logística.
+            <h1 className="mt-8 max-w-3xl text-4xl font-semibold tracking-[-0.03em] text-balance text-white sm:text-5xl">
+              Entra directo a clientes, cotizaciones y operación.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--brand-soft-gray)] sm:text-lg">
-              Acceso controlado con usuarios asignados, identidad corporativa y seguridad centralizada antes
-              de entrar al ERP.
+              Un solo acceso para revisar pendientes, capturar información y seguir el trabajo del día sin duplicidad.
             </p>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
               <div className="rounded-[24px] border border-white/10 bg-white/6 p-5 backdrop-blur">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[var(--brand-gray)]">
-                  Seguridad
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-gray)]">
+                  Acceso
                 </p>
                 <p className="mt-3 text-sm font-medium leading-6 text-white">
-                  Login protegido antes del homepage y acceso solo para usuarios activos.
+                  Entras con tu usuario asignado y solo si tu perfil está activo.
                 </p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/6 p-5 backdrop-blur">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[var(--brand-gray)]">
-                  Inteligencia
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-gray)]">
+                  Flujo
                 </p>
                 <p className="mt-3 text-sm font-medium leading-6 text-white">
-                  CRM, pricing y master data operan sobre un backend sincronizado y trazable.
+                  Clientes, cotizaciones y catálogos comparten la misma información operativa.
                 </p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/6 p-5 backdrop-blur">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[var(--brand-gray)]">
-                  Rendimiento
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-gray)]">
+                  Claridad
                 </p>
                 <p className="mt-3 text-sm font-medium leading-6 text-white">
-                  Una sola plataforma para capturar, cotizar y convertir sin duplicidad operativa.
+                  Cada pantalla está pensada para ubicarte rápido y dejarte actuar con menos capacitación.
                 </p>
               </div>
             </div>
@@ -116,66 +131,75 @@ export function LoginScreen({ reason }: LoginScreenProps) {
 
           <section className="brand-card rounded-[32px] p-8 sm:p-10">
             <div className="mb-8">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[var(--brand-burgundy)]">
-                User Login
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-burgundy)]">
+                Inicio de sesión
               </div>
-              <h2 className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">Iniciar sesion</h2>
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.025em] text-[var(--brand-navy)]">
+                Inicia sesión
+              </h2>
               <p className="mt-2 text-sm leading-7 text-[#526175]">
-                Usa tu username o correo asignado con la contraseña definida por administración.
+                Usa tu usuario o correo asignado y entra directo al sistema.
               </p>
             </div>
 
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
               <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[var(--brand-navy)]">Usuario</span>
-                <input
+                <span className="text-sm font-semibold text-[var(--brand-navy)]">
+                  Usuario o correo <span className="text-[var(--brand-burgundy)]">*</span>
+                </span>
+                <Input
                   type="text"
                   autoComplete="username"
-                  value={login}
-                  onChange={(event) => setLogin(event.target.value)}
-                  placeholder="usuario o correo"
-                  className="w-full rounded-[20px] border border-[#D1D6DF] bg-white px-4 py-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)] focus:ring-2 focus:ring-[rgba(179,58,91,0.18)]"
-                  required
+                  placeholder="usuario o correo…"
+                  className="h-12 rounded-[20px] border-[#D1D6DF] bg-white px-4 text-sm text-[var(--brand-navy)]"
+                  aria-invalid={Boolean(loginError)}
+                  disabled={submitting}
+                  {...form.register("login")}
                 />
+                {loginError ? <p className="text-xs text-[#8E1B1B]">{loginError}</p> : null}
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[var(--brand-navy)]">Contrasena</span>
-                <input
+                <span className="text-sm font-semibold text-[var(--brand-navy)]">
+                  Contraseña <span className="text-[var(--brand-burgundy)]">*</span>
+                </span>
+                <Input
                   type="password"
                   autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="********"
-                  className="w-full rounded-[20px] border border-[#D1D6DF] bg-white px-4 py-3 text-sm text-[var(--brand-navy)] outline-none focus:border-[var(--brand-burgundy-light)] focus:ring-2 focus:ring-[rgba(179,58,91,0.18)]"
-                  required
+                  placeholder="contraseña…"
+                  className="h-12 rounded-[20px] border-[#D1D6DF] bg-white px-4 text-sm text-[var(--brand-navy)]"
+                  aria-invalid={Boolean(passwordError)}
+                  disabled={submitting}
+                  {...form.register("password")}
                 />
+                {passwordError ? <p className="text-xs text-[#8E1B1B]">{passwordError}</p> : null}
               </label>
 
               {statusMessage ? (
-                <div className="rounded-[20px] border border-[#F6D9A4] bg-[#FFF4DE] px-4 py-3 text-sm text-[#8C5A02]">
-                  {statusMessage}
-                </div>
+                <Alert className="border-[#F6D9A4] bg-[#FFF4DE] text-[#8C5A02]">
+                  <AlertTitle>Acceso restringido</AlertTitle>
+                  <AlertDescription className="text-[#8C5A02]">{statusMessage}</AlertDescription>
+                </Alert>
               ) : null}
 
               {errorMessage ? (
-                <div className="rounded-[20px] border border-[#F2B6B6] bg-[#FFF0F0] px-4 py-3 text-sm text-[#8E1B1B]">
-                  {errorMessage}
-                </div>
+                <Alert variant="destructive" className="border-[#F2B6B6] bg-[#FFF0F0] text-[#8E1B1B]">
+                  <AlertTitle>No se pudo iniciar sesión</AlertTitle>
+                  <AlertDescription className="text-[#8E1B1B]">{errorMessage}</AlertDescription>
+                </Alert>
               ) : null}
 
-              <button
+              <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-[22px] bg-[linear-gradient(135deg,_#B33A5B,_#800020)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-[0_20px_34px_-22px_rgba(128,0,32,0.85)] hover:translate-y-[-1px] hover:shadow-[0_26px_40px_-22px_rgba(128,0,32,0.88)] disabled:cursor-not-allowed disabled:opacity-70"
+                className="h-12 w-full rounded-[22px] bg-[linear-gradient(135deg,_#B33A5B,_#800020)] text-sm font-semibold text-white shadow-[0_20px_34px_-22px_rgba(128,0,32,0.85)] hover:translate-y-[-1px] hover:shadow-[0_26px_40px_-22px_rgba(128,0,32,0.88)]"
               >
-                {submitting ? "Validando acceso..." : "Entrar al ERP"}
-              </button>
+                {submitting ? "Validando acceso…" : "Entrar al ERP"}
+              </Button>
             </form>
 
             <div className="mt-6 rounded-[22px] border border-[#DDE2EA] bg-[rgba(11,31,59,0.05)] px-4 py-4 text-xs leading-7 text-[#5B6A7D]">
-              La contraseña se valida con Supabase Auth. El ERP solo permite acceso si el usuario
-              existe en el directorio interno y está activo.
+              La autenticación se valida con Supabase Auth. El ERP solo abre el acceso si tu usuario existe en el directorio interno y está activo.
             </div>
           </section>
         </div>

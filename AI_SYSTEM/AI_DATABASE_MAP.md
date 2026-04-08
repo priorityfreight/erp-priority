@@ -362,7 +362,25 @@ update_quotation_status()
 Handles the canonical quotation lifecycle transitions.
 
 search_quotations()
-Returns the paginated CRM or Pricing quotation queue without forcing full summary-view scans.
+Returns the paginated CRM or Pricing quotation queue with workspace-aware search, lane/status, column filters, sorting, and page-size controls without forcing full summary-view scans.
+
+workspace_saved_views
+Stores per-user workspace presets including search, lane/tab, filters, sorting, and visible-column preferences. Internal system rows may also persist workspace column layouts.
+
+mailboxes
+Stores shared ERP mailboxes, OAuth connection state, sync configuration, and the optional `signature_image_url` used for outbound signatures.
+
+mailbox_role_access
+Controls which ERP roles may access each shared mailbox.
+
+mail_threads
+Stores the lightweight local index of Gmail threads for inbox rendering and entity linking.
+
+mail_messages
+Stores the lightweight local index of Gmail messages used for thread detail and reply context.
+
+mail_entity_links
+Stores automatic or manual links between mail threads/messages and ERP entities such as quotations and clients.
 
 erp_can_view_quotation_cost()
 Returns whether the current role may view quotation purchase-side economics.

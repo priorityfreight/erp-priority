@@ -1,9 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { type ColumnDef } from "@tanstack/react-table"
+import { useEffect, useMemo, useState } from "react"
 import { PageContainer } from "@/components/layout/PageContainer"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
 import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
+import { PriorityMetricCard, PriorityMetricStrip } from "@/components/priority/PriorityWorkspace"
 import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
 import { PriorityToolbar } from "@/components/priority/PriorityToolbar"
 import { Button } from "@/components/ui/button"
@@ -17,8 +20,8 @@ function EmptyState({ hasQuery }: { hasQuery: boolean }) {
       title={hasQuery ? "Sin coincidencias UN/LOCODE" : "Sin datos UN/LOCODE"}
       description={
         hasQuery
-          ? "No UN/LOCODE rows match the current search."
-          : "No UN/LOCODE data is available for the current filter."
+          ? "No hay registros UN/LOCODE que coincidan con la búsqueda actual."
+          : "No hay datos UN/LOCODE disponibles para el filtro seleccionado."
       }
       variant={hasQuery ? "search" : "default"}
     />
@@ -71,64 +74,88 @@ export function UnlocodeExplorer() {
     countryCode === "all"
       ? undefined
       : summaries.find((entry) => entry.country_code === countryCode.toUpperCase())
+  const columns = useMemo<ColumnDef<UnlocodeRecord>[]>(
+    () => [
+      {
+        accessorKey: "unlocode",
+        header: "UN/LOCODE",
+        cell: ({ row }) => row.original.unlocode,
+      },
+      {
+        id: "location",
+        header: "Ubicación",
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium text-[#111827]">{row.original.name}</div>
+            <div className="mt-1 text-xs text-[#6B7280]">
+              {row.original.name_without_diacritics || "Sin nombre alterno"}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "country",
+        header: "País",
+        cell: ({ row }) => `${row.original.country_code} · ${row.original.country_name}`,
+      },
+      {
+        accessorKey: "subdivision_code",
+        header: "Subdivisión",
+        cell: ({ row }) => row.original.subdivision_code || "N/A",
+      },
+      {
+        accessorKey: "function_classifier",
+        header: "Funciones",
+        cell: ({ row }) => row.original.function_classifier || "N/A",
+      },
+      {
+        accessorKey: "iata_code",
+        header: "IATA",
+        cell: ({ row }) => row.original.iata_code || "N/A",
+      },
+      {
+        accessorKey: "coordinates",
+        header: "Coordenadas",
+        cell: ({ row }) => row.original.coordinates || "N/A",
+      },
+    ],
+    []
+  )
 
   return (
     <PageContainer
       title="UN/LOCODE"
-      description="Read-only lookup for UNECE trade and transport location codes."
+      description="Consulta operativa de solo lectura para códigos UNECE de comercio y transporte."
       actions={
         <div className="rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">
-          Source mode: {result?.mode ?? "loading"}
+          Modo fuente: {result?.mode ?? "cargando"}
         </div>
       }
     >
       <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
-              Visible Results
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{total.toLocaleString()}</div>
-          </div>
-          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
-              Active Countries
-            </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">
-              {countryCode === "all" ? countryOptions.length : 1}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
-              Country Focus
-            </div>
-            <div className="mt-2 text-sm font-semibold text-[#111827]">
-              {highlightedSummary
-                ? `${highlightedSummary.country_code} · ${highlightedSummary.row_count.toLocaleString()} rows`
-                : "MX, US, CA"}
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#475569]">
-              Current Window
-            </div>
-            <div className="mt-2 text-sm font-semibold text-[#111827]">
-              {currentRangeStart.toLocaleString()}-{currentRangeEnd.toLocaleString()} of {total.toLocaleString()}
-            </div>
-          </div>
-        </section>
+        <PriorityMetricStrip>
+          <PriorityMetricCard label="Resultados visibles" value={total.toLocaleString()} helper="Resultados que respetan país y búsqueda." tone="info" />
+          <PriorityMetricCard label="Países activos" value={countryCode === "all" ? countryOptions.length : 1} helper="Cobertura visible en esta ventana." tone="success" />
+          <PriorityMetricCard
+            label="Foco país"
+            value={highlightedSummary ? `${highlightedSummary.country_code}` : "MX / US / CA"}
+            helper={highlightedSummary ? `${highlightedSummary.row_count.toLocaleString()} registros` : "Foco por país cuando conviene."}
+            tone="warning"
+          />
+          <PriorityMetricCard label="Ventana actual" value={`${currentRangeStart.toLocaleString()}-${currentRangeEnd.toLocaleString()}`} helper={`de ${total.toLocaleString()} totales`} tone="default" />
+        </PriorityMetricStrip>
 
         <section className="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <PriorityCardTitle>Lookup Explorer</PriorityCardTitle>
+              <PriorityCardTitle>Explorador de ubicaciones</PriorityCardTitle>
               <PriorityTypography variant="bodyMuted" className="mt-1">
-                Search by UN/LOCODE, location name, subdivision, IATA, or coordinates.
+                Busca por UN/LOCODE, nombre de ubicación, subdivisión, IATA o coordenadas.
               </PriorityTypography>
             </div>
             <PriorityToolbar className="flex flex-col gap-3 sm:flex-row">
               <PriorityInput
-                placeholder="Search code or location"
+                placeholder="Buscar código o ubicación…"
                 value={query}
                 onChange={(event) => {
                   setLoading(true)
@@ -143,9 +170,9 @@ export function UnlocodeExplorer() {
                   setPage(1)
                   setCountryCode(value)
                 }}
-                placeholder="Country"
+                placeholder="País"
                 options={[
-                  { value: "all", label: "All Countries" },
+                  { value: "all", label: "Todos los países" },
                   ...countryOptions.map((code) => ({ value: code, label: code })),
                 ]}
               />
@@ -179,77 +206,53 @@ export function UnlocodeExplorer() {
 
           {loading ? (
             <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-10 text-center text-sm text-[#6B7280]">
-              Loading UN/LOCODE data...
+              Cargando datos UN/LOCODE...
             </div>
           ) : items.length === 0 ? (
             <EmptyState hasQuery={Boolean(query.trim())} />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#E5E7EB]">
-              <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
-                <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3">UN/LOCODE</th>
-                    <th className="px-4 py-3">Location</th>
-                    <th className="px-4 py-3">Country</th>
-                    <th className="px-4 py-3">Subdivision</th>
-                    <th className="px-4 py-3">Functions</th>
-                    <th className="px-4 py-3">IATA</th>
-                    <th className="px-4 py-3">Coordinates</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                  {items.map((item: UnlocodeRecord) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-semibold text-[#111827]">{item.unlocode}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-[#111827]">{item.name}</div>
-                        <div className="mt-1 text-xs text-[#6B7280]">
-                          {item.name_without_diacritics || "No alternate name"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">
-                        {item.country_code} · {item.country_name}
-                      </td>
-                      <td className="px-4 py-3 text-[#475569]">{item.subdivision_code || "N/A"}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.function_classifier || "N/A"}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.iata_code || "N/A"}</td>
-                      <td className="px-4 py-3 text-[#475569]">{item.coordinates || "N/A"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PriorityCollectionTable
+              columns={columns}
+              data={items}
+              emptyTitle="Sin resultados UN/LOCODE"
+              emptyDescription="Ajusta la búsqueda o el filtro por país para seguir explorando."
+              paginationMode="none"
+              getRowId={(row) => row.id}
+              footerContent={
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => {
+                      setLoading(true)
+                      setPage((current) => Math.max(1, current - 1))
+                    }}
+                    type="button"
+                    variant="outline"
+                    disabled={page <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  <div className="min-w-[118px] text-center text-sm text-[#526175]">
+                    Página {page} de {totalPages}
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setLoading(true)
+                      setPage((current) => Math.min(totalPages, current + 1))
+                    }}
+                    type="button"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              }
+            />
           )}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <PriorityTypography variant="caption" className="uppercase tracking-[0.14em]">
-              Page {page} of {totalPages}
-            </PriorityTypography>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => {
-                  setLoading(true)
-                  setPage((current) => Math.max(1, current - 1))
-                }}
-                type="button"
-                variant="outline"
-                disabled={page <= 1}
-              >
-                Previous
-              </Button>
-              <Button
-                onClick={() => {
-                  setLoading(true)
-                  setPage((current) => Math.min(totalPages, current + 1))
-                }}
-                type="button"
-                variant="outline"
-                disabled={page >= totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <PriorityTypography variant="caption" className="uppercase tracking-[0.14em]">
+            Ventana {currentRangeStart.toLocaleString()}-{currentRangeEnd.toLocaleString()} de {total.toLocaleString()}
+          </PriorityTypography>
         </section>
       </div>
     </PageContainer>

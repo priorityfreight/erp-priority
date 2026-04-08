@@ -52,6 +52,7 @@ Official isolated visual review workbench:
 Rule:
 
 - if a component is part of the approved Priority registry, prefer importing it from the Priority barrel or its canonical module instead of rebuilding the pattern locally
+- the global shell may use `ui/navigation-menu.tsx` directly for topbar module navigation when a dedicated Priority wrapper is not yet needed
 
 
 --------------------------------------------------
@@ -63,6 +64,7 @@ Approved current wrappers and hooks:
 - `PriorityDialog`
 - `PrioritySheet`
 - `PrioritySearchCombobox`
+- `PriorityCollectionTable`
 - `PriorityDataTable`
 - `PriorityEmptyState`
 - `PriorityFormHeader`
@@ -71,12 +73,21 @@ Approved current wrappers and hooks:
 - `PriorityInfoField`
 - `PrioritySubmitBar`
 - `PriorityDateField`
+- `PriorityFormEngine`
+- `PriorityHybridFormLayout`
 - `PrioritySectionAlert`
 - `PriorityRowActions`
 - `PriorityToolbar`
+- `PriorityGrid`
+- `PriorityGridToolbar`
+- `PriorityCommandBar`
 - `PriorityUserAvatar`
 - `PriorityTypography`
 - `PriorityHoverPreview`
+- `PriorityWorkspaceHeader`
+- `PriorityMetricStrip`
+- `PriorityMetricCard`
+- `PrioritySummaryRail`
 - `usePriorityConfirm`
 
 
@@ -96,20 +107,45 @@ Forms
 - use `PriorityInfoField` for backend-owned or derived values
 - end long or important forms with `PrioritySubmitBar`
 - use `PriorityDateField` instead of raw date inputs on premium ERP surfaces
+- use `PriorityFormEngine` when a form should be rendered from schema definitions on top of `react-hook-form + zod`
+- use `PriorityHybridFormLayout` when a form and a dense editing surface must coexist in the same workspace
 
 Data display
 
-- use `PriorityDataTable` as the default grid/list shell
+- use `PriorityCollectionWorkspace` as the default browse/list shell
+- use `PrioritySearchField`, `PriorityFilterPopover`, and `PrioritySavedViews` as the default toolbar interaction layer for browse workspaces
+- use `PriorityStatusLanes` to make workspace state legible without forcing users to read a status column first
+- use `PriorityActionRail` for visible first-column row actions in live operational workspaces
+- use `PriorityActionMenu` or `PriorityRowActions` for secondary actions
+- use `PriorityKanbanBoard` for board/pipeline mode in modules such as opportunities
+- use `PriorityCollectionTable` for detail tabs, embedded lists, and browse/list surfaces that do not need the full workspace shell
+- `PriorityDataTable` is legacy for browse/list shells, is no longer part of the preferred barrel export path, and should not be used for new workspace migrations
+- `Master Data > Mail` and `/mail` should reuse the same Priority workspace language instead of inventing a parallel email UI kit
+- use `PriorityGrid` for dense editable workflows, matrices, and header-plus-lines ERP surfaces
 - use `PriorityEmptyState` for empty, search-empty, blocked, and recoverable error states
 - use `PriorityTypography` for semantic text roles
 - use `PriorityUserAvatar` when a user or owner identity is shown
+
+Workspace framing
+
+- use `PriorityWorkspaceHeader` to orient the user fast and avoid oversized decorative page heroes
+- use `PriorityWorkspacePath` inside the workspace header when the user benefits from quick backtracking to parent list screens
+- use `PriorityMetricStrip` and `PriorityMetricCard` for high-signal workspace summaries
+- use `PrioritySummaryRail` when a dense workspace needs quick explanation before the user acts
 
 Feedback and interaction
 
 - use `PrioritySectionAlert` for inline success/warning/error/info blocks
 - use `PriorityRowActions` for dense secondary actions in tables
 - use `PriorityHoverPreview` when quick context reduces navigation cost
+- use `PriorityCommandBar` for desktop-first quick navigation and low-training cross-workspace jumping
 - use `usePriorityConfirm` instead of `window.confirm`
+
+Navigation rule
+
+- global navigation is topbar-first; do not reintroduce a persistent desktop sidebar as the canonical shell
+- `NavigationMenu` in the topbar handles module switching
+- `PriorityWorkspacePath` in the workspace header handles local backtracking
 
 
 --------------------------------------------------
@@ -145,20 +181,33 @@ KNOWN STRONG PATTERNS
 
 Administrative list workspace
 
-- `PriorityToolbar`
-- `PriorityDataTable`
-- `PriorityRowActions`
+- `PriorityCollectionWorkspace`
+- `PrioritySearchField`
+- `PriorityFilterPopover`
+- `PrioritySavedViews`
+- `PriorityStatusLanes`
+- `PriorityActionRail`
+- `PriorityActionMenu`
 - `PriorityEmptyState`
 - `PrioritySectionAlert`
 
 Premium modal form
 
 - `PriorityDialog`
+- `PriorityFormEngine`
 - `PriorityFormHeader`
 - `PriorityFormSection`
 - `PriorityFormField`
 - `PriorityInfoField`
 - `PrioritySubmitBar`
+
+Hybrid header + lines workspace
+
+- `PriorityHybridFormLayout`
+- `PriorityFormEngine`
+- `PriorityGrid`
+- `PriorityGridToolbar`
+- `PrioritySectionAlert`
 
 Dense record workspace
 
@@ -167,6 +216,14 @@ Dense record workspace
 - `PriorityDateField`
 - `PrioritySectionAlert`
 - `PriorityRowActions`
+
+Pipeline workspace
+
+- `PriorityCollectionWorkspace`
+- `PriorityStatusLanes`
+- `PrioritySavedViews`
+- `PriorityKanbanBoard`
+- `PriorityActionRail`
 
 Spreadsheet-style capture form
 
@@ -182,10 +239,10 @@ Spreadsheet-style capture form
 NON-NEGOTIABLE RULES
 --------------------------------------------------
 
-- do not introduce a second UI foundation
+- do not introduce a third UI foundation beyond the approved `shadcn/ui` + `react-aria-components` stack
 - do not reintroduce `window.confirm`
 - do not build new empty states with custom ad hoc markup when `PriorityEmptyState` fits
-- do not build new list grids from raw HTML tables when `PriorityDataTable` fits
+- do not build new browse/list workspaces from raw HTML tables when `PriorityCollectionWorkspace` fits
 - do not rebuild typography ad hoc when `PriorityTypography` roles already fit
 - do not bypass the wrapper layer simply because direct primitive imports look faster
 

@@ -1,19 +1,24 @@
 "use client"
 
+import { useMemo } from "react"
 import { type ColumnDef } from "@tanstack/react-table"
+import type { ColDef } from "ag-grid-community"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { ProviderContactForm } from "@/components/forms/ProviderContactForm"
 import { ProviderForm } from "@/components/forms/ProviderForm"
 import { ProviderServiceOfferingForm } from "@/components/forms/ProviderServiceOfferingForm"
-import { normalizeWhatsAppLink } from "@/components/forms/ContactForm"
+import { normalizeWhatsAppLink } from "@/components/forms/contact-form-utils"
 import { PageContainer } from "@/components/layout/PageContainer"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityEmptyState } from "@/components/priority/PriorityEmptyState"
+import { PriorityGrid } from "@/components/priority/grid/PriorityGrid"
 import { PriorityHoverPreview } from "@/components/priority/PriorityHoverPreview"
 import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
 import { PriorityTypography } from "@/components/priority/PriorityTypography"
+import { PriorityMetricCard, PriorityMetricStrip, PrioritySummaryRail } from "@/components/priority/PriorityWorkspace"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -28,29 +33,12 @@ function LoadingCard() {
   return <Skeleton className="h-28 rounded-[24px]" />
 }
 
-function HeaderMetric({
-  label,
-  value,
-  helper,
-}: {
-  label: string
-  value: string
-  helper: string
-}) {
-  return (
-    <div className="rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_48px_-36px_rgba(3,10,24,0.28)]">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B6A7D]">{label}</div>
-      <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{value}</div>
-      <div className="mt-2 text-sm text-[#5B6A7D]">{helper}</div>
-    </div>
-  )
-}
-
 export function ProviderDetailView({
   controller,
 }: {
   controller: ProviderDetailController
 }) {
+  const searchParams = useSearchParams()
   const {
     providerDetails,
     loading,
@@ -91,9 +79,14 @@ export function ProviderDetailView({
     handleDeleteOffering,
   } = controller
 
+  const defaultTab = useMemo(() => {
+    const requestedTab = searchParams.get("tab")
+    return requestedTab === "contacts" || requestedTab === "offerings" ? requestedTab : "profile"
+  }, [searchParams])
+
   if (loading) {
     return (
-      <PageContainer title="Provider detail" description="Loading provider information...">
+      <PageContainer title="Proveedor" description="Cargando información del proveedor…">
         <div className="space-y-4">
           <LoadingCard />
           <LoadingCard />
@@ -105,10 +98,10 @@ export function ProviderDetailView({
 
   if (!providerDetails) {
     return (
-      <PageContainer title="Provider detail" description="The requested provider could not be found.">
+      <PageContainer title="Proveedor" description="No encontramos el proveedor solicitado.">
         <PriorityEmptyState
           title="Proveedor no encontrado"
-          description="El registro solicitado no existe o ya no está disponible en el catalogo de pricing."
+          description="El registro solicitado no existe o ya no está disponible en el catálogo de pricing."
         />
       </PageContainer>
     )
@@ -116,55 +109,71 @@ export function ProviderDetailView({
 
   const { provider, contacts, serviceOfferings, serviceTransportTypes } = providerDetails
 
-  const serviceColumns: ColumnDef<(typeof serviceOfferings)[number]>[] = [
+  const serviceGridColumns: ColDef<(typeof serviceOfferings)[number]>[] = [
     {
-      accessorKey: "service_type",
-      header: "Servicio",
-      cell: ({ row }) => (
-        <PriorityHoverPreview
-          eyebrow="Servicio del proveedor"
-          title={row.original.service_type}
-          description="Configuracion comercial habilitada para pricing."
-          lines={[
-            { label: "Transporte", value: row.original.transport_type },
-            { label: "Terminos", value: row.original.terms_and_conditions || "No definido" },
-          ]}
-          trigger={
+      field: "service_type",
+      headerName: "Servicio",
+      flex: 1.2,
+      cellRenderer: (params: { data?: (typeof serviceOfferings)[number] }) => {
+        const offering = params.data
+
+        if (!offering) {
+          return null
+        }
+
+        return (
+          <div className="flex h-full items-center py-2">
             <div className="space-y-1">
-              <div className="font-medium text-[var(--brand-navy)]">{row.original.service_type}</div>
-              <Badge variant="secondary">{row.original.transport_type}</Badge>
+              <div className="font-medium text-[var(--brand-navy)]">{offering.service_type}</div>
+              <Badge variant="secondary">{offering.transport_type}</Badge>
             </div>
-          }
-        />
-      ),
+          </div>
+        )
+      },
     },
     {
-      accessorKey: "terms_and_conditions",
-      header: "Terminos y condiciones",
-      cell: ({ row }) => row.original.terms_and_conditions || "No definido",
+      field: "transport_type",
+      headerName: "Transporte",
+      flex: 0.9,
     },
     {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex justify-end">
-          <PriorityRowActions
-            label={`Acciones de ${row.original.service_type}`}
-            actions={[
-              {
-                label: "Editar",
-                onSelect: () => startEditOffering(row.original),
-              },
-              {
-                label: deletingOfferingId === row.original.id ? "Eliminando..." : "Eliminar",
-                onSelect: () => void handleDeleteOffering(row.original.id),
-                disabled: deletingOfferingId === row.original.id,
-                destructive: true,
-              },
-            ]}
-          />
-        </div>
-      ),
+      field: "terms_and_conditions",
+      headerName: "Términos y condiciones",
+      flex: 1.8,
+      valueGetter: ({ data }) => data?.terms_and_conditions || "No definido",
+    },
+    {
+      headerName: "Acciones",
+      width: 160,
+      sortable: false,
+      filter: false,
+      cellRenderer: (params: { data?: (typeof serviceOfferings)[number] }) => {
+        const offering = params.data
+
+        if (!offering) {
+          return null
+        }
+
+        return (
+          <div className="flex h-full items-center justify-end">
+            <PriorityRowActions
+              label={`Acciones de ${offering.service_type}`}
+              actions={[
+                {
+                  label: "Editar",
+                  onSelect: () => startEditOffering(offering),
+                },
+                {
+                  label: deletingOfferingId === offering.id ? "Eliminando..." : "Eliminar",
+                  onSelect: () => void handleDeleteOffering(offering.id),
+                  disabled: deletingOfferingId === offering.id,
+                  destructive: true,
+                },
+              ]}
+            />
+          </div>
+        )
+      },
     },
   ]
 
@@ -179,7 +188,7 @@ export function ProviderDetailView({
           description={row.original.position || "Sin puesto definido"}
           lines={[
             { label: "Correo", value: row.original.email || "No disponible" },
-            { label: "Telefono", value: row.original.phone || "No disponible" },
+            { label: "Teléfono", value: row.original.phone || "No disponible" },
             { label: "LinkedIn", value: row.original.linkedin_url || "No disponible" },
           ]}
           trigger={
@@ -193,7 +202,7 @@ export function ProviderDetailView({
     },
     {
       accessorKey: "phone",
-      header: "Telefono",
+      header: "Teléfono",
       cell: ({ row }) => {
         const whatsappLink = normalizeWhatsAppLink(row.original.phone || "")
         return (
@@ -275,14 +284,14 @@ export function ProviderDetailView({
   return (
     <PageContainer
       title={provider.name}
-      description="Pricing provider profile with services, terms, and direct supplier contacts."
+      description="Workspace de pricing para revisar empresa, contactos, términos y cobertura del proveedor."
       actions={
         <ButtonGroup className="flex flex-wrap items-center gap-3 bg-transparent p-0">
           <Button asChild type="button" variant="outline" size="lg">
             <Link href="/pricing/providers">Volver</Link>
           </Button>
           <Button type="button" variant="outline" size="lg" onClick={() => setShowEditModal(true)}>
-            Editar informacion
+            Editar información
           </Button>
           <Button
             type="button"
@@ -291,105 +300,101 @@ export function ProviderDetailView({
             onClick={() => void handleDeleteProvider()}
             disabled={deletingProvider}
           >
-            {deletingProvider ? "Deleting..." : "Eliminar proveedor"}
+            {deletingProvider ? "Eliminando…" : "Eliminar proveedor"}
           </Button>
         </ButtonGroup>
       }
+      meta={
+        <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-white/10 bg-white/8 px-3 py-2 text-sm text-[var(--brand-light-gray)]">
+          <StatusBadge status={status} />
+          <select
+            className="rounded-xl border border-white/10 bg-[rgba(255,255,255,0.08)] px-3 py-2 text-sm outline-none focus:border-[rgba(179,58,91,0.45)]"
+            value={status}
+            onChange={(event) => void handleStatusChange(event.target.value)}
+            disabled={savingStatus}
+          >
+            <option value="en_proceso_de_alta">En proceso de alta</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+          <span className="text-xs text-[var(--brand-soft-gray)]">
+            {savingStatus ? "Guardando estatus…" : "Seguimiento del proveedor"}
+          </span>
+        </div>
+      }
     >
       <div className="space-y-8">
-        <section className="rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-6 shadow-[0_28px_60px_-42px_rgba(3,10,24,0.34)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#64748B]">
-                Seguimiento del proveedor
-              </div>
-              <div className="mt-2 text-3xl font-semibold text-[var(--brand-navy)]">{provider.name}</div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#5B6A7D]">
-                <Badge variant="outline">{provider.provider_type || "Sin clasificar"}</Badge>
-                <span>{provider.company_email || "Sin correo corporativo"}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <StatusBadge status={status} />
-              <select
-                className="rounded-xl border border-[#D1D5DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
-                value={status}
-                onChange={(event) => void handleStatusChange(event.target.value)}
-                disabled={savingStatus}
-              >
-                <option value="en_proceso_de_alta">En proceso de alta</option>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-              </select>
+        <PrioritySummaryRail className="xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+          <div>
+            <PriorityTypography variant="eyebrow">Proveedor</PriorityTypography>
+            <PriorityTypography as="h2" variant="sectionTitle" className="mt-2">
+              Empresa, contactos y servicios ofertados en un solo espacio de trabajo.
+            </PriorityTypography>
+            <PriorityTypography variant="bodyMuted" className="mt-2">
+              Diseñado para que pricing decida rápido: quién cotiza, bajo qué términos y con qué contacto directo.
+            </PriorityTypography>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5B6A7D]">
+              <Badge variant="outline">{provider.provider_type || "Sin clasificar"}</Badge>
+              <span>{provider.company_email || "Sin correo corporativo"}</span>
             </div>
           </div>
-        </section>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="rounded-[20px] border border-[rgba(11,31,59,0.08)] bg-[rgba(11,31,59,0.03)] p-4">
+              <PriorityTypography variant="eyebrow">Crédito</PriorityTypography>
+              <PriorityTypography variant="body" className="mt-2 font-medium">
+                {provider.credit_active
+                  ? `${provider.credit_days || 0} días y ${provider.credit_amount ? `$${provider.credit_amount.toLocaleString()}` : "monto pendiente"}`
+                  : "Sin crédito activo configurado."}
+              </PriorityTypography>
+            </div>
+          </div>
+        </PrioritySummaryRail>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <HeaderMetric
-            label="Contactos"
-            value={String(contacts.length)}
-            helper="Directos para pricing, negociacion y seguimiento."
-          />
-          <HeaderMetric
-            label="Servicios"
-            value={String(serviceOfferings.length)}
-            helper="Ofertas habilitadas con terminos y transporte."
-          />
-          <HeaderMetric
-            label="Credito"
-            value={provider.credit_active ? "Activo" : "Sin credito"}
-            helper={
-              provider.credit_days
-                ? `${provider.credit_days} dias de credito configurados`
-                : "Credito aun no definido"
-            }
-          />
-          <HeaderMetric
-            label="Ubicacion"
-            value={provider.country || "Sin pais"}
-            helper={provider.city || provider.city_unlocode || "Ciudad no definida"}
-          />
-        </section>
+        <PriorityMetricStrip>
+          <PriorityMetricCard label="Contactos" value={String(contacts.length)} helper="Directos para pricing y negociación." tone="info" />
+          <PriorityMetricCard label="Servicios" value={String(serviceOfferings.length)} helper="Ofertas habilitadas por servicio y transporte." tone="success" />
+          <PriorityMetricCard label="Crédito" value={provider.credit_active ? "Activo" : "Sin crédito"} helper={provider.credit_days ? `${provider.credit_days} días de crédito configurados.` : "Crédito aún no definido."} tone="warning" />
+          <PriorityMetricCard label="Ubicación" value={provider.country || "Sin país"} helper={provider.city || provider.city_unlocode || "Ciudad no definida"} tone="default" />
+        </PriorityMetricStrip>
 
-        <Tabs defaultValue="profile" className="gap-5">
+        <Tabs key={defaultTab} defaultValue={defaultTab} className="gap-5">
           <div className="rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.86)] px-4 py-3 shadow-[0_20px_40px_-34px_rgba(3,10,24,0.26)]">
             <TabsList variant="line" className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="profile">Perfil</TabsTrigger>
               <TabsTrigger value="contacts">Contactos</TabsTrigger>
-              <TabsTrigger value="offerings">Service Offerings</TabsTrigger>
+              <TabsTrigger value="offerings">Servicios ofertados</TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="profile" className="space-y-6">
-            <InfoCard title="Informacion de la empresa">
+            <InfoCard title="Información de la empresa">
               <InfoField label="Nombre" value={provider.name} />
               <InfoField label="RFC" value={provider.tax_id} />
               <InfoField label="Tipo de proveedor" value={provider.provider_type} />
             </InfoCard>
 
-            <InfoCard title="Ubicacion de la empresa">
-              <InfoField label="Direccion" value={provider.full_address} wide />
-              <InfoField label="Codigo postal" value={provider.postal_code} />
+            <InfoCard title="Ubicación de la empresa">
+              <InfoField label="Dirección" value={provider.full_address} wide />
+              <InfoField label="Código postal" value={provider.postal_code} />
               <InfoField label="UN/LOCODE" value={provider.city_unlocode} />
               <InfoField label="Ciudad" value={provider.city} />
-              <InfoField label="Pais" value={provider.country} />
+              <InfoField label="País" value={provider.country} />
             </InfoCard>
 
-            <InfoCard title="Informacion de contacto">
-              <InfoField label="Telefono corporativo" value={provider.corporate_phone} />
+            <InfoCard title="Información de contacto">
+              <InfoField label="Teléfono corporativo" value={provider.corporate_phone} />
               <InfoField label="Correo de la empresa" value={provider.company_email} />
-              <InfoField label="Pagina web" value={provider.website} />
+              <InfoField label="Página web" value={provider.website} />
             </InfoCard>
 
-            <InfoCard title="Credito y cobranza">
-              <InfoField label="Credito activo" value={provider.credit_active ? "Si" : "No"} />
+            <InfoCard title="Crédito y cobranza">
+              <InfoField label="Crédito activo" value={provider.credit_active ? "Sí" : "No"} />
               <InfoField
-                label="Monto de credito"
+                label="Monto de crédito"
                 value={provider.credit_amount !== null ? `$${provider.credit_amount.toLocaleString()}` : null}
               />
               <InfoField
-                label="Dias de credito"
+                label="Días de crédito"
                 value={provider.credit_days !== null ? String(provider.credit_days) : null}
               />
             </InfoCard>
@@ -403,7 +408,7 @@ export function ProviderDetailView({
                     Contactos de proveedor
                   </PriorityTypography>
                   <PriorityTypography variant="bodyMuted" className="mt-1">
-                    Contactos directos para pricing, seguimiento y negociacion.
+                    Contactos directos para pricing, seguimiento y negociación.
                   </PriorityTypography>
                 </div>
                 <Button
@@ -413,15 +418,15 @@ export function ProviderDetailView({
                     setShowContactModal(true)
                   }}
                 >
-                  Anadir contacto
+                  Añadir contacto
                 </Button>
               </div>
 
-              <PriorityDataTable
+              <PriorityCollectionTable
                 columns={contactColumns}
                 data={contacts}
                 emptyTitle="No hay contactos registrados"
-                emptyDescription="Agrega el primer contacto operativo o comercial del proveedor desde este workspace."
+                emptyDescription="Agrega el primer contacto operativo o comercial del proveedor desde este espacio de trabajo."
               />
             </section>
           </TabsContent>
@@ -434,7 +439,7 @@ export function ProviderDetailView({
                     Tipos de servicio que ofrece
                   </PriorityTypography>
                   <PriorityTypography variant="bodyMuted" className="mt-1">
-                    Cada fila representa un servicio habilitado y sus terminos.
+                    Cada fila representa un servicio habilitado y sus términos comerciales para pricing.
                   </PriorityTypography>
                 </div>
                 <Button
@@ -444,15 +449,46 @@ export function ProviderDetailView({
                     setShowOfferingModal(true)
                   }}
                 >
-                  Anadir servicio
+                  Añadir servicio
                 </Button>
               </div>
 
-              <PriorityDataTable
-                columns={serviceColumns}
-                data={serviceOfferings}
+              <PriorityGrid
+                mode="hybrid"
+                rowData={serviceOfferings}
+                columnDefs={serviceGridColumns}
                 emptyTitle="No hay servicios configurados"
                 emptyDescription="Agrega el primer servicio del proveedor para habilitar su uso desde pricing."
+                height={420}
+                rowHeight={76}
+                renderMobileCard={(offering) => (
+                  <div className="space-y-3 rounded-[22px] border border-[var(--border-subtle)] bg-white p-4 shadow-[0_20px_40px_-34px_rgba(3,10,24,0.26)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-[var(--brand-navy)]">{offering.service_type}</div>
+                        <div className="mt-1 text-sm text-[#5B6A7D]">{offering.transport_type}</div>
+                      </div>
+                      <PriorityRowActions
+                        label={`Acciones de ${offering.service_type}`}
+                        actions={[
+                          {
+                            label: "Editar",
+                            onSelect: () => startEditOffering(offering),
+                          },
+                          {
+                            label: deletingOfferingId === offering.id ? "Eliminando..." : "Eliminar",
+                            onSelect: () => void handleDeleteOffering(offering.id),
+                            disabled: deletingOfferingId === offering.id,
+                            destructive: true,
+                          },
+                        ]}
+                      />
+                    </div>
+                    <div className="rounded-[18px] bg-[rgba(11,31,59,0.04)] px-3 py-3 text-sm text-[#334155]">
+                      {offering.terms_and_conditions || "No definido"}
+                    </div>
+                  </div>
+                )}
               />
             </section>
           </TabsContent>
@@ -462,6 +498,7 @@ export function ProviderDetailView({
       {showEditModal ? (
         <Modal
           title="Editar proveedor"
+          size="workspace"
           onClose={() => {
             if (!savingProvider) {
               setShowEditModal(false)
@@ -470,8 +507,8 @@ export function ProviderDetailView({
           }}
         >
           <ProviderForm
-            title="Informacion del proveedor"
-            description="Edita la informacion base de la empresa."
+            title="Información del proveedor"
+            description="Edita la información base de la empresa."
             values={providerForm}
             onChange={(field, value) =>
               setProviderForm((current) => ({
@@ -489,7 +526,8 @@ export function ProviderDetailView({
 
       {showContactModal ? (
         <Modal
-          title={editingContact ? "Editar contacto de proveedor" : "Anadir contacto de proveedor"}
+          title={editingContact ? "Editar contacto de proveedor" : "Añadir contacto de proveedor"}
+          size="standard"
           onClose={() => {
             if (!savingContact) {
               setShowContactModal(false)
@@ -516,7 +554,8 @@ export function ProviderDetailView({
 
       {showOfferingModal ? (
         <Modal
-          title={editingOffering ? "Editar servicio ofrecido" : "Anadir servicio ofrecido"}
+          title={editingOffering ? "Editar servicio ofrecido" : "Añadir servicio ofrecido"}
+          size="standard"
           onClose={() => {
             if (!savingOffering) {
               setShowOfferingModal(false)
@@ -526,7 +565,7 @@ export function ProviderDetailView({
         >
           <ProviderServiceOfferingForm
             title={editingOffering ? "Editar servicio" : "Nuevo servicio"}
-            description="Relaciona un servicio del catalogo maestro con sus terminos."
+            description="Relaciona un servicio del catálogo maestro con sus términos."
             values={offeringForm}
             serviceTransportTypes={serviceTransportTypes}
             onChange={(field, value) =>

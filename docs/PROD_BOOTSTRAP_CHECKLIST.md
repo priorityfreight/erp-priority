@@ -46,6 +46,11 @@ SUPABASE PROD CREATION
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `GMAIL_CLIENT_ID`
+- `GMAIL_CLIENT_SECRET`
+- `GMAIL_OAUTH_REDIRECT_URI`
+- `MAIL_ENCRYPTION_KEY`
+- `NEXT_PUBLIC_APP_URL`
 - cron secrets if used
 - admin API secrets if used
 
@@ -139,6 +144,9 @@ Before pointing `LIVE` to `PROD`, verify in Vercel:
 - preview/dev env vars do not point to `PROD`
 - no `TRAIN` write credentials are present in production
 - PDF/document routes use the same approved branding assets
+- Gmail OAuth redirect points to the production domain
+- `NEXT_PUBLIC_APP_URL` matches the public production domain
+- `Master Data > Mail` signature previews resolve through `/api/mail/signature-image`
 
 
 --------------------------------------------------
@@ -164,6 +172,10 @@ Then run manual smoke against `PROD`:
 - field-masking sanity check by role
 - customer document preview/PDF branding check
 - pricing request preview/PDF branding check
+- `Master Data > Mail` load, save, and Gmail reconnect check
+- mailbox signature preview check
+- shared inbox load at `/mail`
+- outbound/reply smoke from one connected mailbox
 
 Do not run destructive stress or ephemeral validation writes on `PROD`.
 

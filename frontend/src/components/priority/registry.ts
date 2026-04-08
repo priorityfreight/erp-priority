@@ -5,6 +5,8 @@ export type PriorityComponentCategory =
   | "navigation"
   | "feedback"
   | "interaction"
+  | "workspace"
+  | "grid"
 
 export type PriorityComponentRegistryItem = {
   name: string
@@ -16,6 +18,14 @@ export type PriorityComponentRegistryItem = {
 }
 
 export const priorityComponentRegistry: PriorityComponentRegistryItem[] = [
+  {
+    name: "PriorityCommandBar",
+    category: "navigation",
+    path: "@/components/priority/PriorityCommandBar",
+    base: "ui/command.tsx + ui/dialog.tsx",
+    purpose: "Global desktop-first command surface for fast navigation and reduced training cost.",
+    approvedFor: ["global navigation", "shortcut launch", "cross-workspace jumping"],
+  },
   {
     name: "PriorityDialog",
     category: "overlay",
@@ -41,12 +51,44 @@ export const priorityComponentRegistry: PriorityComponentRegistryItem[] = [
     approvedFor: ["UN/LOCODE", "provider lookup", "client lookup", "large catalogs"],
   },
   {
-    name: "PriorityDataTable",
+    name: "PriorityCollectionTable",
     category: "data-display",
-    path: "@/components/priority/PriorityDataTable",
-    base: "ui/data-table.tsx",
-    purpose: "Canonical ERP list/grid wrapper with toolbar, pagination, row actions, and optional selection.",
-    approvedFor: ["master data", "CRM lists", "pricing lists", "dense operator grids"],
+    path: "@/components/priority/collection/PriorityCollectionTable",
+    base: "ui/data-table.tsx + TanStack Table",
+    purpose: "Canonical browse/list table for read-mostly ERP records, detail tabs, and embedded lists.",
+    approvedFor: ["detail tabs", "master data lists", "embedded browse tables", "CRM sublists"],
+  },
+  {
+    name: "PriorityFormEngine",
+    category: "form",
+    path: "@/components/priority/forms/PriorityFormEngine",
+    base: "react-hook-form + zod + Priority field registry",
+    purpose: "Schema-driven ERP form renderer with shared sections, field components, and submit behavior.",
+    approvedFor: ["standard forms", "modal forms", "wizard steps", "hybrid form sections"],
+  },
+  {
+    name: "PriorityGrid",
+    category: "grid",
+    path: "@/components/priority/grid/PriorityGrid",
+    base: "ag-grid-react + ag-grid-community",
+    purpose: "Canonical dense editable grid wrapper for ERP-grade row/cell workflows with mobile fallback.",
+    approvedFor: ["charge lines", "permissions matrix", "pricing rows", "shipment events", "bulk editing"],
+  },
+  {
+    name: "PriorityGridToolbar",
+    category: "grid",
+    path: "@/components/priority/grid/PriorityGridToolbar",
+    base: "Priority grid composition",
+    purpose: "Shared high-signal header for dense grids with context and grid-local actions.",
+    approvedFor: ["editable grids", "matrix workspaces", "hybrid form + grid screens"],
+  },
+  {
+    name: "PriorityHybridFormLayout",
+    category: "form",
+    path: "@/components/priority/forms/PriorityFormWorkflow",
+    base: "Priority workflow composition",
+    purpose: "Responsive split layout for hybrid screens where a schema form and a dense grid must coexist.",
+    approvedFor: ["quotation detail", "shipments", "finance hybrids", "pricing workspaces"],
   },
   {
     name: "PriorityEmptyState",
@@ -159,6 +201,46 @@ export const priorityComponentRegistry: PriorityComponentRegistryItem[] = [
     base: "ui/alert-dialog.tsx",
     purpose: "Shared destructive confirmation flow replacing window.confirm.",
     approvedFor: ["deletes", "state transitions", "destructive workspace actions"],
+  },
+  {
+    name: "PriorityWorkspaceHeader",
+    category: "workspace",
+    path: "@/components/priority/PriorityWorkspace",
+    base: "Priority workspace composition",
+    purpose: "Compact branded header for operator workspaces with title, context, metadata, and actions.",
+    approvedFor: ["page headers", "detail workspaces", "dense list views"],
+  },
+  {
+    name: "PriorityWorkspacePath",
+    category: "navigation",
+    path: "@/components/priority/PriorityWorkspacePath",
+    base: "ui/breadcrumb.tsx + Next pathname routing",
+    purpose: "Interactive in-header route path for fast backtracking without repeating navigation chrome in the topbar.",
+    approvedFor: ["workspace headers", "detail routes", "operator backtracking"],
+  },
+  {
+    name: "PriorityMetricStrip",
+    category: "workspace",
+    path: "@/components/priority/PriorityWorkspace",
+    base: "Priority workspace composition",
+    purpose: "Shared metric band for high-signal workspace stats without card clutter.",
+    approvedFor: ["dashboards", "list workspaces", "detail summaries"],
+  },
+  {
+    name: "PriorityMetricCard",
+    category: "workspace",
+    path: "@/components/priority/PriorityWorkspace",
+    base: "Priority workspace composition",
+    purpose: "Dense metric card with tuned tones for information hierarchy.",
+    approvedFor: ["summary KPIs", "status snapshots", "operator metrics"],
+  },
+  {
+    name: "PrioritySummaryRail",
+    category: "workspace",
+    path: "@/components/priority/PriorityWorkspace",
+    base: "Priority workspace composition",
+    purpose: "High-level orientation rail that explains the current workspace before the user acts.",
+    approvedFor: ["detail headers", "dashboard orientation", "admin summaries"],
   },
 ]
 

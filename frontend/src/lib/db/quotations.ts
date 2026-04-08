@@ -26,6 +26,56 @@ export type QuotationListResult = {
   totalCount: number
 }
 
+export type QuotationListFilter = {
+  id?: string
+  column: string
+  value?: string
+  valueTo?: string
+}
+
+export type QuotationListSort = {
+  columnId: string
+  direction: "asc" | "desc"
+}
+
+type RpcErrorLike = {
+  code?: string | null
+  message?: string | null
+  details?: string | null
+  hint?: string | null
+}
+
+function getRpcErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  if (error && typeof error === "object") {
+    const candidate = error as RpcErrorLike
+    return [candidate.message, candidate.details, candidate.hint].filter(Boolean).join(" ")
+  }
+
+  return typeof error === "string" ? error : ""
+}
+
+function isSearchQuotationsSignatureMismatch(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const candidate = error as RpcErrorLike
+  const message = getRpcErrorMessage(error).toLowerCase()
+
+  return (
+    candidate.code === "PGRST202" ||
+    message.includes("search_quotations") &&
+      (message.includes("function") ||
+        message.includes("could not find") ||
+        message.includes("does not exist") ||
+        message.includes("no matches"))
+  )
+}
+
 function mapShipment(row: Record<string, unknown>): Shipment {
   return {
     id: String(row.id),
@@ -64,17 +114,69 @@ export async function getQuotations(params?: {
   status?: string
   page?: number
   pageSize?: number
+  pricingOwnerId?: string | null
+  serviceType?: string | null
+  transportType?: string | null
+  onlyMine?: boolean
+  columnFilters?: QuotationListFilter[]
+  sort?: QuotationListSort | null
 }): Promise<QuotationListResult> {
   const page = Math.max(params?.page ?? 1, 1)
   const pageSize = Math.max(params?.pageSize ?? 25, 1)
-  const { data, error } = await supabase.rpc("search_quotations", {
+  const rpcPayload = {
     p_scope: params?.scope ?? "crm",
     p_query: params?.query?.trim() || null,
     p_status:
       params?.status?.trim() && params.status !== "all" ? params.status.trim() : null,
     p_limit: pageSize,
     p_offset: (page - 1) * pageSize,
-  } as never)
+    p_pricing_owner_id: params?.pricingOwnerId ?? null,
+    p_service_type: params?.serviceType?.trim() || null,
+    p_transport_type: params?.transportType?.trim() || null,
+    p_only_mine: params?.onlyMine ?? false,
+    p_filters:
+      params?.columnFilters && params.columnFilters.length > 0
+        ? { columnFilters: params.columnFilters }
+        : {},
+    p_sort:
+      params?.sort && params.sort.columnId
+        ? {
+            columnId: params.sort.columnId,
+            direction: params.sort.direction,
+          }
+        : {},
+  }
+  let { data, error } = await supabase.rpc("search_quotations", rpcPayload as never)
+
+  if (error && isSearchQuotationsSignatureMismatch(error)) {
+    const legacyResponse = await supabase.rpc("search_quotations", {
+      p_scope: rpcPayload.p_scope,
+      p_query: rpcPayload.p_query,
+      p_status: rpcPayload.p_status,
+      p_limit: rpcPayload.p_limit,
+      p_offset: rpcPayload.p_offset,
+      p_pricing_owner_id: rpcPayload.p_pricing_owner_id,
+      p_service_type: rpcPayload.p_service_type,
+      p_transport_type: rpcPayload.p_transport_type,
+      p_only_mine: rpcPayload.p_only_mine,
+    } as never)
+
+    data = legacyResponse.data
+    error = legacyResponse.error
+
+    if (error && isSearchQuotationsSignatureMismatch(error)) {
+      const minimalLegacyResponse = await supabase.rpc("search_quotations", {
+        p_scope: rpcPayload.p_scope,
+        p_query: rpcPayload.p_query,
+        p_status: rpcPayload.p_status,
+        p_limit: rpcPayload.p_limit,
+        p_offset: rpcPayload.p_offset,
+      } as never)
+
+      data = minimalLegacyResponse.data
+      error = minimalLegacyResponse.error
+    }
+  }
 
   if (error) {
     throw error

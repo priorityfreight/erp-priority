@@ -29,7 +29,7 @@ function DataTableView<TData>({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.95)] shadow-[0_24px_48px_-40px_rgba(3,10,24,0.4)]",
+        "overflow-hidden rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.97)] shadow-[0_24px_48px_-40px_rgba(3,10,24,0.4)]",
         className
       )}
     >
@@ -39,7 +39,7 @@ function DataTableView<TData>({
             <TableRow
               key={headerGroup.id}
               className={cn(
-                "border-b border-[rgba(144,158,174,0.18)] bg-[rgba(11,31,59,0.04)]",
+                "border-b border-[rgba(144,158,174,0.16)] bg-[linear-gradient(180deg,_rgba(11,31,59,0.04),_rgba(11,31,59,0.02))]",
                 headerClassName
               )}
             >
@@ -56,10 +56,13 @@ function DataTableView<TData>({
             <TableRow
               key={row.id}
               data-state={row.getIsSelected() ? "selected" : undefined}
-              className={cn("border-b border-[rgba(144,158,174,0.12)] last:border-b-0", rowClassName)}
+              className={cn(
+                "border-b border-[rgba(144,158,174,0.12)] last:border-b-0 transition-colors hover:bg-[rgba(11,31,59,0.032)] data-[state=selected]:bg-[rgba(179,58,91,0.08)]",
+                rowClassName
+              )}
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className={cn("px-4 py-3 text-sm text-[var(--brand-navy)]", cellClassName)}>
+                <TableCell key={cell.id} className={cn("px-4 py-3 text-sm text-[var(--brand-navy)] align-top", cellClassName)}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

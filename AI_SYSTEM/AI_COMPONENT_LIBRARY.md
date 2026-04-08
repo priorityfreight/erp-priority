@@ -39,8 +39,14 @@ Current Priority UI baseline
 - PrioritySearchCombobox
 - PriorityRowActions
 - PriorityToolbar
+- PriorityCommandBar
+- PriorityWorkspacePath
 - PriorityDateField
 - PriorityHoverPreview
+- PriorityWorkspaceHeader
+- PriorityMetricStrip
+- PriorityMetricCard
+- PrioritySummaryRail
 - PriorityFormSection
 - PriorityFormField
 - PriorityInput
@@ -49,6 +55,18 @@ Current Priority UI baseline
 - PriorityInfoField
 - PrioritySubmitBar
 - PriorityEmptyState
+- PriorityCollectionWorkspace
+- PrioritySearchField
+- PriorityFilterPopover
+- PrioritySavedViews
+- PriorityStatusLanes
+- PriorityActionRail
+- PriorityActionMenu
+- PriorityModalShell
+- PriorityTooltip
+- PriorityKanbanBoard
+- PriorityKanbanCard
+- PriorityCollectionTable
 - PriorityDataTable
 - PriorityUserAvatar
 - PrioritySectionAlert
@@ -57,15 +75,22 @@ Current Priority UI baseline
 Current administrative workspace pattern
 
 - summary metric cards at the top
-- toolbar with `PriorityInput` and `PrioritySelectField`
-- `PriorityDataTable` for the main grid
-- `PriorityRowActions` for dense row action menus instead of piling multiple buttons in each row
+- toolbar with `PrioritySearchField`, `PriorityFilterPopover`, `PrioritySavedViews`, and `PriorityInput`/`PrioritySelectField` only where needed
+- `PriorityStatusLanes` above the active browse surface
+- `PriorityCollectionWorkspace` for the main browse shell
+- `PriorityCollectionTable` for read-mostly detail tabs, embedded browse lists, and master-data list surfaces that do not need the full workspace shell
+- `PriorityActionRail` for primary row actions that should stay visible in the first column
+- `PriorityActionMenu` or `PriorityRowActions` for secondary row actions instead of piling multiple buttons in each row
 - `PrioritySectionAlert` for inline success, warning, and failure states
 - `AlertDialog` for destructive confirmation
 - modal content built from `PriorityFormSection` and `PrioritySubmitBar`
 - use `DropdownMenu`-backed `PriorityRowActions` for secondary row actions instead of stacking small action buttons with low contrast
 - keep this pattern as the default for new master data modules unless a workflow clearly needs a denser custom workspace
-- current approved list workspaces using this pattern: users, exchange rates, service transport types, sales accounting concepts, quotation rejection reasons, clients, contacts, opportunities, quotations, and pricing quotations
+- current approved browse workspaces using this pattern: pricing quotations, quotations, opportunities, clients, and providers
+- current approved operational mail surfaces:
+  - `Master Data > Mail` for mailbox setup, role access, OAuth, sync mode, and signature image
+  - `/mail` for the shared inbox and reply flow
+  - embedded `Email` tabs on entities when the workflow benefits from linked thread context
 - destructive actions must route through the shared `usePriorityConfirm` hook instead of `window.confirm`
 - blocking `alert()` is deprecated in live frontend code; use `notifyWarning`, `notifyError`, `notifySuccess`, or `notifyInfo`
 - use `Switch` for real boolean state toggles in admin/workspace surfaces when immediate on/off intent is clearer than a button label
@@ -74,23 +99,66 @@ Current administrative workspace pattern
 Composition rule
 
 - use primitives as infrastructure and Priority wrappers as the ERP-facing contract
-- when an official `shadcn` primitive or pattern exists and fits the ERP need, use it as the technical base and keep `Priority` as the branded wrapper
-- current canonical internal bases: `ui/empty.tsx` for empty states, `ui/combobox.tsx` for official combobox composition, and `ui/data-table.tsx` for the shared TanStack/shadcn table shell
-- current approved examples: `PriorityEmptyState` wraps official `Empty`; `PrioritySearchCombobox` stays the ERP-facing contract while delegating to the shared `ui/combobox.tsx` pattern; `PriorityDataTable` remains the ERP-facing table contract on top of the shared `ui/data-table.tsx` + TanStack/shadcn pattern
-- `PriorityDataTable` is approved to expose optional row selection and a column-visibility menu when a workspace benefits from denser operator controls
+- when an official `shadcn` primitive or `react-aria-components` pattern fits the ERP need, use it as the technical base and keep `Priority` as the branded wrapper
+- current canonical internal bases:
+  - `ui/empty.tsx` for empty states
+  - `ui/combobox.tsx` for official combobox composition
+  - `react-aria-components` for browse/discovery workspaces, lanes, saved views, action rails, modals, and kanban
+  - `ag-grid-community` for dense editing wrappers
+- current approved examples:
+  - `PriorityEmptyState` wraps official `Empty`
+  - `PrioritySearchCombobox` stays the ERP-facing contract while delegating to the shared combobox pattern
+  - `PriorityCollectionWorkspace` is the ERP-facing browse contract on top of React Aria compositions
+  - `PrioritySavedViews`, `PriorityStatusLanes`, `PriorityActionRail`, and `PriorityKanbanBoard` are the approved workspace interaction layer
+- mailbox-signature rendering is approved as an ERP service capability:
+  - mailbox records persist the source URL
+  - the app may proxy remote images through `/api/mail/signature-image` before rendering them in UI or outbound mail
+- `PriorityCollectionTable` is the canonical browse/list table for non-workspace list surfaces
+- `PriorityDataTable` is now a legacy compatibility wrapper around `PriorityCollectionTable` and should not be chosen for new live workspace migrations
 - dense record workspaces should prefer tabs, section cards, drawers, dialogs, and sticky submit rails over long unstructured vertical pages
 - date picking should be composed through the shared `PriorityDateField` wrapper on top of `calendar + popover + button`, not raw `input type="date"` in live workspaces
 - contextual record previews should prefer `PriorityHoverPreview` when they reduce navigation friction without adding modal weight
 - use `ButtonGroup` to cluster related secondary actions in dense workspaces instead of scattering standalone buttons
 - use `ResizablePanelGroup` only in genuinely dense workspaces where side-by-side context improves speed, not as decoration
-- list workspaces should prefer toolbar + table + filters + empty state
+- list workspaces should prefer `PriorityCollectionWorkspace` with toolbar + lanes + active table + empty state
 - current approved tabbed workspaces: client detail, provider detail, quotation detail, and roles & permissions
+- desktop-first navigation should prefer the shared `PriorityCommandBar` over adding isolated quick-search affordances per screen
 - long CRM and pricing forms should use `PriorityFormSection`, `PriorityFormField`, `PriorityInfoField`, and `PrioritySubmitBar` instead of raw inputs and ad hoc footer buttons
 - forms that open in dialogs, sheets, or premium cards should start with `PriorityFormHeader` and keep a stable two-column default grid unless a third column is clearly justified
+- required fields must show a visible required indicator only when the schema or workflow truly requires them; do not mark optional fields just because they are common
+- helper text should exist only when it prevents a real error, clarifies a business rule, or explains derived behavior
+- approved modal size taxonomy:
+  - `compact` for short utility or catalog forms
+  - `standard` for most create/edit dialogs
+  - `workspace` for long record forms and hybrid form-plus-grid workflows
+- approved form density taxonomy:
+  - `compact` for short dialogs and catalog forms
+  - `workspace` for long create/edit flows and hybrid record capture
+- desktop forms should bias toward wider dialogs with tighter section spacing so operators see more fields before the submit rail appears
+- use `PriorityDialog` and `PriorityForm` as the only shared place to tune dialog width, padding, field height, and submit-bar prominence
+- on large desktop screens, shared form layouts should prefer a 3-column working density by default unless a given form explicitly needs fewer columns for clarity
+- `PrioritySubmitBar` should stay sticky only in long workspace forms; compact forms should default to an inline footer with lower visual weight
 - boolean states should prefer `Switch` when the intent is immediate on/off, and 2-5 mutually exclusive choices should prefer `ToggleGroup`
 - validation and sync warnings inside forms should use `PrioritySectionAlert` instead of custom inline boxes
 - spreadsheet-style capture forms may keep a tabular grid for speed, but they must still use shared headers, alerts, info cards, and submit bars instead of custom legacy shells
+- schema-driven forms should use `PriorityFormEngine` on top of `react-hook-form + zod`
+- feature modules should define schemas and field definitions, not custom form state machines
+- `PriorityGrid` on top of `ag-grid-community` is the approved dense editing wrapper for inline row capture, commercial lines, matrices, and structured operational tables
+- `PriorityGridToolbar` is the shared header for grid-local actions and orientation
+- `PriorityKanbanBoard` is the approved board shell for pipeline-style workflows such as opportunities
+- `PriorityHybridFormLayout` is approved when a classic form and a dense grid need to coexist in one workspace
+- the current live forms already migrated to this standard are: login, client, contact, opportunity, provider, provider contact, provider service offering, user, client logistics party, and quotation header
+- special modal flows such as quotation status changes, quotation sales-option capture, and role-permission cloning must still use `PriorityFormSection` + `PrioritySubmitBar` even when they are not full `PriorityFormEngine` screens
 - typography must be semantically composed through `PriorityTypography` or approved semantic wrappers, not rebuilt ad hoc with random `text-*` and `tracking-*` combinations in every page
+- page-level workspace framing should prefer:
+  - `PriorityWorkspaceHeader`
+  - `PriorityWorkspacePath`
+  - `PriorityMetricStrip`
+  - `PrioritySummaryRail`
+  over oversized marketing-like hero blocks inside live ERP screens
+- empty list workspaces should switch to a compact workspace mode with toolbar-first layout and `PriorityEmptyState` visible near the fold instead of stacking hero copy, metrics, and an empty table shell
+- do not repeat the same workspace label in navigation, topbar, and page hero; keep global navigation in the shell and use `PriorityWorkspacePath` inside the workspace header for local backtracking
+- live ERP overview and detail screens should feel like workspaces first, not landing pages or card mosaics
 
 
 
@@ -117,15 +185,18 @@ Main application wrapper.
 
 Structure
 
-Sidebar
 Topbar
 Main Workspace
+Workspace Path in header
 
 Corporate implementation:
 
 - branded dark shell
 - shared Priority lockup
 - translucent topbar
+- topbar `NavigationMenu` for premium module switching on desktop
+- `PriorityCommandBar` for global movement and quick actions
+- interactive `PriorityWorkspacePath` inside workspace headers for local backtracking
 - bright premium content card
 - the shell, login screen, and constrained header states must render branding through a single shared Brand component backed by canonical brand asset constants
 
@@ -165,27 +236,6 @@ Responsive grid layout.
 NAVIGATION COMPONENTS
 --------------------------------------------------
 
-Sidebar
-
-Contains main modules.
-
-Must support:
-
-- shared brand lockup
-- real company logo asset instead of recreated typography
-- canonical SVG mark/wordmark from the shared branding module
-- prefer official synced SVG lockups from `frontend/public/assets/` when they exist
-- current approved shell lockup: `frontend/public/assets/logo_vSVG.svg`
-- grouped module sections
-- accordion module cards
-- permission-aware route visibility
-- persistent desktop collapsed state
-- mobile drawer open / close state
-- burgundy active item treatment
-- dark navy base
-
-
-
 Topbar
 
 Contains
@@ -197,8 +247,10 @@ Quick actions
 Must support:
 
 - compact brand lockup on constrained layouts
-- corporate eyebrow + page title
+- module navigation
+- global search / command entry
 - user identity cluster
+- current approved shell lockup: `frontend/public/assets/logo_vSVG.svg`
 
 
 Brand

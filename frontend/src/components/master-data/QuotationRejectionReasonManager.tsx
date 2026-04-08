@@ -4,7 +4,7 @@ import { type ColumnDef } from "@tanstack/react-table"
 import { PencilLineIcon, PlusIcon, ShieldAlertIcon, Trash2Icon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Modal } from "@/components/data/Modal"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
 import {
   PriorityFormField,
@@ -62,7 +62,7 @@ export function QuotationRejectionReasonManager() {
       setItems(data)
     } catch (error) {
       console.error(error)
-      notifyError("No se pudo cargar el catalogo de motivos")
+      notifyError("No se pudo cargar el catálogo de motivos")
     } finally {
       setLoading(false)
     }
@@ -141,7 +141,7 @@ export function QuotationRejectionReasonManager() {
               variant="outline"
               className="border-[rgba(179,58,91,0.18)] bg-[rgba(179,58,91,0.06)] text-[var(--brand-burgundy)]"
             >
-              Catalogo comercial
+              Catálogo comercial
             </Badge>
           </div>
         ),
@@ -189,50 +189,51 @@ export function QuotationRejectionReasonManager() {
 
   return (
     <PageContainer
-      title="Motivos de rechazo de cotizacion"
-      description="Catalogo editable para clasificar rechazos comerciales de forma consistente."
+      density="compact"
+      title="Motivos de rechazo de cotización"
+      description="Catálogo editable para clasificar rechazos comerciales de forma consistente."
       actions={
         <Button type="button" size="lg" onClick={openCreateModal}>
           <PlusIcon />
-          Anadir motivo
+          Añadir motivo
         </Button>
       }
     >
-      <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+      <div className="space-y-4">
+        <section className="grid gap-2.5 md:grid-cols-3">
+          <div className="rounded-[20px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-3.5 shadow-[0_16px_28px_-26px_rgba(37,99,235,0.18)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
               Registros
             </div>
-            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{items.length}</div>
+            <div className="mt-1.5 text-[1.45rem] font-semibold text-[var(--brand-navy)]">{items.length}</div>
           </div>
-          <div className="rounded-[24px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(16,185,129,0.22)]">
+          <div className="rounded-[20px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-3.5 shadow-[0_16px_28px_-26px_rgba(16,185,129,0.16)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#047857]">
-              Catalogo activo
+              Catálogo activo
             </div>
-            <div className="mt-3 text-sm leading-7 text-[#27445D]">
+            <div className="mt-1.5 text-sm leading-6 text-[#27445D]">
               Reutilizable en CRM, Pricing y reportes.
             </div>
           </div>
-          <div className="rounded-[24px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(217,119,6,0.18)]">
+          <div className="rounded-[20px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-3.5 shadow-[0_16px_28px_-26px_rgba(217,119,6,0.14)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">
               Uso recomendado
             </div>
-            <div className="mt-3 text-sm leading-7 text-[#27445D]">
-              Seleccion estandar en lugar de texto libre.
+            <div className="mt-1.5 text-sm leading-6 text-[#27445D]">
+              Selección estándar en lugar de texto libre.
             </div>
           </div>
         </section>
 
-        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section className="space-y-4 rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_44px_-38px_rgba(3,10,24,0.28)]">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <PriorityCardTitle>Catalogo actual</PriorityCardTitle>
+              <PriorityCardTitle>Catálogo actual</PriorityCardTitle>
               <PriorityTypography variant="bodyMuted" className="mt-1">
                 Busca por texto y mantén una lista limpia de motivos reutilizables.
               </PriorityTypography>
             </div>
-            <PriorityToolbar className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
+            <PriorityToolbar density="compact" className="flex w-full max-w-xl flex-col gap-2.5 sm:flex-row">
               <PriorityInput
                 placeholder="Buscar motivo"
                 value={query}
@@ -257,10 +258,10 @@ export function QuotationRejectionReasonManager() {
               <Skeleton className="h-12 rounded-[18px]" />
             </div>
           ) : (
-            <PriorityDataTable
+            <PriorityCollectionTable
               columns={columns}
               data={items}
-              emptyTitle="No hay motivos configurados todavia"
+              emptyTitle="No hay motivos configurados todavía"
               emptyDescription="Crea el primer motivo para estandarizar rechazos comerciales y evitar texto libre."
             />
           )}
@@ -269,8 +270,9 @@ export function QuotationRejectionReasonManager() {
 
       {showModal ? (
         <Modal
-          title={editingId ? "Editar motivo" : "Anadir motivo"}
-          description="Mantén el catalogo de rechazo limpio y reutilizable."
+          title={editingId ? "Editar motivo" : "Añadir motivo"}
+          description="Mantén el catálogo de rechazo limpio y reutilizable."
+          size="compact"
           onClose={() => {
             setShowModal(false)
             resetForm()
@@ -278,6 +280,7 @@ export function QuotationRejectionReasonManager() {
         >
           <div className="space-y-5">
             <PriorityFormSection
+              density="compact"
               title="Motivo comercial"
               description="Usa una etiqueta clara, corta y reutilizable para reportes y seguimiento."
             >
@@ -293,7 +296,7 @@ export function QuotationRejectionReasonManager() {
                 />
               </PriorityFormField>
             </PriorityFormSection>
-            <PrioritySubmitBar>
+            <PrioritySubmitBar density="compact" mode="inline">
               <Button
                 type="button"
                 variant="outline"
@@ -322,7 +325,7 @@ export function QuotationRejectionReasonManager() {
             <AlertDialogTitle>Eliminar motivo</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete
-                ? `Vas a eliminar "${pendingDelete.reason}". Esta accion impacta catalogos operativos y no debe ejecutarse por error.`
+                ? `Vas a eliminar "${pendingDelete.reason}". Esta acción impacta catálogos operativos y no debe ejecutarse por error.`
                 : "Confirma la eliminacion del motivo."}
             </AlertDialogDescription>
           </AlertDialogHeader>

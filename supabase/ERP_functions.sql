@@ -37,6 +37,20 @@ as $$
   limit 1;
 $$;
 
+create or replace function erp_current_role_id()
+returns uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select u.role_id
+  from public.users u
+  where u.auth_user_id = auth.uid()
+    and u.active = true
+  limit 1;
+$$;
+
 create or replace function erp_current_user_id()
 returns uuid
 language sql
@@ -219,6 +233,56 @@ as $$
     lower(coalesce(p_submodule_code, '')),
     lower(coalesce(p_action_code, 'view'))
   );
+$$;
+
+create or replace function erp_can_manage_mailboxes()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    public.erp_is_admin()
+    or public.erp_has_resource_access('crm.email.mailboxes', 'edit');
+$$;
+
+create or replace function erp_can_access_mailbox(
+  p_mailbox_id uuid,
+  p_action_code text default 'view'
+)
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  current_role_id uuid := public.erp_current_role_id();
+begin
+  if public.erp_is_admin() then
+    return true;
+  end if;
+
+  if not public.erp_is_authenticated_active_user() then
+    return false;
+  end if;
+
+  if not public.erp_has_submodule_access('crm.email', coalesce(nullif(lower(btrim(p_action_code)), ''), 'view')) then
+    return false;
+  end if;
+
+  if current_role_id is null then
+    return false;
+  end if;
+
+  return exists (
+    select 1
+    from public.mailbox_role_access mra
+    where mra.mailbox_id = p_mailbox_id
+      and mra.role_id = current_role_id
+  );
+end;
 $$;
 
 create or replace function erp_has_field_access(

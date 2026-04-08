@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Modal } from "@/components/data/Modal"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import {
   PriorityFormField,
   PriorityFormGrid,
@@ -89,7 +89,7 @@ export function SalesAccountingConceptManager() {
       setItems(data)
     } catch (error) {
       console.error(error)
-      notifyError("No se pudo cargar el catalogo contable")
+      notifyError("No se pudo cargar el catálogo contable")
     } finally {
       setLoading(false)
     }
@@ -113,7 +113,7 @@ export function SalesAccountingConceptManager() {
       } catch (error) {
         console.error(error)
         if (!cancelled) {
-          notifyError("No se pudo cargar el catalogo contable")
+          notifyError("No se pudo cargar el catálogo contable")
         }
       } finally {
         if (!cancelled) {
@@ -242,7 +242,7 @@ export function SalesAccountingConceptManager() {
       },
       {
         accessorKey: "operation_type",
-        header: "Operacion",
+        header: "Operación",
         cell: ({ row }) => (
           <Badge
             variant="outline"
@@ -301,50 +301,51 @@ export function SalesAccountingConceptManager() {
 
   return (
     <PageContainer
+      density="compact"
       title="Conceptos contables"
-      description="Catalogo SAT para ventas con tipo de servicio, operacion, IVA y clave SAT."
+      description="Catálogo SAT para ventas con tipo de servicio, operación, IVA y clave SAT."
       actions={
         <Button type="button" size="lg" onClick={openCreateModal}>
           <PlusIcon />
-          Anadir concepto
+          Añadir concepto
         </Button>
       }
     >
-      <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(37,99,235,0.25)]">
+      <div className="space-y-4">
+        <section className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-[22px] border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-4 shadow-[0_20px_40px_-34px_rgba(37,99,235,0.22)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
               Registros
             </div>
-            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">{items.length}</div>
+            <div className="mt-2.5 text-[1.9rem] font-semibold text-[var(--brand-navy)]">{items.length}</div>
           </div>
-          <div className="rounded-[24px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(16,185,129,0.22)]">
+          <div className="rounded-[22px] border border-[rgba(16,185,129,0.16)] bg-[linear-gradient(180deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-4 shadow-[0_20px_40px_-34px_rgba(16,185,129,0.2)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#047857]">
               Tipos de servicio
             </div>
-            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">
+            <div className="mt-2.5 text-[1.9rem] font-semibold text-[var(--brand-navy)]">
               {new Set(items.map((item) => item.service_type)).size}
             </div>
           </div>
-          <div className="rounded-[24px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-5 shadow-[0_24px_48px_-36px_rgba(217,119,6,0.18)]">
+          <div className="rounded-[22px] border border-[rgba(217,119,6,0.16)] bg-[linear-gradient(180deg,_rgba(255,251,235,0.95)_0%,_rgba(255,255,255,0.92)_100%)] p-4 shadow-[0_20px_40px_-34px_rgba(217,119,6,0.16)]">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">
               IVA acumulado
             </div>
-            <div className="mt-3 text-3xl font-semibold text-[var(--brand-navy)]">
+            <div className="mt-2.5 text-[1.9rem] font-semibold text-[var(--brand-navy)]">
               {totalVatConfigured.toLocaleString()}%
             </div>
           </div>
         </section>
 
-        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
-          <div className="flex flex-col gap-4">
+        <section className="space-y-4 rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_44px_-38px_rgba(3,10,24,0.28)]">
+          <div className="flex flex-col gap-3">
             <div>
-              <PriorityCardTitle>Catalogo actual</PriorityCardTitle>
+              <PriorityCardTitle>Catálogo actual</PriorityCardTitle>
               <PriorityTypography variant="bodyMuted" className="mt-1">
-                Filtra por servicio, operacion o busca por concepto y clave SAT.
+                Filtra por servicio, operación o busca por concepto y clave SAT.
               </PriorityTypography>
             </div>
-            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto]">
+            <PriorityToolbar density="compact" className="grid gap-2.5 xl:grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto]">
               <PriorityInput
                 placeholder="Buscar concepto o clave SAT"
                 value={query}
@@ -359,7 +360,7 @@ export function SalesAccountingConceptManager() {
               <PrioritySelectField
                 value={operationTypeFilter}
                 onValueChange={setOperationTypeFilter}
-                placeholder="Operacion"
+                placeholder="Operación"
                 options={operationOptions}
               />
               <Button
@@ -383,7 +384,7 @@ export function SalesAccountingConceptManager() {
               <Skeleton className="h-12 rounded-[18px]" />
             </div>
           ) : (
-            <PriorityDataTable
+            <PriorityCollectionTable
               columns={columns}
               data={items}
               emptyTitle="No hay conceptos contables registrados"
@@ -395,8 +396,9 @@ export function SalesAccountingConceptManager() {
 
       {showModal ? (
         <Modal
-          title={editingId ? "Editar concepto contable" : "Anadir concepto contable"}
+          title={editingId ? "Editar concepto contable" : "Añadir concepto contable"}
           description="Captura el concepto, el alcance comercial y la referencia SAT."
+          size="standard"
           onClose={() => {
             setShowModal(false)
             resetForm()
@@ -430,7 +432,7 @@ export function SalesAccountingConceptManager() {
             </PriorityFormSection>
 
             <PriorityFormSection
-              title="Aplicacion operativa"
+              title="Aplicación operativa"
               description="Selecciona donde aplica el concepto y el IVA asociado."
             >
               <PriorityFormGrid>
@@ -444,13 +446,13 @@ export function SalesAccountingConceptManager() {
                     options={serviceTypeOptions.map((option) => ({ value: option, label: option }))}
                   />
                 </PriorityFormField>
-                <PriorityFormField label="Operacion">
+                <PriorityFormField label="Operación">
                   <PrioritySelectField
                     value={formValues.operationType}
                     onValueChange={(value) =>
                       setFormValues((current) => ({ ...current, operationType: value }))
                     }
-                    placeholder="Operacion"
+                    placeholder="Operación"
                     options={operationTypeOptions.map((option) => ({ value: option, label: option }))}
                   />
                 </PriorityFormField>
@@ -468,12 +470,12 @@ export function SalesAccountingConceptManager() {
               <div className="mt-4">
                 <PriorityInfoField
                   label="Uso esperado"
-                  value="Ventas, pricing y conciliacion comercial con catalogo SAT."
+                  value="Ventas, pricing y conciliación comercial con catálogo SAT."
                 />
               </div>
             </PriorityFormSection>
 
-            <PrioritySubmitBar>
+            <PrioritySubmitBar density="compact" mode="inline">
               <Button
                 type="button"
                 variant="outline"

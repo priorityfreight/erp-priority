@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageContainer } from "@/components/layout/PageContainer"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityInput, PrioritySelectField } from "@/components/priority/PriorityForm"
 import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
 import { PriorityCardTitle, PriorityTypography } from "@/components/priority/PriorityTypography"
@@ -91,6 +91,7 @@ export function ServiceTransportTypeManager() {
 
   return (
     <PageContainer
+      density="compact"
       title="Tipos de servicio"
       description="Catalogo canónico bloqueado para ventas, pricing, oportunidades, cotizaciones y operaciones."
       actions={
@@ -99,31 +100,31 @@ export function ServiceTransportTypeManager() {
         </div>
       }
     >
-      <div className="space-y-8">
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
+      <div className="space-y-4">
+        <section className="grid gap-2.5 md:grid-cols-3">
+          <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#1D4ED8]">
               Registros
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{items.length}</div>
+            <div className="mt-1 text-[1.45rem] font-semibold text-[#111827]">{items.length}</div>
           </div>
-          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-4">
+          <div className="rounded-xl border border-[#D1FAE5] bg-[#ECFDF5] p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#047857]">
               Tipos canónicos
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#111827]">{groupedCount}</div>
+            <div className="mt-1 text-[1.45rem] font-semibold text-[#111827]">{groupedCount}</div>
           </div>
-          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
+          <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#B45309]">
               Lista permitida
             </div>
-            <div className="mt-2 text-sm font-medium text-[#111827]">
+            <div className="mt-1 text-sm font-medium text-[#111827]">
               {LOCKED_SERVICE_TYPES.join(", ")}
             </div>
           </div>
         </section>
 
-        <section className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5">
+        <section className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-3">
           <PrioritySectionAlert title="Regla del sistema" variant="warning">
             Este catálogo ya no se edita desde la aplicación. Los tipos de servicio válidos
             son únicamente AIR, FCL, LCL, FTL, LTL y COURIER. Cualquier cambio futuro debe
@@ -131,15 +132,15 @@ export function ServiceTransportTypeManager() {
           </PrioritySectionAlert>
         </section>
 
-        <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-6 shadow-[0_28px_56px_-42px_rgba(3,10,24,0.34)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section className="space-y-4 rounded-[24px] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_24px_44px_-38px_rgba(3,10,24,0.28)]">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <PriorityCardTitle>Catalogo actual</PriorityCardTitle>
               <PriorityTypography variant="bodyMuted" className="mt-1">
                 Consulta los tipos de servicio y sus tipos de transporte relacionados.
               </PriorityTypography>
             </div>
-            <PriorityToolbar className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(220px,1fr)_auto]">
+            <PriorityToolbar density="compact" className="grid gap-2.5 xl:grid-cols-[minmax(0,1.4fr)_minmax(220px,1fr)_auto]">
               <PriorityInput
                 placeholder="Buscar"
                 value={query}
@@ -171,7 +172,7 @@ export function ServiceTransportTypeManager() {
               <Skeleton className="h-12 rounded-[18px]" />
             </div>
           ) : (
-            <PriorityDataTable
+            <PriorityCollectionTable
               columns={columns}
               data={items}
               emptyTitle={

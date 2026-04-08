@@ -177,6 +177,26 @@ before update on provider_invoices
 for each row
 execute function set_updated_at();
 
+create trigger set_mailboxes_updated_at
+before update on mailboxes
+for each row
+execute function set_updated_at();
+
+create trigger set_mail_threads_updated_at
+before update on mail_threads
+for each row
+execute function set_updated_at();
+
+create trigger set_mail_messages_updated_at
+before update on mail_messages
+for each row
+execute function set_updated_at();
+
+create trigger set_mail_sync_runs_updated_at
+before update on mail_sync_runs
+for each row
+execute function set_updated_at();
+
 
 -- =========================================
 -- 1.0 AUTH USER SYNC

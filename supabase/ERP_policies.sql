@@ -1351,6 +1351,157 @@ using (
 
 
 -- =========================================
+-- COMMUNICATIONS
+-- =========================================
+
+alter table mailboxes enable row level security;
+alter table mailbox_role_access enable row level security;
+alter table mail_threads enable row level security;
+alter table mail_messages enable row level security;
+alter table mail_entity_links enable row level security;
+alter table mail_sync_runs enable row level security;
+
+alter table mailboxes force row level security;
+alter table mailbox_role_access force row level security;
+alter table mail_threads force row level security;
+alter table mail_messages force row level security;
+alter table mail_entity_links force row level security;
+alter table mail_sync_runs force row level security;
+
+create policy "active_select_mailboxes"
+on mailboxes
+for select
+using (
+  public.erp_can_access_mailbox(id, 'view')
+  or public.erp_can_manage_mailboxes()
+);
+
+create policy "admin_insert_mailboxes"
+on mailboxes
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mailboxes"
+on mailboxes
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mailboxes"
+on mailboxes
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "admin_select_mailbox_role_access"
+on mailbox_role_access
+for select
+using (public.erp_can_manage_mailboxes());
+
+create policy "admin_insert_mailbox_role_access"
+on mailbox_role_access
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mailbox_role_access"
+on mailbox_role_access
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mailbox_role_access"
+on mailbox_role_access
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_threads"
+on mail_threads
+for select
+using (public.erp_can_access_mailbox(mailbox_id, 'view'));
+
+create policy "admin_insert_mail_threads"
+on mail_threads
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_threads"
+on mail_threads
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_threads"
+on mail_threads
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_messages"
+on mail_messages
+for select
+using (public.erp_can_access_mailbox(mailbox_id, 'view'));
+
+create policy "admin_insert_mail_messages"
+on mail_messages
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_messages"
+on mail_messages
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_messages"
+on mail_messages
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_entity_links"
+on mail_entity_links
+for select
+using (public.erp_can_access_mailbox(mailbox_id, 'view'));
+
+create policy "admin_insert_mail_entity_links"
+on mail_entity_links
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_entity_links"
+on mail_entity_links
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_entity_links"
+on mail_entity_links
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_sync_runs"
+on mail_sync_runs
+for select
+using (
+  public.erp_can_access_mailbox(mailbox_id, 'view')
+  or public.erp_can_manage_mailboxes()
+);
+
+create policy "admin_insert_mail_sync_runs"
+on mail_sync_runs
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_sync_runs"
+on mail_sync_runs
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_sync_runs"
+on mail_sync_runs
+for delete
+using (public.erp_can_manage_mailboxes());
+
+
+-- =========================================
 -- OBSERVABILITY
 -- =========================================
 
@@ -1391,12 +1542,15 @@ revoke execute on all functions in schema public from anon;
 grant execute on all functions in schema public to authenticated;
 grant execute on function public.resolve_login_identity(text) to anon;
 grant execute on function public.erp_current_branch_id() to authenticated;
+grant execute on function public.erp_current_role_id() to authenticated;
 grant execute on function public.erp_has_role(text) to authenticated;
 grant execute on function public.erp_condition_allows(text, uuid, uuid) to authenticated;
 grant execute on function public.erp_access_scope(text, text) to authenticated;
 grant execute on function public.erp_has_resource_access(text, text, uuid, uuid) to authenticated;
 grant execute on function public.erp_has_module_access(text, text) to authenticated;
 grant execute on function public.erp_has_submodule_access(text, text) to authenticated;
+grant execute on function public.erp_can_manage_mailboxes() to authenticated;
+grant execute on function public.erp_can_access_mailbox(uuid, text) to authenticated;
 grant execute on function public.erp_has_field_access(text, text, text, uuid, uuid) to authenticated;
 grant execute on function public.erp_can_access_client_resource(text, text, uuid) to authenticated;
 grant execute on function public.erp_can_access_opportunity_resource(text, text, uuid, uuid) to authenticated;

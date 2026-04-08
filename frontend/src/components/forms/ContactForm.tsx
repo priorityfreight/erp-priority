@@ -1,30 +1,18 @@
 "use client"
 
+import { useMemo } from "react"
 import type { Client } from "@/lib/db"
-import { Button } from "@/components/ui/button"
+import { PrioritySectionAlert } from "@/components/priority"
+import { PriorityFormEngine } from "@/components/priority/forms/PriorityFormEngine"
+import type { FormSchemaDefinition } from "@/lib/forms/types"
+import { contactFormSchema, type ContactFormSchemaValues } from "@/features/contacts/schemas/contact-form"
 import {
-  PriorityFormHeader,
-  PriorityFormField,
-  PriorityFormGrid,
-  PriorityFormSection,
-  PriorityInfoField,
-  PriorityInput,
-  PrioritySelectField,
-  PrioritySubmitBar,
-} from "@/components/priority/PriorityForm"
-import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
-import { PriorityTypography } from "@/components/priority/PriorityTypography"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+  isValidEmail,
+  isValidLinkedInUrl,
+  normalizeWhatsAppLink,
+} from "./contact-form-utils"
 
-export type ContactFormValues = {
-  clientId: string
-  name: string
-  position: string
-  phone: string
-  linkedinUrl: string
-  email: string
-  status: string
-}
+export type ContactFormValues = ContactFormSchemaValues
 
 type ContactFormProps = {
   title: string
@@ -59,57 +47,6 @@ function formatDate(value?: string | null) {
   }).format(date)
 }
 
-export function normalizeWhatsAppLink(value: string) {
-  const digits = value.replace(/[^\d]/g, "")
-  if (!digits) {
-    return null
-  }
-
-  let normalized = digits
-
-  if (normalized.startsWith("00")) {
-    normalized = normalized.slice(2)
-  }
-
-  // Default local 10-digit numbers to Mexico's country code so WhatsApp
-  // links work even when the user captures a national-format phone number.
-  if (normalized.length === 10) {
-    normalized = `52${normalized}`
-  }
-
-  // Older Mexico WhatsApp patterns sometimes include an extra mobile "1".
-  if (normalized.startsWith("521") && normalized.length === 13) {
-    normalized = `52${normalized.slice(3)}`
-  }
-
-  if (normalized.length < 12) {
-    return null
-  }
-
-  return `https://api.whatsapp.com/send?phone=${normalized}`
-}
-
-export function isValidEmail(value: string) {
-  if (!value.trim()) {
-    return true
-  }
-
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
-}
-
-export function isValidLinkedInUrl(value: string) {
-  if (!value.trim()) {
-    return true
-  }
-
-  try {
-    const url = new URL(value.trim())
-    return url.hostname.includes("linkedin.com")
-  } catch {
-    return false
-  }
-}
-
 export function ContactForm({
   title,
   description,
@@ -123,167 +60,145 @@ export function ContactForm({
   createdAt,
   updatedAt,
 }: ContactFormProps) {
-  const whatsappLink = normalizeWhatsAppLink(values.phone)
-  const emailValid = isValidEmail(values.email)
-  const linkedinValid = isValidLinkedInUrl(values.linkedinUrl)
-
-  return (
-    <section className="space-y-5 rounded-[28px] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(245,247,250,0.96)_100%)] p-5 shadow-[0_28px_60px_-44px_rgba(3,10,24,0.42)]">
-      <PriorityFormHeader title={title} description={description} />
-
-      <PriorityFormSection
-        title="Informacion del contacto"
-        description="Datos base del contacto y su relacion con la cuenta."
-      >
-        <PriorityFormGrid>
-          <PriorityFormField label="Cliente">
-            <PrioritySelectField
-              value={values.clientId}
-              onValueChange={(value) => onChange("clientId", value)}
-              placeholder="Selecciona un cliente"
-              disabled={disabled}
-              options={clients.map((client) => ({
+  const schemaDefinition = useMemo<FormSchemaDefinition<typeof contactFormSchema>>(
+    () => ({
+      schema: contactFormSchema,
+      title,
+      description,
+      sections: [
+        {
+          id: "profile",
+          title: "Información del contacto",
+          description: "Datos base del contacto y su relación con la cuenta.",
+          columnsClassName: "xl:grid-cols-3",
+          fields: [
+            {
+              name: "clientId",
+              type: "select",
+              label: "Cliente",
+              placeholder: "Selecciona un cliente",
+              required: true,
+              options: clients.map((client) => ({
                 value: client.id,
                 label: client.company_name,
-              }))}
-            />
-          </PriorityFormField>
-          <PriorityFormField label="Nombre del contacto">
-            <PriorityInput
-              placeholder="Nombre del contacto *"
-              value={values.name}
-              onChange={(event) => onChange("name", event.target.value)}
-              disabled={disabled}
-            />
-          </PriorityFormField>
-          <PriorityFormField label="Puesto">
-            <PriorityInput
-              placeholder="Puesto"
-              value={values.position}
-              onChange={(event) => onChange("position", event.target.value)}
-              disabled={disabled}
-            />
-          </PriorityFormField>
-          <PriorityFormField label="Estatus">
-            <div className="space-y-3">
-              <ToggleGroup
-                type="single"
-                value={values.status}
-                onValueChange={(value) => {
-                  if (value) {
-                    onChange("status", value)
-                  }
-                }}
-                className="w-full justify-start"
-              >
-                <ToggleGroupItem value="activo" className="min-w-[120px]">
-                  Activo
-                </ToggleGroupItem>
-                <ToggleGroupItem value="ya_no_trabaja" className="min-w-[140px]">
-                  Ya no trabaja
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <PriorityTypography variant="caption">
-                El estatus controla si el contacto debe considerarse para salida comercial activa.
-              </PriorityTypography>
-            </div>
-          </PriorityFormField>
-        </PriorityFormGrid>
-      </PriorityFormSection>
+              })),
+            },
+            {
+              name: "name",
+              type: "text",
+              label: "Nombre del contacto",
+              placeholder: "Nombre del contacto",
+              required: true,
+            },
+            {
+              name: "position",
+              type: "text",
+              label: "Puesto",
+              placeholder: "Puesto",
+            },
+            {
+              name: "status",
+              type: "toggle-group",
+              label: "Estatus",
+              helperText: "El estatus controla si el contacto debe considerarse para salida comercial activa.",
+              required: true,
+              options: [
+                { value: "activo", label: "Activo" },
+                { value: "ya_no_trabaja", label: "Ya no trabaja" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "channels",
+          title: "Canales de contacto",
+          description: "Canales directos de contacto y enlaces rápidos.",
+          columnsClassName: "xl:grid-cols-3",
+          fields: [
+            {
+              name: "phone",
+              type: "text",
+              label: "Teléfono directo",
+              placeholder: "Teléfono directo",
+              description: normalizeWhatsAppLink(values.phone)
+                ? "Se puede abrir directo en WhatsApp."
+                : "Opcional. Si lo capturas bien, quedará listo para WhatsApp.",
+            },
+            {
+              name: "linkedinUrl",
+              type: "text",
+              label: "LinkedIn URL",
+              placeholder: "LinkedIn URL",
+              description: isValidLinkedInUrl(values.linkedinUrl)
+                ? values.linkedinUrl.trim()
+                  ? "Usa una URL válida de linkedin.com."
+                  : "Opcional. Agrega el perfil si ayuda al seguimiento comercial."
+                : "La URL debe pertenecer a linkedin.com.",
+            },
+            {
+              name: "email",
+              type: "text",
+              label: "Correo",
+              placeholder: "Correo",
+              className: "md:col-span-2",
+              required: true,
+              description: isValidEmail(values.email)
+                ? values.email.trim()
+                  ? "Validación de formato solamente. La existencia real requiere verificación externa."
+                  : "Captura un correo para habilitar comunicación comercial."
+                : "El correo no tiene un formato válido.",
+            },
+          ],
+        },
+        {
+          id: "audit",
+          title: "Fechas de referencia",
+          description: "Contexto rápido para saber si el contacto está reciente o requiere depuración.",
+          fields: [
+            { type: "info", label: "Creado", infoValue: () => formatDate(createdAt) },
+            { type: "info", label: "Última actualización", infoValue: () => formatDate(updatedAt) },
+          ],
+        },
+      ],
+    }),
+    [clients, createdAt, description, title, updatedAt, values.email, values.linkedinUrl, values.phone]
+  )
 
-      <PriorityFormSection
-        title="Informacion de contacto"
-        description="Canales directos de contacto y enlaces rapidos."
-      >
-        <PriorityFormGrid className="md:grid-cols-2">
-          <PriorityFormField
-            label="Telefono directo"
-            description={whatsappLink ? "Se puede abrir directo en WhatsApp." : "Sin enlace de WhatsApp."}
-          >
-            <PriorityInput
-              placeholder="Telefono directo"
-              value={values.phone}
-              onChange={(event) => onChange("phone", event.target.value)}
-              disabled={disabled}
-            />
-          </PriorityFormField>
-          <PriorityFormField
-            label="LinkedIn URL"
-            description={
-              linkedinValid
-                ? "Usa una URL valida de linkedin.com."
-                : "La URL debe pertenecer a linkedin.com."
-            }
-          >
-            <PriorityInput
-              aria-invalid={!linkedinValid}
-              placeholder="LinkedIn URL"
-              value={values.linkedinUrl}
-              onChange={(event) => onChange("linkedinUrl", event.target.value)}
-              disabled={disabled}
-              className={!linkedinValid ? "border-[#FCA5A5] focus-visible:ring-[rgba(185,28,28,0.15)]" : undefined}
-            />
-          </PriorityFormField>
-          <PriorityFormField
-            label="Correo"
-            description={
-              emailValid
-                ? "Validacion de formato solamente. La existencia real requiere verificacion externa."
-                : "El correo no tiene un formato valido."
-            }
-            className="md:col-span-2"
-          >
-            <PriorityInput
-              aria-invalid={!emailValid}
-              placeholder="Correo"
-              value={values.email}
-              onChange={(event) => onChange("email", event.target.value)}
-              disabled={disabled}
-              className={!emailValid ? "border-[#FCA5A5] focus-visible:ring-[rgba(185,28,28,0.15)]" : undefined}
-            />
-          </PriorityFormField>
-        </PriorityFormGrid>
-      </PriorityFormSection>
+  return (
+    <PriorityFormEngine
+      schemaDefinition={schemaDefinition}
+      density="compact"
+      values={values}
+      loading={loading}
+      disabled={disabled}
+      submitLabel={submitLabel}
+      onSubmit={onSubmit}
+      onFieldChange={(field, value) => onChange(field as keyof ContactFormValues, String(value ?? ""))}
+      afterSections={(currentValues) => {
+        const emailValid = isValidEmail(currentValues.email)
+        const linkedinValid = isValidLinkedInUrl(currentValues.linkedinUrl)
+        const whatsappLink = normalizeWhatsAppLink(currentValues.phone)
 
-      {!emailValid || !linkedinValid ? (
-        <PrioritySectionAlert title="Validaciones pendientes" variant="warning">
-          {!emailValid && !linkedinValid
-            ? "Corrige el formato del correo y la URL de LinkedIn antes de guardar."
-            : !emailValid
-              ? "Corrige el formato del correo antes de guardar."
-              : "Corrige la URL de LinkedIn antes de guardar."}
-        </PrioritySectionAlert>
-      ) : null}
+        return (
+          <>
+            {!emailValid || !linkedinValid ? (
+              <PrioritySectionAlert title="Validaciones pendientes" variant="warning">
+                {!emailValid && !linkedinValid
+                  ? "Corrige el formato del correo y la URL de LinkedIn antes de guardar."
+                  : !emailValid
+                    ? "Corrige el formato del correo antes de guardar."
+                    : "Corrige la URL de LinkedIn antes de guardar."}
+              </PrioritySectionAlert>
+            ) : null}
 
-      {whatsappLink ? (
-        <PrioritySectionAlert title="Canal rapido disponible" variant="success">
-          Este contacto ya tiene un telefono apto para abrir conversacion directa en WhatsApp.
-        </PrioritySectionAlert>
-      ) : null}
-
-      {(createdAt || updatedAt) ? (
-        <PriorityFormSection
-          title="Registro"
-          description="Campos automáticos controlados por la base de datos."
-        >
-          <div className="grid gap-3 md:grid-cols-2">
-            <PriorityInfoField label="Fecha de creacion" value={formatDate(createdAt)} />
-            <PriorityInfoField label="Ultima vez actualizado" value={formatDate(updatedAt)} />
-          </div>
-        </PriorityFormSection>
-      ) : null}
-
-      {onSubmit ? (
-        <PrioritySubmitBar>
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={disabled || loading || !emailValid || !linkedinValid}
-          >
-            {loading ? "Guardando..." : submitLabel}
-          </Button>
-        </PrioritySubmitBar>
-      ) : null}
-    </section>
+            {whatsappLink ? (
+              <PrioritySectionAlert title="Canal rapido disponible" variant="success">
+                Este contacto ya tiene un teléfono apto para abrir conversación directa en WhatsApp.
+              </PrioritySectionAlert>
+            ) : null}
+          </>
+        )
+      }}
+    />
   )
 }

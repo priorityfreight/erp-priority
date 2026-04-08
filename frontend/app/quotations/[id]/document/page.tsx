@@ -97,15 +97,15 @@ export default function QuotationDocumentPage() {
   }, [details])
 
   if (!quotationId) {
-    return <div className="p-8 text-sm text-[#6B7280]">Quotation id no valido.</div>
+    return <div className="p-8 text-sm text-[#6B7280]">ID de cotización no válido.</div>
   }
 
   if (loading && !details) {
-    return <div className="p-8 text-sm text-[#6B7280]">Cargando documento de cotizacion...</div>
+    return <div className="p-8 text-sm text-[#6B7280]">Cargando documento de cotización...</div>
   }
 
   if (!details) {
-    return <div className="p-8 text-sm text-[#6B7280]">No se encontro la cotizacion.</div>
+    return <div className="p-8 text-sm text-[#6B7280]">No se encontró la cotización.</div>
   }
 
   const { quotation, cargoLines, clientContacts } = details
@@ -125,7 +125,7 @@ export default function QuotationDocumentPage() {
             href={`/quotations/${quotation.id}`}
             className="rounded-md border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:bg-[#F9FAFB]"
           >
-            Regresar a cotizacion
+            Regresar a cotización
           </Link>
           <Link
             href={pdfHref}
@@ -162,7 +162,7 @@ export default function QuotationDocumentPage() {
                     {brandIdentity.companyName}
                   </div>
                   <h1 className="text-4xl font-semibold tracking-tight text-white">
-                    Cotizacion Comercial
+                    Cotización comercial
                   </h1>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export default function QuotationDocumentPage() {
                 </div>
                 <div className="rounded-2xl bg-white/8 px-4 py-3 ring-1 ring-white/10">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60">
-                    Fecha de emision
+                    Fecha de emisión
                   </div>
                   <div className="mt-1 text-sm font-semibold text-white">
                     {new Date().toLocaleDateString("es-MX")}
@@ -227,11 +227,11 @@ export default function QuotationDocumentPage() {
             </div>
           </div>
           <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-              Tipo de operacion
-            </div>
-            <div className="mt-1 text-sm font-medium text-[#111827]">
-              {quotation.operation_type || "—"}
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                Tipo de operacion
+              </div>
+              <div className="mt-1 text-sm font-medium text-[#111827]">
+                {quotation.operation_type || "—"}
             </div>
           </div>
           <div className="rounded-xl border border-[#E7EAF0] bg-[#FBFCFE] p-4 shadow-sm">
@@ -246,7 +246,7 @@ export default function QuotationDocumentPage() {
 
         <section className="space-y-4 rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
           <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-            Informacion de la Ruta
+            Información de la ruta
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -265,7 +265,7 @@ export default function QuotationDocumentPage() {
             </div>
             <div className="md:col-span-2">
               <div className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Pickup
+                Recolección
               </div>
               <div className="mt-1 text-sm text-[#111827]">
                 {quotation.pickup_address || "No disponible"}
@@ -284,7 +284,7 @@ export default function QuotationDocumentPage() {
 
         <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
           <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-            Informacion de Carga
+            Información de carga
           </h2>
           <div className="mt-5 overflow-x-auto rounded-xl border border-[#E7EAF0]">
             <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
@@ -294,7 +294,7 @@ export default function QuotationDocumentPage() {
                   <th className="px-4 py-3">Cantidad</th>
                   <th className="px-4 py-3">Dimensiones</th>
                   <th className="px-4 py-3">Peso</th>
-                  <th className="px-4 py-3">Commodities</th>
+                  <th className="px-4 py-3">Mercancía</th>
                   <th className="px-4 py-3">CBM</th>
                   <th className="px-4 py-3">KG / VOL</th>
                   <th className="px-4 py-3">Clase</th>
@@ -304,7 +304,7 @@ export default function QuotationDocumentPage() {
                 {cargoLines.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-[#6B7280]">
-                      No hay detalles de carga capturados todavia.
+                      No hay detalles de carga capturados todavía.
                     </td>
                   </tr>
                 ) : (
@@ -340,7 +340,7 @@ export default function QuotationDocumentPage() {
 
         <section className="rounded-2xl border border-[#E7EAF0] p-5 shadow-sm">
           <h2 className="text-lg font-semibold" style={{ color: priorityPalette.navy }}>
-            Opciones de la Cotizacion
+            Opciones de la cotización
           </h2>
           <p className="mt-1 text-sm text-[#6B7280]">
             Vista comercial para cliente. No incluye proveedor ni costo de compra.
@@ -348,7 +348,7 @@ export default function QuotationDocumentPage() {
 
           {visibleOptionSummaries.length === 0 ? (
             <div className="mt-5 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-6 text-center text-sm text-[#6B7280]">
-              Todavia no hay opciones comerciales listas para compartir.
+              Todavía no hay opciones comerciales listas para compartir.
             </div>
           ) : (
             <div className="mt-5 space-y-4">
@@ -415,7 +415,7 @@ export default function QuotationDocumentPage() {
                   {getCustomerOptionRemarks(option.lines).length > 0 ? (
                     <div className="border-t border-[#E5E7EB] bg-[#FBFCFE] px-4 py-4">
                       <div className="text-xs font-semibold uppercase tracking-wide text-[#800020]">
-                        Remarks:
+                        Observaciones:
                       </div>
                       <div className="mt-3 space-y-3">
                         {getCustomerOptionRemarks(option.lines).map((remark, index) => (
@@ -438,7 +438,7 @@ export default function QuotationDocumentPage() {
         <section className="rounded-2xl border border-[#E7EAF0] bg-[#FBFCFE] p-6 text-center shadow-sm">
           <p className="mx-auto max-w-3xl text-base leading-8 text-[#475569]">
             Propuesta formal de servicio logístico preparada para evaluación comercial.
-            Los importes mostrados corresponden únicamente a la versión dirigida al cliente
+            Los importes mostrados corresponden únicamente a la versión dirigida al cliente.
           </p>
         </section>
       </div>

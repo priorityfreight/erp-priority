@@ -16,8 +16,8 @@ test.describe("frontend critical authenticated workspaces", () => {
 
     await expect(page).toHaveURL(/\/master-data\/users\/roles/)
     await expect(page.getByRole("heading", { name: /Roles y permisos/i })).toBeVisible()
-    await expect(page.getByRole("tab", { name: /Route access/i })).toBeVisible()
-    await expect(page.getByRole("tab", { name: /Field masking/i })).toBeVisible()
+    await expect(page.getByRole("tab", { name: /Acceso por recurso/i })).toBeVisible()
+    await expect(page.getByRole("tab", { name: /Campos sensibles/i })).toBeVisible()
 
     await captureEvidence(page, testInfo, "roles-permissions-workspace.png")
   })
@@ -27,7 +27,7 @@ test.describe("frontend critical authenticated workspaces", () => {
     await page.goto("/clients")
 
     await expect(page).toHaveURL(/\/clients/)
-    await expect(page.getByRole("heading", { name: /Clients/i })).toBeVisible()
+    await expect(page.getByRole("heading", { level: 1, name: "Clientes" })).toBeVisible()
 
     const opened = await openFirstTableRecord({
       page,
@@ -46,8 +46,8 @@ test.describe("frontend critical authenticated workspaces", () => {
     }
 
     await expect(page).toHaveURL(/\/clients\/[^/]+/)
-    await expect(page.getByRole("tab", { name: /Perfil/i })).toBeVisible()
     await expect(page.getByRole("tab", { name: /Contactos/i })).toBeVisible()
+    await expect(page.getByRole("tab", { name: /Consignee y Shippers/i })).toBeVisible()
     await expect(page.getByRole("tab", { name: /Oportunidades/i })).toBeVisible()
 
     await captureEvidence(page, testInfo, "client-detail-workspace.png")
@@ -58,7 +58,7 @@ test.describe("frontend critical authenticated workspaces", () => {
     await page.goto("/pricing/providers")
 
     await expect(page).toHaveURL(/\/pricing\/providers/)
-    await expect(page.getByRole("heading", { name: /Providers/i })).toBeVisible()
+    await expect(page.getByRole("heading", { level: 1, name: "Proveedores" })).toBeVisible()
 
     const opened = await openFirstTableRecord({
       page,
@@ -79,7 +79,7 @@ test.describe("frontend critical authenticated workspaces", () => {
     await expect(page).toHaveURL(/\/pricing\/providers\/[^/]+/)
     await expect(page.getByRole("tab", { name: /Perfil/i })).toBeVisible()
     await expect(page.getByRole("tab", { name: /Contactos/i })).toBeVisible()
-    await expect(page.getByRole("tab", { name: /Service Offerings/i })).toBeVisible()
+    await expect(page.getByRole("tab", { name: /Servicios ofertados/i })).toBeVisible()
 
     await captureEvidence(page, testInfo, "provider-detail-workspace.png")
   })
@@ -89,12 +89,13 @@ test.describe("frontend critical authenticated workspaces", () => {
     await page.goto("/quotations")
 
     await expect(page).toHaveURL(/\/quotations/)
-    await expect(page.getByRole("heading", { name: /Quotations/i })).toBeVisible()
+    await expect(page.getByRole("heading", { level: 1, name: "Cotizaciones" })).toBeVisible()
 
     const opened = await openFirstTableRecord({
       page,
       action: async () => {
-        await page.locator('a[href^="/quotations/"]').first().click()
+        await page.getByRole("button", { name: /Acciones de/i }).first().click()
+        await page.getByRole("menuitem", { name: /Ver detalle/i }).click()
       },
       emptyEvidence: {
         testInfo,

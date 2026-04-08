@@ -91,6 +91,54 @@ export type UserRole = {
   description: string | null
 }
 
+export type WorkspaceKey =
+  | "pricing_quotations"
+  | "crm_quotations"
+  | "opportunities"
+  | "clients"
+  | "providers"
+
+export type StatusLaneKey = string
+
+export type PricingQuotationLane =
+  | "pendiente"
+  | "cotizando"
+  | "lista_para_enviar"
+  | "renegociar_tarifa"
+
+export type WorkspaceFilterState = {
+  pricingOwnerId: string | null
+  serviceType: string | null
+  transportType: string | null
+  mineOnly: boolean
+}
+
+export type SavedWorkspaceView = {
+  id: string
+  workspace_key: WorkspaceKey
+  owner_user_id: string
+  name: string
+  search_query: string | null
+  status_lane: StatusLaneKey | null
+  filters_json: Record<string, unknown>
+  sort_json: Record<string, unknown>
+  visible_columns_json: string[]
+  is_default: boolean
+  created_at: string
+  updated_at: string | null
+}
+
+export type SavedWorkspaceViewPayload = {
+  workspace_key: WorkspaceKey
+  name: string
+  search_query?: string | null
+  status_lane?: StatusLaneKey | null
+  filters_json?: Record<string, unknown>
+  sort_json?: Record<string, unknown>
+  visible_columns_json?: string[]
+  is_default?: boolean
+}
+
 export type PermissionModule = {
   id: string
   code: string

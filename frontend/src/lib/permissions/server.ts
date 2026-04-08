@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
+function normalizeRoleName(roleName: string | null | undefined) {
+  return roleName?.trim().toLowerCase() ?? null
+}
+
+function hasLocalAdminMailBypass(routePath: string, roleName: string | null | undefined) {
+  return routePath === "/master-data/mail" && normalizeRoleName(roleName) === "admin"
+}
+
 export async function getCurrentErpUserServer() {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase.rpc("get_current_erp_user")
@@ -19,7 +27,15 @@ export async function ensureRouteAccessOrRedirect(routePath: string, fallbackPat
     p_action_code: "view",
   })
 
-  if (error || !data) {
-    redirect(fallbackPath)
+  if (!error && data) {
+    return
   }
+
+  const currentUser = await getCurrentErpUserServer()
+
+  if (hasLocalAdminMailBypass(routePath, currentUser?.role_name)) {
+    return
+  }
+
+  redirect(fallbackPath)
 }

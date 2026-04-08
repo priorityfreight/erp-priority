@@ -218,6 +218,33 @@ Root cause:
 Approved solution:
 
 - add named-persona `field-masking` validation
+
+
+9. Local browser audit on macOS must use inline env vars when passwords contain special characters
+
+Observed problem:
+
+- terminal sessions entered `dquote>` and Playwright started with incomplete credentials
+- the browser opened but only the login user field was filled reliably
+
+Root cause:
+
+- shell parsing broke on `!` inside double quotes
+- E2E helpers still referenced legacy login labels after the login screen copy changed
+
+Approved solution:
+
+- run headed local browser audits with inline env vars using single quotes:
+  - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e:critical -- --headed`
+  - `UI_TEST_LOGIN='adanrodriguez' UI_TEST_PASSWORD='Adan26!' npm run test:e2e -- --headed`
+- keep Playwright login selectors compatible with both current and legacy labels:
+  - `Usuario o correo|Usuario`
+  - `Contraseña|Contrasena`
+
+Prevention rule:
+
+- when local browser audits use credentials containing `!`, prefer inline env vars with single quotes
+- update E2E expectations whenever the shell or page copy is renamed, especially after localization changes
 - validate quotation economics and pricing-cost visibility separately from route visibility
 
 Prevention rule:
@@ -280,6 +307,8 @@ Root cause:
 Approved solution:
 
 - standardize live forms on `PriorityFormHeader`, `PriorityFormSection`, `PriorityFormField`, `PriorityInfoField`, and `PrioritySubmitBar`
+- standardize next-generation forms on `react-hook-form + zod + PriorityFormEngine`
+- use `PriorityGrid` instead of ad hoc raw tables when the workflow is truly dense, editable, or matrix-like
 - use `ToggleGroup` for short exclusive choice sets and `Switch` for real boolean states
 - use `PrioritySectionAlert` for inline validation, sync, and guidance messages
 - keep the default form density at two columns unless a third column has a strong workflow reason
@@ -366,15 +395,17 @@ Root cause:
 
 Approved solution:
 
-- migrate core list workspaces to `PriorityDataTable`
-- standardize toolbar search/filter controls with `PriorityInput` and `PrioritySelectField`
+- migrate core list workspaces to `PriorityCollectionWorkspace`
+- standardize toolbar search/filter controls with `PrioritySearchField`, `PriorityFilterPopover`, and `PrioritySavedViews`
+- standardize lane-based state orientation with `PriorityStatusLanes`
+- standardize visible first-column actions with `PriorityActionRail`
 - standardize loading with `Skeleton`
-- standardize empty states via the table layer
+- standardize empty states via the workspace layer
 - move long forms like contacts and opportunities to `PriorityFormSection` and `PrioritySubmitBar`
 
 Prevention rule:
 
-- new list workspaces should not introduce raw tables if `PriorityDataTable` already fits the use case
+- new browse/list workspaces should not introduce raw tables if `PriorityCollectionWorkspace` already fits the use case
 - new live forms should not fall back to legacy raw inputs/buttons when the Priority form layer exists
 
 
@@ -492,7 +523,7 @@ Dense workspaces fall back to raw tables, raw date inputs, or scattered action b
 
 Response:
 
-- move tabular sections to `PriorityDataTable`
+- move tabular sections to `PriorityCollectionTable` or `PriorityCollectionWorkspace`, depending on whether the screen is embedded or full-workspace
 - compose date selection through `PriorityDateField`
 - group related secondary actions with `ButtonGroup`
 - add `HoverCard`/`ResizablePanelGroup` only when they reduce navigation friction or scroll depth
@@ -586,7 +617,7 @@ Approved solution:
 
 - use summary cards for top-line metrics
 - use a toolbar built from `PriorityInput` and `PrioritySelectField`
-- use `PriorityDataTable` as the default main grid
+- use `PriorityCollectionWorkspace` for full browse workspaces and `PriorityCollectionTable` for embedded/read-mostly list surfaces
 - use `AlertDialog` for destructive confirmation
 - use `PriorityFormSection` plus `PrioritySubmitBar` inside modal editing flows
 
@@ -627,13 +658,271 @@ Root cause:
 
 Approved solution:
 
-- keep global navigation in sidebar and topbar
+- keep global navigation topbar-first with `NavigationMenu` and `PriorityCommandBar`
+- keep local backtracking inside `PriorityWorkspacePath`
 - use internal tabs only inside dense single-record or single-workspace surfaces
 - current approved tabbed workspaces are client detail, provider detail, quotation detail, and roles & permissions
 
 Prevention rule:
 
 - when a workspace contains multiple sibling sub-processes of the same record, evaluate tabs before adding more stacked sections
+
+
+16. Workspace filters must operate on the backend dataset, not only the current page
+
+Observed problem:
+
+- quotation workspace filters, sort, and presets looked complete in UI, but initially only filtered the already loaded client page
+- views such as "Ganadas ADAN" could silently omit records from other pages while counters and pagination still reflected the unfiltered dataset
+
+Root cause:
+
+- the workspace query contract was split between backend pagination and frontend-only filtering
+- `search_quotations()` had not yet been extended to accept the full workspace state
+
+Approved solution:
+
+- move `query`, `lane/status`, `columnFilters`, `sort`, `page`, and `pageSize` into the backend query contract
+- make `totalCount` and pagination respond to the filtered dataset returned by `search_quotations()`
+- treat frontend filtering as a temporary fallback only, never the canonical path for operational workspaces
+
+Prevention rule:
+
+- a saved view or filter builder is not considered real until the dataset, counters, and pagination all come from the backend contract
+
+
+17. Browse columns, filters, and sorting must come from one shared schema
+
+Observed problem:
+
+- quotation columns, filter options, chips, and sorting behavior drifted because parts of the workspace still used hard-coded lists by column name
+- the filter modal could fall out of sync with the visible table and with saved views
+
+Root cause:
+
+- column labels, filter kinds, backend keys, and visible/default behavior were modeled in multiple places
+
+Approved solution:
+
+- define a single workspace column schema containing:
+  - `id`
+  - `label`
+  - `visible by default`
+  - `sortable`
+  - `filterable`
+  - `filterKind`
+  - `filterOptions`
+  - backend column key
+- derive the filter builder, chips, sorting, and column modal from that one schema
+
+Prevention rule:
+
+- do not hard-code browse workspace behavior by column name in multiple places once a column schema exists
+
+
+18. Column presets must persist in the same workspace system as saved views
+
+Observed problem:
+
+- workspace column layouts originally lived in isolated `localStorage` state, while saved views lived in the shared workspace persistence layer
+- this created split behavior between search/filter presets and column presets
+
+Root cause:
+
+- column preference was treated as a UI-only concern instead of part of workspace state
+
+Approved solution:
+
+- persist column layouts through `workspace_saved_views`, using the same canonical persistence layer as search, lanes, filters, and sorting
+- allow internal system rows when needed, but keep them hidden from normal saved-view lists
+
+Prevention rule:
+
+- user workspace state must not be split across unrelated persistence systems unless the split is explicitly intentional and documented
+
+
+19. Workspace migration SQL must not reintroduce legacy RPC shapes
+
+Observed problem:
+
+- the workspace-saved-views migration attempted to recreate an older `search_quotations()` body that referenced removed quotation header columns such as `commodities`, `quantity`, `weight`, and `volume`
+- `supabase db push` failed only when the migration actually hit the linked remote database
+
+Root cause:
+
+- a newer migration added workspace features, but it still embedded a stale version of the quotation RPC body
+- the migration was not validated against the current canonical schema after quotation-header cleanup
+
+Approved solution:
+
+- update both workspace migrations so the RPC output shape stays compatible without depending on removed physical columns
+- run `supabase db push --dry-run` before pushing live migrations
+- treat migration SQL as versioned code that must stay aligned with current canonical schema, not as a historical dump
+
+Prevention rule:
+
+- any migration that recreates an RPC must be rechecked against the live canonical table shape before release or remote push
+
+
+20. HTML5 drag-and-drop is too brittle for precision workspace ordering
+
+Observed problem:
+
+- the first implementation of workspace column ordering tended to drop items at the end of a list instead of at the user’s intended insertion point
+- card-based layouts also made column ordering visually noisy and harder to control
+
+Root cause:
+
+- native drag-and-drop did not provide a stable insertion model for precise list ordering in this workspace
+- the visual metaphor was too heavy for a utilitarian settings modal
+
+Approved solution:
+
+- move to list-based ordering with explicit insertion handling and clearer vertical structure
+- adopt an open-source sortable stack such as `dnd-kit` for stable drag behavior
+- keep explicit `subir/bajar` controls as a precision fallback when direct drag is inconvenient
+
+Prevention rule:
+
+- do not rely on raw HTML5 drag-and-drop for ERP ordering surfaces that require exact insertion behavior
+
+
+21. Base select/popover primitives must be revalidated inside modal workspaces
+
+Observed problem:
+
+- workspace filter modals could open correctly while the actual select list for choosing a filter column appeared missing or collapsed
+
+Root cause:
+
+- the shared `Select` viewport sizing still respected trigger-height assumptions that failed inside larger modal compositions
+- layering and viewport constraints were validated in ordinary forms but not in workspace overlays
+
+Approved solution:
+
+- fix the base `Select` viewport sizing and z-index behavior at the shared primitive level
+- validate the primitive again inside the actual workspace modal where it will be used
+
+Prevention rule:
+
+- when a primitive is reused inside workspace modals, validate the primitive in that exact overlay context, not only in isolated form fields
+
+
+22. Browser automation failures can come from the host environment, not the product
+
+Observed problem:
+
+- Playwright browser execution from the Codex-hosted macOS environment failed with Chromium launch errors such as `MachPortRendezvousServer ... Permission denied (1100)`
+- list-based test discovery, lint, and build still passed, and the same suites could run from a normal local terminal
+
+Root cause:
+
+- browser launch restrictions in the host environment were independent from the frontend application health
+
+Approved solution:
+
+- treat build, lint, migrations, and Playwright test listing as reliable signals inside Codex
+- treat full browser execution as an environment-sensitive step that may need to run from a normal local terminal or an approved external browser-server path
+- never misclassify host browser-launch failures as app regressions without additional evidence
+
+Prevention rule:
+
+- separate product failures from host-browser failures during release validation, and document the difference explicitly in the final audit
+
+
+23. Legacy wrappers should be reduced to compatibility facades once the new baseline is live
+
+Observed problem:
+
+- `PriorityDataTable` continued to appear as if it were the active standard long after `PriorityCollectionWorkspace` and `PriorityCollectionTable` had become the real browse/list baseline
+- this created documentation drift and kept encouraging the wrong component choice
+
+Root cause:
+
+- the legacy wrapper remained fully functional and still looked like a first-class choice in exports, registry, and docs
+
+Approved solution:
+
+- introduce `PriorityCollectionTable` as the canonical non-workspace browse table
+- keep `PriorityDataTable` only as a compatibility wrapper while older imports are retired
+- update `AI_SYSTEM`, stories, registry, and migration docs in the same change set
+
+Prevention rule:
+
+- once a new UI baseline is live, old wrappers must be demoted explicitly in both code and governance docs, not just informally avoided
+
+
+24. QA/example cleanup must be scripted, previewable, and backend-safe
+
+Observed problem:
+
+- UI and E2E flows created realistic QA artifacts in TRAIN, including `Cliente QA Proceso`, `Proveedor QA`, `@priority.test`, `example.com`, and `Vista QA`
+- manual cleanup worked, but ad hoc one-off deletion is too easy to forget and too risky to repeat by hand
+- client records could not be hard-deleted because backend policy correctly forced the safer `soft_delete_client()` path
+
+Root cause:
+
+- example data creation was easy and repeatable, but the project lacked one canonical reusable script for non-ledger QA/example cleanup outside the live-validation harness
+- cleanup assumptions were split between manual DB operations and ledger-based validation cleanup
+
+Approved solution:
+
+- add a reusable script at `frontend/scripts/validation/cleanup-qa-example-data.mjs`
+- support two modes:
+  - preview: `cd frontend && npm run validation:cleanup:qa-preview`
+  - apply: `cd frontend && npm run validation:cleanup:qa-apply`
+- make the script delete dependent records first (`workspace_saved_views`, quotations, cargo/cost children, opportunities, provider artifacts)
+- for clients, neutralize identifying fields and then call `soft_delete_client()` instead of hard delete
+- emit JSON and Markdown cleanup summaries under `docs/validation/`
+
+Prevention rule:
+
+- do not manually purge QA/example UI data from ERP tables when the reusable cleanup script can target it safely
+- any new QA/example naming pattern must be added to the cleanup script in the same change that introduces the pattern
+
+
+25. Remote signature images must be treated as a rendering integration, not just a saved URL
+
+Observed problem:
+
+- mailbox signatures based on Google Drive links still rendered as broken images in the ERP and would remain fragile in outbound mail
+
+Root cause:
+
+- a shared Drive URL is not enough by itself
+- Drive may require URL normalization and can still block direct browser embedding through cross-origin resource rules
+
+Approved solution:
+
+- persist the mailbox signature as a normalized public URL
+- render remote signatures through the ERP-owned proxy route `/api/mail/signature-image` when the upstream host is hotlink-sensitive
+- require `NEXT_PUBLIC_APP_URL` in production so outbound emails can resolve the proxied signature from the public ERP domain
+
+Prevention rule:
+
+- do not treat "store image URL" as a complete signature feature if the chosen host does not guarantee stable direct embedding from the ERP domain
+
+
+26. Email tabs linked by quotation reference still need participant-context filtering
+
+Observed problem:
+
+- quotation email views in sales showed provider-sourcing emails just because the subject contained the quotation reference
+
+Root cause:
+
+- automatic mail linking by exact quotation reference is useful, but it is not sufficient to decide whether a thread belongs in the sales or pricing context
+
+Approved solution:
+
+- keep subject-reference linking as the indexing/linking strategy
+- additionally filter quotation email views by participant context:
+  - sales sees customer-facing threads
+  - pricing/provider workflows see provider-facing threads
+
+Prevention rule:
+
+- any embedded ERP mail view must combine entity linking with operational participant rules before it is treated as the final user-facing thread set
 
 
 --------------------------------------------------

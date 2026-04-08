@@ -8,6 +8,7 @@ import type {
 import type { ProviderContactFormValues } from "@/components/forms/ProviderContactForm"
 import type { ProviderFormValues } from "@/components/forms/ProviderForm"
 import type { ProviderServiceOfferingFormValues } from "@/components/forms/ProviderServiceOfferingForm"
+import { normalizeContactStatus } from "@/components/forms/contact-form-utils"
 
 export type ProviderDetailsState = {
   provider: Provider
@@ -76,7 +77,7 @@ export function buildProviderContactForm(contact: ProviderContactWithProvider): 
     phone: contact.phone || "",
     linkedinUrl: contact.linkedin_url || "",
     position: contact.position || "",
-    status: contact.status || "activo",
+    status: normalizeContactStatus(contact.status),
   }
 }
 

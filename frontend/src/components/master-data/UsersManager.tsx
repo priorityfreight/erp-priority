@@ -8,7 +8,7 @@ import { Modal } from "@/components/data/Modal"
 import { StatusBadge } from "@/components/data/StatusBadge"
 import { UserForm, type UserFormValues } from "@/components/forms/UserForm"
 import { PageContainer } from "@/components/layout/PageContainer"
-import { PriorityDataTable } from "@/components/priority/PriorityDataTable"
+import { PriorityCollectionTable } from "@/components/priority/collection/PriorityCollectionTable"
 import { PriorityRowActions } from "@/components/priority/PriorityRowActions"
 import { PrioritySectionAlert } from "@/components/priority/PrioritySectionAlert"
 import {
@@ -364,7 +364,7 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
     },
     {
       accessorKey: "phone",
-      header: "Telefono",
+      header: "Teléfono",
       cell: ({ row }) => <span>{row.original.phone || "No disponible"}</span>,
     },
     {
@@ -434,7 +434,7 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
           </Button>
           <Button type="button" size="lg" onClick={openCreateModal}>
             <PlusIcon />
-            Anadir usuario
+            Añadir usuario
           </Button>
         </div>
       }
@@ -511,7 +511,7 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
           </div>
 
           {tableFeedback ? (
-            <PrioritySectionAlert title="Operacion completada" variant="success">
+            <PrioritySectionAlert title="Operación completada" variant="success">
               {tableFeedback}
             </PrioritySectionAlert>
           ) : null}
@@ -529,7 +529,7 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
               <Skeleton className="h-12 rounded-[18px]" />
             </div>
           ) : (
-            <PriorityDataTable
+            <PriorityCollectionTable
               columns={columns}
               data={filteredUsers}
               emptyTitle="No hay usuarios que coincidan con los filtros"
@@ -541,8 +541,9 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
 
       {showCreateModal ? (
         <Modal
-          title={editingUser ? "Editar usuario" : "Anadir usuario"}
+          title={editingUser ? "Editar usuario" : "Añadir usuario"}
           description="Administra el perfil ERP y las credenciales de acceso del usuario."
+          size="standard"
           onClose={() => {
             setShowCreateModal(false)
             resetForm()
@@ -557,12 +558,12 @@ export function UsersManager({ currentUserEmail, currentUserId }: UsersManagerPr
             />
 
             {formError ? (
-              <div className="rounded-[22px] border border-[rgba(239,68,68,0.16)] bg-[rgba(254,242,242,0.95)] px-4 py-3 text-sm text-[#B91C1C]">
+              <PrioritySectionAlert title="No se pudo guardar el usuario" variant="destructive">
                 {formError}
-              </div>
+              </PrioritySectionAlert>
             ) : null}
 
-            <PrioritySubmitBar>
+            <PrioritySubmitBar density="compact" mode="inline">
               <Button
                 type="button"
                 variant="outline"

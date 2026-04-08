@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import type { ReactNode } from "react"
 import { MoreHorizontalIcon } from "lucide-react"
 
@@ -16,7 +17,8 @@ import {
 type PriorityRowAction = {
   label: string
   icon?: ReactNode
-  onSelect: () => void
+  onSelect?: () => void
+  href?: string
   disabled?: boolean
   destructive?: boolean
 }
@@ -45,16 +47,31 @@ export function PriorityRowActions({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {actions.map((action, index) => (
-          <DropdownMenuItem
-            key={`${action.label}-${index}`}
-            variant={action.destructive ? "destructive" : "default"}
-            disabled={action.disabled}
-            className="rounded-[14px] px-3 py-2.5 font-medium"
-            onSelect={action.onSelect}
-          >
-            {action.icon}
-            {action.label}
-          </DropdownMenuItem>
+          action.href ? (
+            <DropdownMenuItem
+              key={`${action.label}-${index}`}
+              asChild
+              variant={action.destructive ? "destructive" : "default"}
+              disabled={action.disabled}
+              className="rounded-[14px] px-3 py-2.5 font-medium"
+            >
+              <Link href={action.href}>
+                {action.icon}
+                {action.label}
+              </Link>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              key={`${action.label}-${index}`}
+              variant={action.destructive ? "destructive" : "default"}
+              disabled={action.disabled}
+              className="rounded-[14px] px-3 py-2.5 font-medium"
+              onSelect={action.onSelect}
+            >
+              {action.icon}
+              {action.label}
+            </DropdownMenuItem>
+          )
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
