@@ -26,8 +26,9 @@ Clean `PROD` environments must now use:
 
 1. [`supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/supabase/baselines/20260408120000_prod_bootstrap_baseline.sql)
 2. [`supabase/seeds/prod_seed.sql`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/supabase/seeds/prod_seed.sql)
-3. repair of legacy migration history up to `20260407113000`
-4. any future delta migrations created after the baseline
+3. [`scripts/build-prod-operational-master-data-seed.mjs`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/scripts/build-prod-operational-master-data-seed.mjs) + the generated operational snapshot for approved live catalogs
+4. repair of legacy migration history up to `20260407113000`
+5. any future delta migrations created after the baseline
 
 Legacy cutoff:
 
@@ -67,6 +68,8 @@ It does **not** contain:
 - mailbox instances
 - QA users
 - saved workspace views
+- the live `UN/LOCODE` snapshot
+- the live `exchange_rates` snapshot
 
 For clarity, the controlled production seed is now duplicated at:
 
@@ -75,6 +78,26 @@ For clarity, the controlled production seed is now duplicated at:
 And the reserved non-production fixture file is:
 
 - [`supabase/seeds/train_seed.sql`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/supabase/seeds/train_seed.sql)
+
+
+## Operational Master Data Snapshot
+
+The production bootstrap now uses a second controlled layer for approved operational catalogs that are large or expected to evolve:
+
+- `unlocodes`
+- `exchange_rates`
+
+That snapshot is generated from the current approved `DEV/TRAIN` source of truth with:
+
+- [`scripts/build-prod-operational-master-data-seed.mjs`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/scripts/build-prod-operational-master-data-seed.mjs)
+
+The generated file is:
+
+- `supabase/seeds/generated/prod_operational_master_data.sql`
+
+This generated file is intentionally not tracked in git. It is a controlled artifact built at cutover time from approved operational master data.
+
+Additionally, `sales_accounting_concepts` has now been promoted to the canonical static seed because it is small, approved, and required for day-one operation.
 
 
 ## Operational Rule

@@ -20,6 +20,7 @@ CURRENT BACKEND STATE
 - no new product capability may depend on fallback-only behavior
 - clean `PROD` bootstrap no longer depends on replaying the full historical migration chain
 - the current canonical clean bootstrap artifact is `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
+- approved operational `PROD` master data for `unlocodes` and `exchange_rates` is promoted from `DEV/TRAIN` with `scripts/build-prod-operational-master-data-seed.mjs`
 
 
 --------------------------------------------------
@@ -56,11 +57,12 @@ When applying a backend change:
 1. update canonical SQL sources
 2. add a migration file
 3. if the change affects the clean bootstrap state, regenerate `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
-4. apply the migration to the linked Supabase project
-5. regenerate frontend/src/types/supabase.ts
-6. update the frontend query layer if the contract changed
-7. update AI_SYSTEM files in the same turn
-8. run validation before treating the change as stable
+4. if the change affects approved operational master data promoted into `PROD`, keep `scripts/build-prod-operational-master-data-seed.mjs` aligned
+5. apply the migration to the linked Supabase project
+6. regenerate frontend/src/types/supabase.ts
+7. update the frontend query layer if the contract changed
+8. update AI_SYSTEM files in the same turn
+9. run validation before treating the change as stable
 
 When a change affects branding or shared visual identity:
 
