@@ -1351,6 +1351,50 @@ using (
 
 
 -- =========================================
+-- WORKSPACE PREFERENCES
+-- =========================================
+
+alter table workspace_saved_views enable row level security;
+alter table workspace_saved_views force row level security;
+
+create policy "active_select_workspace_saved_views"
+on workspace_saved_views
+for select
+using (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+create policy "active_insert_workspace_saved_views"
+on workspace_saved_views
+for insert
+with check (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+create policy "active_update_workspace_saved_views"
+on workspace_saved_views
+for update
+using (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+)
+with check (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+create policy "active_delete_workspace_saved_views"
+on workspace_saved_views
+for delete
+using (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+
+-- =========================================
 -- COMMUNICATIONS
 -- =========================================
 

@@ -55,6 +55,17 @@ Latest browse-baseline note:
   - `/api/mail/signature-image` was added as the approved proxy path for remote signature images such as Google Drive
   - quotation email tabs were tightened so sales sees customer-facing threads and pricing sees provider-facing threads
   - production sign-off for the merged baseline now routes through `docs/PRODUCTION_RELEASE_CLOSEOUT.md` so Vercel, DB, workspace smoke, and mailing smoke stay on one checklist
+- on 2026-04-08 the branch/environment strategy was formalized:
+  - `main` is the production branch
+  - `dev` is the stable shared development integration branch
+  - Vercel maps `main` to `Production` and `dev` to the stable shared `Preview`
+  - the current linked Supabase backend is treated as `DEV/TRAIN`
+  - a separate clean Supabase backend remains the required `PROD` target
+- on 2026-04-08 the clean `PROD` bootstrap strategy was formalized:
+  - replaying the full historical migration chain is no longer considered safe for a blank production database
+  - `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql` is now the canonical clean bootstrap artifact
+  - `supabase/seeds/prod_seed.sql` is the controlled production seed
+  - historical migrations remain repository history and TRAIN upgrade history, not the canonical clean bootstrap path
 
 Latest stabilization note:
 
@@ -72,6 +83,7 @@ Latest stabilization note:
 - customer quotation layout now treats route, load information, and per-option commercial presentation as governed UX areas
 - repository-identity policy is now explicit: this repo is only for Priority Logistics ERP and must not be mixed with other business systems unless the user explicitly requests it
 - environment policy is now explicit: the current linked backend is treated as TRAIN and the future production cutover must use a separate clean PROD backend
+- branch policy is now explicit: `main` and `dev` are the only long-lived branches; `main` is production and `dev` is the stable integration branch
 - hardening-phase policy is now explicit: TRAIN is allowed to run destructive validation only with prefixed ephemeral data, ledger tracking, cleanup, and clean-state verification
 - AI governance now includes a formal black book so proven hardening lessons and recurring failure patterns are preserved for future module work instead of rediscovered ad hoc
 

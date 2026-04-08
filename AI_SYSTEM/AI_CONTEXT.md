@@ -91,6 +91,7 @@ CANONICAL SOURCES OF TRUTH
 Database structure:
 
 - supabase/ERP_schema.sql
+- supabase/baselines/20260408120000_prod_bootstrap_baseline.sql
 - supabase/migrations/20260307000432_initial_erp_schema.sql
 
 Database business logic:
@@ -119,20 +120,28 @@ ENVIRONMENT TOPOLOGY
 Current recommended topology for this stage of the project:
 
 1. LOCAL application
-2. TRAIN database environment (current linked backend under active validation)
-3. LIVE application deployment
-4. PROD database environment (new clean production backend with no inherited test data)
+2. DEV/TRAIN database environment (current linked backend under active validation and active development)
+3. stable shared `dev` Vercel preview deployment
+4. LIVE application deployment from `main`
+5. PROD database environment (new clean production backend with no inherited test data)
 
 Operational interpretation:
 
-- the current Supabase backend should now be treated as TRAIN, not as final production
+- the current Supabase backend should now be treated as `DEV/TRAIN`, not as final production
 - the future production cutover should use a new clean PROD database
+- the GitHub branch model is now:
+  - `main` = production
+  - `dev` = stable shared development integration branch
+- Vercel mapping is now:
+  - `main` -> `Production`
+  - `dev` -> stable shared `Preview`
 - LIVE must point only to PROD
-- LOCAL may point to TRAIN during active development and validation
+- LOCAL may point to DEV/TRAIN during active development and validation
+- the stable `dev` preview must also point only to DEV/TRAIN
 
 Decision rule for now:
 
-- use 2 database environments only: TRAIN and PROD
+- use 2 database environments only: DEV/TRAIN and PROD
 - do not add a third remote database environment unless a concrete business or release need appears
 - keep infrastructure simple and low-cost until the ERP proves stable under controlled training usage
 
@@ -140,12 +149,13 @@ Promotion rule:
 
 - promote structure, not working data
 - schema, migrations, functions, views, triggers, policies, controlled seeds, and approved configuration may move from TRAIN to PROD
+- clean `PROD` bootstrap must use the canonical baseline under `supabase/baselines/`, not blind replay of every historical migration
 - ad hoc operational records, test records, and incidental working data must not be copied from TRAIN into PROD
 
 Safety rule:
 
 - no stress, load, or ephemeral validation writes may run against PROD
-- TRAIN is the only remote environment allowed for destructive validation and temporary audit data
+- DEV/TRAIN is the only remote environment allowed for destructive validation and temporary audit data
 
 Current hardening phase rule:
 
@@ -206,6 +216,15 @@ Frontend foundation rule:
   - the mailbox record stores `signature_image_url`
   - `/api/mail/signature-image` is the approved render path for remote signatures such as Google Drive
   - `NEXT_PUBLIC_APP_URL` must point to the public ERP domain so outbound emails can resolve the proxied signature outside the app
+- the canonical branch and cloud strategy is now:
+  - `main` deploys to Vercel `Production`
+  - `dev` deploys to the stable shared Vercel `Preview`
+  - current linked backend remains `DEV/TRAIN`
+  - a separate clean Supabase project must be created for `PROD`
+  - `main` must not keep pointing to `DEV/TRAIN` after the controlled `PROD` cutover
+- the current canonical clean bootstrap baseline is `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
+- the controlled production seed is `supabase/seeds/prod_seed.sql`
+- `supabase/seeds/train_seed.sql` is reserved for non-production fixtures and must never be loaded into `PROD`
 - the final production handoff for workspaces + mailing + Vercel must follow `docs/PRODUCTION_RELEASE_CLOSEOUT.md`
 - `npm run validation:release` is now the canonical automated pre-smoke gate for production envs, mailing contracts, Vercel cron config, and the extended quotation workspace RPC
 - quotation email context rules are now explicit:

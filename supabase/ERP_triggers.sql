@@ -177,6 +177,11 @@ before update on provider_invoices
 for each row
 execute function set_updated_at();
 
+create trigger set_workspace_saved_views_updated_at
+before update on workspace_saved_views
+for each row
+execute function set_updated_at();
+
 create trigger set_mailboxes_updated_at
 before update on mailboxes
 for each row

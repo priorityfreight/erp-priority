@@ -18,6 +18,8 @@ CURRENT BACKEND STATE
 - the active frontend must target the canonical backend first
 - the live frontend query layer now runs in canonical-only mode for CRM and master data
 - no new product capability may depend on fallback-only behavior
+- clean `PROD` bootstrap no longer depends on replaying the full historical migration chain
+- the current canonical clean bootstrap artifact is `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
 
 
 --------------------------------------------------
@@ -29,10 +31,11 @@ SOURCE OF TRUTH ORDER
 3. supabase/ERP_views.sql
 4. supabase/ERP_triggers.sql
 5. supabase/ERP_policies.sql
-6. applied migrations under supabase/migrations/
-7. generated frontend/src/types/supabase.ts
-8. frontend query modules under frontend/src/lib/db/
-9. AI_SYSTEM governance files
+6. supabase/baselines/20260408120000_prod_bootstrap_baseline.sql for clean-environment bootstrap
+7. applied migrations under supabase/migrations/
+8. generated frontend/src/types/supabase.ts
+9. frontend query modules under frontend/src/lib/db/
+10. AI_SYSTEM governance files
 
 AI documentation must follow the executable system.
 It must not become an alternate source of truth.
@@ -52,11 +55,12 @@ When applying a backend change:
 
 1. update canonical SQL sources
 2. add a migration file
-3. apply the migration to the linked Supabase project
-4. regenerate frontend/src/types/supabase.ts
-5. update the frontend query layer if the contract changed
-6. update AI_SYSTEM files in the same turn
-7. run validation before treating the change as stable
+3. if the change affects the clean bootstrap state, regenerate `supabase/baselines/20260408120000_prod_bootstrap_baseline.sql`
+4. apply the migration to the linked Supabase project
+5. regenerate frontend/src/types/supabase.ts
+6. update the frontend query layer if the contract changed
+7. update AI_SYSTEM files in the same turn
+8. run validation before treating the change as stable
 
 When a change affects branding or shared visual identity:
 
@@ -120,6 +124,8 @@ Fallback code must:
 4. be removed once validation confirms the canonical path is stable
 
 Do not add new fallback branches unless the user explicitly accepts rollback-oriented compatibility work.
+
+Do not treat historical delta migrations as the canonical bootstrap path for a clean `PROD` once a controlled baseline exists.
 
 
 --------------------------------------------------

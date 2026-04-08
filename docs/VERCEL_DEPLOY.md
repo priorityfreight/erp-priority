@@ -2,6 +2,18 @@
 
 Priority Logistics ERP deploys from the `frontend/` directory.
 
+Branch strategy:
+
+- `main` deploys to `Production`
+- `dev` is the stable shared `Preview` branch
+
+Environment strategy:
+
+- current linked Supabase backend = `DEV/TRAIN`
+- new clean Supabase backend = `PROD`
+- Vercel `Production` must point only to `PROD`
+- Vercel `Preview` for `dev` must point only to `DEV/TRAIN`
+
 
 ## Project Setup
 
@@ -37,6 +49,8 @@ Add these variables in Vercel Project Settings:
 - `NEXT_PUBLIC_APP_URL`
 
 Use `frontend/.env.example` as the reference shape.
+
+See [`BRANCHING_AND_ENVIRONMENT_STRATEGY.md`](/Users/joseadanrodriguez/Priority%20ERP/priority-logistics-erp/docs/BRANCHING_AND_ENVIRONMENT_STRATEGY.md) for the canonical branch and environment mapping.
 
 
 ## Security Rules
