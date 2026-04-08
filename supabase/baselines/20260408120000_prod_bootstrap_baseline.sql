@@ -1,3 +1,1007 @@
+-- =========================================================
+-- PRIORITY LOGISTICS ERP
+-- PROD BOOTSTRAP BASELINE
+-- GENERATED FROM CANONICAL SQL SOURCES
+-- DO NOT TREAT THIS FILE AS A NORMAL DELTA MIGRATION
+-- FOR CLEAN ENVIRONMENTS ONLY
+-- =========================================================
+
+-- Source order:
+-- 1. ERP_schema.sql
+-- 2. ERP_functions.sql
+-- 3. ERP_views.sql
+-- 4. ERP_triggers.sql
+-- 5. ERP_policies.sql
+
+-- ===== BEGIN ERP_schema.sql =====
+
+-- =========================================================
+-- PRIORITY LOGISTICS ERP
+-- CANONICAL DATABASE SCHEMA
+-- PostgreSQL / Supabase
+-- =========================================================
+
+create extension if not exists "pgcrypto";
+create extension if not exists pg_trgm;
+
+
+-- =========================================================
+-- ORGANIZATION LAYER
+-- =========================================================
+
+create table branches (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  code text unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table roles (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  description text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table users (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid unique references auth.users(id) on delete set null,
+  first_name text,
+  last_name text,
+  email text not null unique,
+  phone text,
+  username text,
+  role_id uuid references roles(id),
+  branch_id uuid references branches(id),
+  base_salary numeric,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_users_role_id on users(role_id);
+create index idx_users_branch_id on users(branch_id);
+create index idx_users_active on users(active);
+create unique index idx_users_username_unique on users(lower(username));
+
+create table permission_modules (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  icon_key text,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_permission_modules_sort_order on permission_modules(sort_order);
+
+create table permission_submodules (
+  id uuid primary key default gen_random_uuid(),
+  module_id uuid not null references permission_modules(id) on delete cascade,
+  code text not null unique,
+  name text not null,
+  route_path text,
+  route_matchers text[] not null default '{}',
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_permission_submodules_module_id on permission_submodules(module_id);
+create index idx_permission_submodules_route_path on permission_submodules(route_path);
+create index idx_permission_submodules_sort_order on permission_submodules(sort_order);
+
+create table permission_actions (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  scope_type text not null default 'resource',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint permission_actions_scope_type_check
+    check (scope_type in ('resource', 'field', 'both'))
+);
+
+create table permission_conditions (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  description text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table permission_resources (
+  id uuid primary key default gen_random_uuid(),
+  module_id uuid not null references permission_modules(id) on delete cascade,
+  submodule_id uuid references permission_submodules(id) on delete cascade,
+  resource_key text not null unique,
+  name text not null,
+  resource_type text not null,
+  resource_group text,
+  table_name text,
+  view_name text,
+  rpc_name text,
+  entity_owner_field text,
+  entity_branch_field text,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_permission_resources_module_id on permission_resources(module_id);
+create index idx_permission_resources_submodule_id on permission_resources(submodule_id);
+create index idx_permission_resources_resource_type on permission_resources(resource_type);
+create index idx_permission_resources_sort_order on permission_resources(sort_order);
+
+create table permission_fields (
+  id uuid primary key default gen_random_uuid(),
+  resource_id uuid not null references permission_resources(id) on delete cascade,
+  field_key text not null,
+  label text not null,
+  data_type text,
+  field_group text,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint permission_fields_resource_field_unique unique (resource_id, field_key)
+);
+
+create index idx_permission_fields_resource_id on permission_fields(resource_id);
+create index idx_permission_fields_group on permission_fields(field_group);
+
+create table role_resource_permissions (
+  id uuid primary key default gen_random_uuid(),
+  role_id uuid not null references roles(id) on delete cascade,
+  resource_id uuid not null references permission_resources(id) on delete cascade,
+  action_id uuid not null references permission_actions(id) on delete cascade,
+  condition_id uuid not null references permission_conditions(id),
+  allowed boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint role_resource_permissions_unique unique (role_id, resource_id, action_id)
+);
+
+create index idx_role_resource_permissions_role_id on role_resource_permissions(role_id);
+create index idx_role_resource_permissions_resource_id on role_resource_permissions(resource_id);
+
+create table role_field_permissions (
+  id uuid primary key default gen_random_uuid(),
+  role_id uuid not null references roles(id) on delete cascade,
+  field_id uuid not null references permission_fields(id) on delete cascade,
+  action_id uuid not null references permission_actions(id) on delete cascade,
+  condition_id uuid not null references permission_conditions(id),
+  allowed boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint role_field_permissions_unique unique (role_id, field_id, action_id)
+);
+
+create index idx_role_field_permissions_role_id on role_field_permissions(role_id);
+create index idx_role_field_permissions_field_id on role_field_permissions(field_id);
+
+
+-- =========================================================
+-- MASTER DATA LAYER
+-- =========================================================
+
+create table external_data_sources (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  provider text not null,
+  source_url text not null,
+  license text,
+  refresh_strategy text,
+  last_imported_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_external_data_sources_code on external_data_sources(code);
+
+create table unlocodes (
+  id uuid primary key default gen_random_uuid(),
+  source_id uuid not null references external_data_sources(id),
+  country_code text not null,
+  location_code text not null,
+  unlocode text not null unique,
+  country_name text not null,
+  name text not null,
+  name_without_diacritics text,
+  subdivision_code text,
+  function_classifier text,
+  status text,
+  change_indicator text,
+  date_code text,
+  iata_code text,
+  coordinates text,
+  remarks text,
+  search_text text not null default '',
+  source_page_url text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint unlocodes_country_location_unique unique (country_code, location_code)
+);
+
+create index idx_unlocodes_country_code on unlocodes(country_code);
+create index idx_unlocodes_unlocode_pattern on unlocodes(unlocode text_pattern_ops);
+create index idx_unlocodes_search_text_trgm on unlocodes using gin(search_text gin_trgm_ops);
+create index idx_unlocodes_name_trgm on unlocodes using gin(name gin_trgm_ops);
+create index idx_unlocodes_name_without_diacritics_trgm on unlocodes using gin(name_without_diacritics gin_trgm_ops);
+
+create table service_transport_types (
+  id uuid primary key default gen_random_uuid(),
+  service_type text not null,
+  transport_type text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint service_transport_types_allowed_service_type
+    check (service_type in ('AIR', 'FCL', 'LCL', 'FTL', 'LTL', 'COURIER')),
+  constraint service_transport_types_unique unique (service_type, transport_type)
+);
+
+create index idx_service_transport_types_service_type on service_transport_types(service_type);
+create index idx_service_transport_types_transport_type on service_transport_types(transport_type);
+
+create table sales_accounting_concepts (
+  id uuid primary key default gen_random_uuid(),
+  concept text not null,
+  service_type text not null,
+  operation_type text not null,
+  vat_rate numeric(5,2) not null default 16.00,
+  sat_code text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint sales_accounting_concepts_allowed_service_type
+    check (service_type in ('GENERAL', 'AIR', 'FCL', 'LCL', 'FTL', 'LTL', 'COURIER')),
+  constraint sales_accounting_concepts_allowed_operation_type
+    check (operation_type in ('IMPORT', 'EXPORT')),
+  constraint sales_accounting_concepts_vat_rate_range
+    check (vat_rate >= 0 and vat_rate <= 100),
+  constraint sales_accounting_concepts_unique unique (concept, service_type, operation_type, sat_code)
+);
+
+create index idx_sales_accounting_concepts_service_type
+  on sales_accounting_concepts(service_type);
+create index idx_sales_accounting_concepts_operation_type
+  on sales_accounting_concepts(operation_type);
+create index idx_sales_accounting_concepts_sat_code
+  on sales_accounting_concepts(sat_code);
+
+create table exchange_rates (
+  id uuid primary key default gen_random_uuid(),
+  rate_date date not null,
+  base_currency text not null,
+  quote_currency text not null default 'MXN',
+  rate_value numeric(18,6) not null,
+  source text not null default 'BANXICO',
+  source_series_code text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint exchange_rates_allowed_base_currency
+    check (base_currency in ('USD', 'EUR')),
+  constraint exchange_rates_allowed_quote_currency
+    check (quote_currency = 'MXN'),
+  constraint exchange_rates_allowed_source
+    check (source in ('BANXICO', 'MANUAL')),
+  constraint exchange_rates_positive_rate
+    check (rate_value > 0),
+  constraint exchange_rates_unique unique (rate_date, base_currency, quote_currency, source)
+);
+
+create index idx_exchange_rates_rate_date
+  on exchange_rates(rate_date desc);
+create index idx_exchange_rates_base_quote_date
+  on exchange_rates(base_currency, quote_currency, rate_date desc);
+
+
+-- =========================================================
+-- CRM LAYER
+-- =========================================================
+
+create table prospects (
+  id uuid primary key default gen_random_uuid(),
+  company_name text not null,
+  contact_name text,
+  email text,
+  phone text,
+  source text,
+  status text not null default 'new',
+  branch_id uuid references branches(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_prospects_branch_id on prospects(branch_id);
+create index idx_prospects_status on prospects(status);
+
+create table clients (
+  id uuid primary key default gen_random_uuid(),
+  prospect_id uuid references prospects(id),
+  company_name text not null,
+  industry text,
+  country text,
+  website text,
+  corporate_phone text,
+  full_address text,
+  postal_code text,
+  city text,
+  city_unlocode text,
+  city_unlocode_id uuid references unlocodes(id),
+  tax_id text,
+  search_text text not null default '',
+  status text not null default 'prospecto',
+  account_owner_id uuid references users(id),
+  branch_id uuid references branches(id),
+  credit_limit numeric,
+  credit_days integer,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  is_deleted boolean not null default false
+);
+
+create index idx_clients_prospect_id on clients(prospect_id);
+create index idx_clients_branch_id on clients(branch_id);
+create index idx_clients_status on clients(status);
+create index idx_clients_account_owner_id on clients(account_owner_id);
+create index idx_clients_city_unlocode_id on clients(city_unlocode_id);
+create index idx_clients_active_company_name on clients(company_name) where is_deleted = false;
+create index idx_clients_search_text_trgm on clients using gin(search_text gin_trgm_ops);
+
+create table contacts (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references clients(id) on delete cascade,
+  name text not null,
+  email text,
+  phone text,
+  linkedin_url text,
+  position text,
+  status text not null default 'activo',
+  is_primary boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_contacts_client_id on contacts(client_id);
+create index idx_contacts_status on contacts(status);
+create index idx_contacts_client_status_created_at on contacts(client_id, status, created_at desc);
+
+create table client_logistics_parties (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references clients(id) on delete cascade,
+  party_type text not null default 'shipper',
+  name text not null,
+  full_address text,
+  postal_code text,
+  city_unlocode text,
+  city_unlocode_id uuid references unlocodes(id),
+  city text,
+  country text,
+  contact_name text,
+  contact_email text,
+  contact_phone text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint client_logistics_parties_type_check
+    check (party_type in ('shipper', 'consignee', 'aa'))
+);
+
+create index idx_client_logistics_parties_client_id on client_logistics_parties(client_id);
+create index idx_client_logistics_parties_type on client_logistics_parties(party_type);
+create index idx_client_logistics_parties_city_unlocode_id
+  on client_logistics_parties(city_unlocode_id);
+
+
+-- =========================================================
+-- COMMERCIAL REFERENCE LAYER
+-- =========================================================
+
+create table providers (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  tax_id text,
+  provider_type text,
+  corporate_phone text,
+  company_email text,
+  website text,
+  full_address text,
+  postal_code text,
+  city_unlocode text,
+  city_unlocode_id uuid references unlocodes(id),
+  city text,
+  country text,
+  credit_active boolean not null default false,
+  credit_amount numeric,
+  credit_days integer,
+  status text not null default 'en_proceso_de_alta',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_providers_provider_type on providers(provider_type);
+create index idx_providers_status on providers(status);
+create index idx_providers_city_unlocode on providers(city_unlocode);
+create index idx_providers_city_unlocode_id on providers(city_unlocode_id);
+
+create table provider_contacts (
+  id uuid primary key default gen_random_uuid(),
+  provider_id uuid not null references providers(id) on delete cascade,
+  name text not null,
+  email text,
+  phone text,
+  linkedin_url text,
+  position text,
+  status text not null default 'activo',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_provider_contacts_provider_id on provider_contacts(provider_id);
+create index idx_provider_contacts_status on provider_contacts(status);
+create index idx_provider_contacts_provider_status_created_at
+  on provider_contacts(provider_id, status, created_at desc);
+
+create table provider_service_offerings (
+  id uuid primary key default gen_random_uuid(),
+  provider_id uuid not null references providers(id) on delete cascade,
+  service_transport_type_id uuid not null references service_transport_types(id),
+  terms_and_conditions text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  unique (provider_id, service_transport_type_id)
+);
+
+create index idx_provider_service_offerings_provider_id
+  on provider_service_offerings(provider_id);
+create index idx_provider_service_offerings_service_transport_type_id
+  on provider_service_offerings(service_transport_type_id);
+
+create table incoterms (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  description text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+
+-- =========================================================
+-- SALES LAYER
+-- =========================================================
+
+create table opportunities (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references clients(id),
+  salesperson_id uuid references users(id),
+  title text not null,
+  description text,
+  trade_lane text,
+  service_type text,
+  transport_type text,
+  operation_type text,
+  incoterm_id uuid references incoterms(id),
+  origin text,
+  origin_unlocode text,
+  origin_unlocode_id uuid references unlocodes(id),
+  destination text,
+  destination_unlocode text,
+  destination_unlocode_id uuid references unlocodes(id),
+  stage text not null default 'qualification',
+  status text not null default 'investigando',
+  expected_profit_usd numeric,
+  service_quantity integer,
+  estimated_value numeric,
+  probability integer,
+  estimated_close_date date,
+  start_date date,
+  expiration_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint opportunities_allowed_operation_type
+    check (operation_type is null or operation_type in ('Import', 'Export'))
+);
+
+create index idx_opportunities_client_id on opportunities(client_id);
+create index idx_opportunities_salesperson_id on opportunities(salesperson_id);
+create index idx_opportunities_status on opportunities(status);
+create index idx_opportunities_stage on opportunities(stage);
+create index idx_opportunities_service_type on opportunities(service_type);
+create index idx_opportunities_transport_type on opportunities(transport_type);
+create index idx_opportunities_operation_type on opportunities(operation_type);
+create index idx_opportunities_incoterm_id on opportunities(incoterm_id);
+create index idx_opportunities_expiration_date on opportunities(expiration_date);
+create index idx_opportunities_origin_unlocode_id on opportunities(origin_unlocode_id);
+create index idx_opportunities_destination_unlocode_id on opportunities(destination_unlocode_id);
+create index idx_opportunities_client_created_at on opportunities(client_id, created_at desc);
+create index idx_opportunities_client_status_created_at
+  on opportunities(client_id, status, created_at desc);
+create index idx_opportunities_status_expiration_date
+  on opportunities(status, expiration_date);
+create index idx_opportunities_title_trgm on opportunities using gin(title gin_trgm_ops);
+
+create table quotation_rejection_reasons (
+  id uuid primary key default gen_random_uuid(),
+  reason text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table quotation_reference_counters (
+  service_type text primary key,
+  prefix text not null unique,
+  last_value bigint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint quotation_reference_counters_allowed_service_type
+    check (service_type in ('AIR', 'FCL', 'LCL', 'FTL', 'LTL', 'COURIER'))
+);
+
+create table quotations (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references clients(id),
+  opportunity_id uuid not null references opportunities(id),
+  created_by uuid references users(id),
+  pricing_owner_id uuid references users(id),
+  reference_number text unique,
+  status text not null default 'borrador',
+  service_type text,
+  transport_type text,
+  operation_type text,
+  origin text,
+  origin_unlocode text,
+  origin_unlocode_id uuid references unlocodes(id),
+  destination text,
+  destination_unlocode text,
+  destination_unlocode_id uuid references unlocodes(id),
+  pickup_address text,
+  delivery_address text,
+  incoterm_id uuid references incoterms(id),
+  required_quote_date date,
+  purchase_valid_until date,
+  sales_valid_until date,
+  rejection_reason_id uuid references quotation_rejection_reasons(id),
+  rejection_notes text,
+  cancellation_notes text,
+  target_rate numeric,
+  currency text not null default 'USD',
+  estimated_cost numeric,
+  estimated_price numeric,
+  expected_profit numeric,
+  accepted_usd_rate_date date,
+  accepted_usd_to_mxn_rate numeric(18,6),
+  accepted_eur_rate_date date,
+  accepted_eur_to_mxn_rate numeric(18,6),
+  exchange_rates_locked_at timestamptz,
+  search_text text not null default '',
+  valid_until date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint quotations_allowed_status
+    check (
+      status in (
+        'borrador',
+        'pendiente',
+        'cotizando',
+        'lista_para_enviar',
+        'enviada',
+        'cancelada',
+        'rechazada',
+        'renegociar_tarifa',
+        'aceptada'
+      )
+    )
+);
+
+create index idx_quotations_client_id on quotations(client_id);
+create index idx_quotations_opportunity_id on quotations(opportunity_id);
+create index idx_quotations_status on quotations(status);
+create index idx_quotations_pricing_owner_id on quotations(pricing_owner_id);
+create index idx_quotations_client_created_at on quotations(client_id, created_at desc);
+create index idx_quotations_opportunity_created_at
+  on quotations(opportunity_id, created_at desc);
+create index idx_quotations_status_created_at on quotations(status, created_at desc);
+create index idx_quotations_pricing_owner_status_created_at
+  on quotations(pricing_owner_id, status, created_at desc);
+create index idx_quotations_search_text_trgm on quotations using gin(search_text gin_trgm_ops);
+
+create table quotation_options (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references quotations(id) on delete cascade,
+  option_label text not null,
+  sort_order integer not null,
+  include_in_customer_quote boolean not null default true,
+  purchase_valid_until date,
+  sales_valid_until date,
+  sales_validity_overridden boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint quotation_options_unique_label unique (quotation_id, option_label),
+  constraint quotation_options_unique_sort_order unique (quotation_id, sort_order)
+);
+
+create index idx_quotation_options_quotation_id on quotation_options(quotation_id);
+create index idx_quotation_options_customer_visibility
+  on quotation_options(quotation_id, include_in_customer_quote, sort_order);
+
+create table quotation_costs (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references quotations(id) on delete cascade,
+  quotation_option_id uuid references quotation_options(id) on delete cascade,
+  option_label text not null default 'Proveedor',
+  provider_id uuid references providers(id),
+  sales_accounting_concept_id uuid references sales_accounting_concepts(id),
+  service_name text not null,
+  cost numeric not null,
+  purchase_amount numeric,
+  purchase_currency text not null default 'USD',
+  purchase_exchange_rate_to_mxn numeric(18,6),
+  purchase_amount_mxn numeric,
+  sale_amount numeric,
+  sale_currency text not null default 'USD',
+  sale_exchange_rate_to_mxn numeric(18,6),
+  sale_amount_mxn numeric,
+  profit_amount numeric,
+  profit_amount_mxn numeric,
+  vat_rate numeric not null default 0,
+  notes text,
+  created_at timestamptz not null default now(),
+  constraint quotation_costs_allowed_purchase_currency
+    check (purchase_currency in ('MXN', 'USD', 'EUR')),
+  constraint quotation_costs_allowed_sale_currency
+    check (sale_currency in ('MXN', 'USD', 'EUR'))
+);
+
+create index idx_quotation_costs_quotation_id on quotation_costs(quotation_id);
+create index idx_quotation_costs_option_id on quotation_costs(quotation_option_id);
+create index idx_quotation_costs_quotation_option_label on quotation_costs(quotation_id, option_label);
+create index idx_quotation_costs_provider_id on quotation_costs(provider_id);
+
+create table quotation_cargo_lines (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references quotations(id) on delete cascade,
+  load_type text not null,
+  commodities text,
+  piece_count integer,
+  width numeric,
+  length numeric,
+  height numeric,
+  weight numeric,
+  freight_class text,
+  cbm numeric,
+  volumetric_weight_kg numeric,
+  sort_order integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_quotation_cargo_lines_quotation_id
+  on quotation_cargo_lines(quotation_id);
+create index idx_quotation_cargo_lines_quotation_sort_order
+  on quotation_cargo_lines(quotation_id, sort_order asc);
+
+
+-- =========================================================
+-- OPERATIONS LAYER
+-- =========================================================
+
+create table shipments (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references quotations(id),
+  client_id uuid not null references clients(id),
+  shipment_reference text unique,
+  status text not null default 'pending',
+  origin text,
+  destination text,
+  booking_number text,
+  departure_date date,
+  arrival_date date,
+  delivered_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_shipments_quotation_id on shipments(quotation_id);
+create index idx_shipments_client_id on shipments(client_id);
+create index idx_shipments_status on shipments(status);
+create index idx_shipments_client_created_at on shipments(client_id, created_at desc);
+create index idx_shipments_quotation_created_at on shipments(quotation_id, created_at desc);
+create index idx_shipments_status_created_at on shipments(status, created_at desc);
+
+create table shipment_events (
+  id uuid primary key default gen_random_uuid(),
+  shipment_id uuid not null references shipments(id) on delete cascade,
+  event_type text not null,
+  event_date timestamptz not null default now(),
+  location text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index idx_shipment_events_shipment_id on shipment_events(shipment_id);
+create index idx_shipment_events_shipment_event_date
+  on shipment_events(shipment_id, event_date desc);
+
+
+-- =========================================================
+-- FINANCE LAYER
+-- =========================================================
+
+create table client_invoices (
+  id uuid primary key default gen_random_uuid(),
+  shipment_id uuid references shipments(id),
+  client_id uuid not null references clients(id),
+  invoice_number text unique,
+  total_amount numeric not null,
+  currency text not null default 'USD',
+  status text not null default 'pending',
+  issue_date date,
+  due_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_client_invoices_shipment_id on client_invoices(shipment_id);
+create index idx_client_invoices_client_id on client_invoices(client_id);
+create index idx_client_invoices_status on client_invoices(status);
+
+create table provider_invoices (
+  id uuid primary key default gen_random_uuid(),
+  provider_id uuid not null references providers(id),
+  shipment_id uuid references shipments(id),
+  invoice_number text unique,
+  total_amount numeric not null,
+  currency text not null default 'USD',
+  status text not null default 'pending',
+  issue_date date,
+  due_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_provider_invoices_provider_id on provider_invoices(provider_id);
+create index idx_provider_invoices_shipment_id on provider_invoices(shipment_id);
+create index idx_provider_invoices_status on provider_invoices(status);
+
+create table commissions (
+  id uuid primary key default gen_random_uuid(),
+  shipment_id uuid not null references shipments(id),
+  user_id uuid not null references users(id),
+  expected_profit numeric,
+  actual_profit numeric,
+  commission_percentage numeric,
+  commission_amount numeric,
+  status text not null default 'pending',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_commissions_shipment_id on commissions(shipment_id);
+create index idx_commissions_user_id on commissions(user_id);
+
+
+-- =========================================================
+-- WORKSPACE PREFERENCES
+-- =========================================================
+
+create table workspace_saved_views (
+  id uuid primary key default gen_random_uuid(),
+  workspace_key text not null,
+  owner_user_id uuid not null references users(id) on delete cascade,
+  name text not null,
+  search_query text,
+  status_lane text,
+  filters_json jsonb not null default '{}'::jsonb,
+  sort_json jsonb not null default '{}'::jsonb,
+  visible_columns_json jsonb not null default '[]'::jsonb,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_workspace_saved_views_owner_workspace
+  on workspace_saved_views(owner_user_id, workspace_key);
+
+create unique index idx_workspace_saved_views_single_default
+  on workspace_saved_views(owner_user_id, workspace_key)
+  where is_default = true;
+
+create index idx_workspace_saved_views_name
+  on workspace_saved_views(owner_user_id, workspace_key, name);
+
+
+-- =========================================================
+-- COMMUNICATIONS LAYER
+-- =========================================================
+
+create table mailboxes (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  display_name text not null,
+  provider text not null default 'gmail',
+  status text not null default 'draft',
+  sync_mode text not null default 'manual',
+  gmail_refresh_token_encrypted text,
+  gmail_refresh_token_hint text,
+  gmail_scope text,
+  connected_email text,
+  connected_by_user_id uuid references users(id),
+  signature_image_url text,
+  last_synced_at timestamptz,
+  last_sync_status text,
+  last_sync_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint mailboxes_provider_check
+    check (provider in ('gmail')),
+  constraint mailboxes_status_check
+    check (status in ('draft', 'active', 'disabled', 'error')),
+  constraint mailboxes_sync_mode_check
+    check (sync_mode in ('manual', 'polling'))
+);
+
+create index idx_mailboxes_status on mailboxes(status);
+create index idx_mailboxes_provider on mailboxes(provider);
+
+comment on column mailboxes.signature_image_url is
+  'Public image URL appended as the outbound email signature for this mailbox.';
+
+create table mailbox_role_access (
+  id uuid primary key default gen_random_uuid(),
+  mailbox_id uuid not null references mailboxes(id) on delete cascade,
+  role_id uuid not null references roles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  constraint mailbox_role_access_unique unique (mailbox_id, role_id)
+);
+
+create index idx_mailbox_role_access_mailbox_id on mailbox_role_access(mailbox_id);
+create index idx_mailbox_role_access_role_id on mailbox_role_access(role_id);
+
+create table mail_threads (
+  id uuid primary key default gen_random_uuid(),
+  mailbox_id uuid not null references mailboxes(id) on delete cascade,
+  gmail_thread_id text not null,
+  subject text,
+  subject_normalized text not null default '',
+  snippet text,
+  participants_json jsonb not null default '[]'::jsonb,
+  latest_message_at timestamptz,
+  oldest_message_at timestamptz,
+  unread_count integer not null default 0,
+  message_count integer not null default 0,
+  has_attachments boolean not null default false,
+  last_synced_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint mail_threads_mailbox_gmail_thread_unique unique (mailbox_id, gmail_thread_id)
+);
+
+create index idx_mail_threads_mailbox_latest
+  on mail_threads(mailbox_id, latest_message_at desc nulls last);
+create index idx_mail_threads_mailbox_subject_trgm
+  on mail_threads using gin(subject_normalized gin_trgm_ops);
+
+create table mail_messages (
+  id uuid primary key default gen_random_uuid(),
+  mailbox_id uuid not null references mailboxes(id) on delete cascade,
+  thread_id uuid not null references mail_threads(id) on delete cascade,
+  gmail_message_id text not null,
+  gmail_thread_id text not null,
+  internet_message_id text,
+  direction text not null default 'inbound',
+  from_name text,
+  from_address text,
+  to_json jsonb not null default '[]'::jsonb,
+  cc_json jsonb not null default '[]'::jsonb,
+  bcc_json jsonb not null default '[]'::jsonb,
+  reply_to_json jsonb not null default '[]'::jsonb,
+  subject text,
+  snippet text,
+  sent_at timestamptz,
+  received_at timestamptz,
+  label_ids text[] not null default '{}'::text[],
+  has_attachments boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint mail_messages_mailbox_gmail_message_unique unique (mailbox_id, gmail_message_id),
+  constraint mail_messages_direction_check
+    check (direction in ('inbound', 'outbound'))
+);
+
+create index idx_mail_messages_thread_sent_at
+  on mail_messages(thread_id, sent_at asc nulls last, created_at asc);
+create index idx_mail_messages_mailbox_received_at
+  on mail_messages(mailbox_id, received_at desc nulls last);
+create index idx_mail_messages_from_address on mail_messages(from_address);
+
+create table mail_entity_links (
+  id uuid primary key default gen_random_uuid(),
+  mailbox_id uuid not null references mailboxes(id) on delete cascade,
+  thread_id uuid not null references mail_threads(id) on delete cascade,
+  message_id uuid references mail_messages(id) on delete cascade,
+  entity_type text not null,
+  entity_id uuid not null,
+  link_source text not null,
+  confidence numeric(5,2) not null default 1,
+  is_primary boolean not null default false,
+  created_by_user_id uuid references users(id),
+  created_at timestamptz not null default now(),
+  constraint mail_entity_links_entity_type_check
+    check (entity_type in ('client', 'contact', 'quotation', 'shipment')),
+  constraint mail_entity_links_source_check
+    check (link_source in ('subject_reference', 'participant_email', 'manual'))
+);
+
+create index idx_mail_entity_links_thread_id on mail_entity_links(thread_id);
+create index idx_mail_entity_links_entity on mail_entity_links(entity_type, entity_id);
+create unique index idx_mail_entity_links_thread_level_unique
+  on mail_entity_links(thread_id, entity_type, entity_id, link_source)
+  where message_id is null;
+create unique index idx_mail_entity_links_message_level_unique
+  on mail_entity_links(message_id, entity_type, entity_id, link_source)
+  where message_id is not null;
+
+create table mail_sync_runs (
+  id uuid primary key default gen_random_uuid(),
+  mailbox_id uuid not null references mailboxes(id) on delete cascade,
+  trigger_source text not null,
+  status text not null,
+  messages_scanned integer not null default 0,
+  messages_upserted integer not null default 0,
+  threads_upserted integer not null default 0,
+  links_created integer not null default 0,
+  error_message text,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  constraint mail_sync_runs_trigger_source_check
+    check (trigger_source in ('manual', 'cron')),
+  constraint mail_sync_runs_status_check
+    check (status in ('running', 'success', 'error'))
+);
+
+create index idx_mail_sync_runs_mailbox_started_at
+  on mail_sync_runs(mailbox_id, started_at desc);
+
+
+-- =========================================================
+-- OBSERVABILITY LAYER
+-- =========================================================
+
+create table audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  table_name text not null,
+  record_id uuid,
+  action text not null,
+  user_id uuid references users(id),
+  payload jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index idx_audit_logs_table_name on audit_logs(table_name);
+create index idx_audit_logs_record_id on audit_logs(record_id);
+
+create table automation_logs (
+  id uuid primary key default gen_random_uuid(),
+  event text not null,
+  action text not null,
+  status text not null,
+  error_message text,
+  created_at timestamptz not null default now()
+);
+
+
+-- ===== BEGIN ERP_functions.sql =====
+
 -- =========================================
 -- ERP BUSINESS LOGIC FUNCTIONS
 -- =========================================
@@ -5121,3 +6125,3423 @@ begin
   where id = p_offering_id;
 end;
 $$;
+
+
+-- ===== BEGIN ERP_views.sql =====
+
+-- =========================================
+-- ERP ANALYTICS VIEWS
+-- =========================================
+
+
+-- =========================================
+-- CLIENT OVERVIEW
+-- =========================================
+
+create or replace view client_overview_view as
+with opportunity_stats as (
+  select
+    o.client_id,
+    count(*) as total_opportunities,
+    coalesce(
+      sum(
+        case
+          when (
+            case
+              when o.expiration_date is not null
+                and o.expiration_date < current_date
+                and o.status not in ('aceptado', 'rechazada', 'vencida')
+                then 'vencida'
+              else o.status
+            end
+          ) not in ('aceptado', 'rechazada', 'vencida')
+            then o.estimated_value
+          else 0
+        end
+      ),
+      0
+    ) as pipeline_value
+  from opportunities o
+  group by o.client_id
+),
+quotation_stats as (
+  select
+    q.client_id,
+    count(*) as total_quotations
+  from quotations q
+  group by q.client_id
+),
+shipment_stats as (
+  select
+    s.client_id,
+    count(*) as total_shipments
+  from shipments s
+  group by s.client_id
+)
+select
+  c.id,
+  c.company_name as client_name,
+  c.website,
+  c.corporate_phone,
+  c.country,
+  c.city,
+  c.status,
+  c.account_owner_id,
+  concat_ws(' ', u.first_name, u.last_name) as account_owner_name,
+  c.created_at,
+  coalesce(os.total_opportunities, 0) as total_opportunities,
+  coalesce(qs.total_quotations, 0) as total_quotations,
+  coalesce(ss.total_shipments, 0) as total_shipments,
+  coalesce(os.pipeline_value, 0) as pipeline_value
+from clients c
+left join users u on u.id = c.account_owner_id
+left join opportunity_stats os on os.client_id = c.id
+left join quotation_stats qs on qs.client_id = c.id
+left join shipment_stats ss on ss.client_id = c.id
+where c.is_deleted = false
+  and public.erp_can_access_client_resource(
+    'crm.clients.list',
+    'view',
+    c.id
+  );
+
+
+-- =========================================
+-- SALES PIPELINE
+-- =========================================
+
+create or replace view sales_pipeline_view as
+select
+  stage,
+  case
+    when expiration_date is not null
+      and expiration_date < current_date
+      and status not in ('aceptado', 'rechazada', 'vencida')
+      then 'vencida'
+    else status
+  end as status,
+  count(*) as opportunities,
+  coalesce(sum(estimated_value), 0) as pipeline_value
+from opportunities
+group by
+  stage,
+  case
+    when expiration_date is not null
+      and expiration_date < current_date
+      and status not in ('aceptado', 'rechazada', 'vencida')
+      then 'vencida'
+    else status
+  end;
+
+
+-- =========================================
+-- OPEN OPPORTUNITIES
+-- =========================================
+
+create or replace view open_opportunities_view as
+select
+  o.id,
+  o.title,
+  o.stage,
+  case
+    when o.expiration_date is not null
+      and o.expiration_date < current_date
+      and o.status not in ('aceptado', 'rechazada', 'vencida')
+      then 'vencida'
+    else o.status
+  end as status,
+  o.service_type,
+  o.transport_type,
+  o.operation_type,
+  o.incoterm_id,
+  i.code as incoterm_code,
+  o.salesperson_id,
+  concat_ws(' ', u.first_name, u.last_name) as salesperson_name,
+  o.origin,
+  o.origin_unlocode,
+  o.destination,
+  o.destination_unlocode,
+  o.expected_profit_usd,
+  o.service_quantity,
+  o.estimated_value,
+  o.start_date,
+  o.expiration_date,
+  o.created_at,
+  c.id as client_id,
+  c.company_name as client_name,
+  o.origin_unlocode_id,
+  o.destination_unlocode_id
+from opportunities o
+join clients c on c.id = o.client_id
+left join users u on u.id = o.salesperson_id
+left join incoterms i on i.id = o.incoterm_id
+where c.is_deleted = false
+  and public.erp_can_access_opportunity_resource(
+    'crm.opportunities.list',
+    'view',
+    o.salesperson_id,
+    o.client_id
+  );
+
+
+-- =========================================
+-- UN/LOCODE COUNTRY SUMMARY
+-- =========================================
+
+create or replace view unlocode_country_summary_view as
+select
+  country_code,
+  max(country_name) as country_name,
+  count(*) as row_count
+from unlocodes
+group by country_code
+order by country_code asc;
+
+
+-- =========================================
+-- QUOTATION SUMMARY
+-- =========================================
+
+create or replace view quotation_summary_view as
+with permission_flags as (
+  select
+    public.erp_can_view_quotation_cost() as can_view_cost,
+    public.erp_can_edit_quotation_purchase_amount() as can_edit_purchase_amount,
+    public.erp_can_view_quotation_sale_price() as can_view_sale_price,
+    public.erp_can_edit_quotation_sale_price() as can_edit_sale_price,
+    public.erp_can_view_quotation_expected_profit() as can_view_expected_profit
+)
+select
+  q.id,
+  q.reference_number,
+  q.status,
+  q.service_type,
+  q.transport_type,
+  q.operation_type,
+  q.origin,
+  q.origin_unlocode,
+  q.destination,
+  q.destination_unlocode,
+  q.pickup_address,
+  q.delivery_address,
+  q.required_quote_date,
+  null::date as purchase_valid_until,
+  null::date as sales_valid_until,
+  q.target_rate,
+  q.pricing_owner_id,
+  concat_ws(' ', pu.first_name, pu.last_name) as pricing_owner_name,
+  q.created_by,
+  concat_ws(' ', cu.first_name, cu.last_name) as created_by_name,
+  q.incoterm_id,
+  i.code as incoterm_code,
+  q.rejection_reason_id,
+  rr.reason as rejection_reason,
+  q.rejection_notes,
+  q.cancellation_notes,
+  q.currency,
+  case when pf.can_view_cost then q.estimated_cost else null end as estimated_cost,
+  case when pf.can_view_sale_price then q.estimated_price else null end as estimated_price,
+  case when pf.can_view_expected_profit then q.expected_profit else null end as expected_profit,
+  (
+    select count(*)
+    from quotation_costs qc
+    where qc.quotation_id = q.id
+  ) as total_charge_lines,
+  q.created_at,
+  q.updated_at,
+  c.id as client_id,
+  c.company_name as client_name,
+  o.id as opportunity_id,
+  o.title as opportunity_title,
+  o.salesperson_id,
+  concat_ws(' ', su.first_name, su.last_name) as salesperson_name,
+  pf.can_view_cost,
+  pf.can_edit_purchase_amount,
+  pf.can_view_sale_price,
+  pf.can_edit_sale_price,
+  pf.can_view_expected_profit,
+  q.accepted_usd_rate_date,
+  q.accepted_usd_to_mxn_rate,
+  q.accepted_eur_rate_date,
+  q.accepted_eur_to_mxn_rate,
+  q.exchange_rates_locked_at
+from quotations q
+join clients c on c.id = q.client_id
+join opportunities o on o.id = q.opportunity_id
+left join incoterms i on i.id = q.incoterm_id
+left join users pu on pu.id = q.pricing_owner_id
+left join users cu on cu.id = q.created_by
+left join users su on su.id = o.salesperson_id
+left join quotation_rejection_reasons rr on rr.id = q.rejection_reason_id
+cross join permission_flags pf
+where c.is_deleted = false
+  and (
+    public.erp_can_access_crm_quotation_resource(
+      'crm.quotations.record',
+      'view',
+      q.created_by,
+      q.client_id
+    )
+    or public.erp_can_access_pricing_quotation(
+      'view',
+      q.status,
+      q.pricing_owner_id
+    )
+    or public.erp_can_access_operations_shipment(
+      'view',
+      q.client_id
+    )
+  );
+
+create or replace view quotation_cost_line_secure_view as
+with permission_flags as (
+  select
+    public.erp_can_view_quotation_cost() as can_view_cost,
+    public.erp_can_edit_quotation_purchase_amount() as can_edit_purchase_amount,
+    public.erp_can_view_quotation_sale_price() as can_view_sale_price,
+    public.erp_can_edit_quotation_sale_price() as can_edit_sale_price,
+    public.erp_can_view_quotation_expected_profit() as can_view_expected_profit
+)
+select
+  qc.id,
+  qc.quotation_id,
+  qc.option_label,
+  qc.provider_id,
+  p.name as provider_name,
+  qc.sales_accounting_concept_id,
+  sac.concept as accounting_concept,
+  qc.service_name,
+  case when pf.can_view_cost then qc.cost else null end as cost,
+  case when pf.can_view_cost then qc.purchase_amount else null end as purchase_amount,
+  qc.purchase_currency,
+  case when pf.can_view_cost then qc.purchase_amount_mxn else null end as purchase_amount_mxn,
+  case when pf.can_view_sale_price then qc.sale_amount else null end as sale_amount,
+  qc.sale_currency,
+  case when pf.can_view_sale_price then qc.sale_amount_mxn else null end as sale_amount_mxn,
+  case when pf.can_view_expected_profit then qc.profit_amount else null end as profit_amount,
+  case when pf.can_view_expected_profit then qc.profit_amount_mxn else null end as profit_amount_mxn,
+  qc.vat_rate,
+  qc.notes,
+  qc.created_at,
+  pf.can_view_cost,
+  pf.can_edit_purchase_amount,
+  pf.can_view_sale_price,
+  pf.can_edit_sale_price,
+  pf.can_view_expected_profit,
+  qc.quotation_option_id,
+  qo.sort_order as option_sort_order,
+  qo.include_in_customer_quote,
+  qo.purchase_valid_until as option_purchase_valid_until,
+  qo.sales_valid_until as option_sales_valid_until,
+  qo.sales_validity_overridden as option_sales_validity_overridden
+from quotation_costs qc
+join quotations q on q.id = qc.quotation_id
+left join quotation_options qo on qo.id = qc.quotation_option_id
+left join providers p on p.id = qc.provider_id
+left join sales_accounting_concepts sac on sac.id = qc.sales_accounting_concept_id
+cross join permission_flags pf
+where
+  public.erp_has_resource_access(
+    'pricing.quotations.cost_section',
+    'view',
+    q.pricing_owner_id,
+    null
+  )
+  or public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.pricing_options',
+    'view',
+    q.created_by,
+    q.client_id
+  );
+
+create or replace view crm_quotations_view as
+select *
+from quotation_summary_view
+where public.erp_can_access_crm_quotation_resource(
+  'crm.quotations.list',
+  'view',
+  created_by,
+  client_id
+)
+and status in (
+  'borrador',
+  'pendiente',
+  'cotizando',
+  'lista_para_enviar',
+  'enviada',
+  'cancelada',
+  'rechazada',
+  'renegociar_tarifa',
+  'aceptada'
+);
+
+create or replace view pricing_quotations_view as
+select *
+from quotation_summary_view
+where public.erp_can_access_pricing_quotation(
+  'view',
+  status,
+  pricing_owner_id
+)
+and status in (
+  'pendiente',
+  'cotizando',
+  'lista_para_enviar',
+  'renegociar_tarifa'
+);
+
+create or replace view quotation_rejection_reason_lookup_view as
+select
+  id,
+  reason,
+  created_at,
+  updated_at
+from quotation_rejection_reasons
+order by reason asc;
+
+
+-- =========================================
+-- ACTIVE SHIPMENTS
+-- =========================================
+
+create or replace view active_shipments_view as
+select
+  s.id,
+  s.shipment_reference,
+  s.status,
+  s.origin,
+  s.destination,
+  s.booking_number,
+  s.departure_date,
+  s.arrival_date,
+  s.created_at,
+  c.id as client_id,
+  c.company_name as client_name,
+  q.reference_number as quotation_reference
+from shipments s
+join clients c on c.id = s.client_id
+join quotations q on q.id = s.quotation_id
+where s.status not in ('delivered', 'cancelled')
+  and c.is_deleted = false;
+
+
+-- =========================================
+-- DELIVERED SHIPMENTS
+-- =========================================
+
+create or replace view delivered_shipments_view as
+select
+  s.id,
+  s.shipment_reference,
+  s.status,
+  s.origin,
+  s.destination,
+  s.departure_date,
+  s.arrival_date,
+  s.delivered_at,
+  s.created_at,
+  c.id as client_id,
+  c.company_name as client_name,
+  q.reference_number as quotation_reference
+from shipments s
+join clients c on c.id = s.client_id
+join quotations q on q.id = s.quotation_id
+where s.status = 'delivered'
+  and c.is_deleted = false;
+
+
+-- =========================================
+-- CLIENT REVENUE
+-- =========================================
+
+create or replace view client_revenue_view as
+with shipment_stats as (
+  select
+    s.client_id,
+    count(*) as total_shipments
+  from shipments s
+  group by s.client_id
+),
+invoice_stats as (
+  select
+    ci.client_id,
+    count(*) as total_invoices,
+    coalesce(sum(ci.total_amount), 0) as billed_amount
+  from client_invoices ci
+  group by ci.client_id
+),
+quotation_profit as (
+  select
+    q.client_id,
+    coalesce(sum(q.expected_profit), 0) as expected_profit
+  from quotations q
+  group by q.client_id
+)
+select
+  c.id as client_id,
+  c.company_name as client_name,
+  coalesce(ss.total_shipments, 0) as total_shipments,
+  coalesce(is2.total_invoices, 0) as total_invoices,
+  coalesce(is2.billed_amount, 0) as billed_amount,
+  coalesce(qp.expected_profit, 0) as expected_profit
+from clients c
+left join shipment_stats ss on ss.client_id = c.id
+left join invoice_stats is2 on is2.client_id = c.id
+left join quotation_profit qp on qp.client_id = c.id
+where c.is_deleted = false;
+
+
+-- =========================================
+-- MONTHLY SALES
+-- =========================================
+
+create or replace view monthly_sales_view as
+select
+  date_trunc('month', created_at) as month,
+  count(*) as opportunities,
+  coalesce(sum(estimated_value), 0) as total_value
+from opportunities
+group by month
+order by month desc;
+
+
+-- =========================================
+-- SHIPMENT ACTIVITY
+-- =========================================
+
+create or replace view shipment_activity_view as
+select
+  status,
+  count(*) as shipments
+from shipments
+group by status;
+
+
+-- =========================================
+-- CLIENT CONTACT LIST
+-- =========================================
+
+create or replace view client_contacts_view as
+select
+  ct.id,
+  ct.client_id,
+  ct.name,
+  ct.email,
+  ct.phone,
+  ct.linkedin_url,
+  ct.position,
+  ct.status,
+  ct.is_primary,
+  ct.created_at,
+  ct.updated_at,
+  c.company_name as client_name
+from contacts ct
+join clients c on c.id = ct.client_id
+where c.is_deleted = false
+  and public.erp_can_access_client_resource(
+    'crm.contacts.list',
+    'view',
+    ct.client_id
+  );
+
+
+-- =========================================
+-- PROVIDER OVERVIEW
+-- =========================================
+
+create or replace view provider_overview_view as
+select
+  p.id,
+  p.name as provider_name,
+  p.provider_type,
+  p.city,
+  p.country,
+  p.status,
+  p.credit_active,
+  p.credit_amount,
+  p.credit_days,
+  count(distinct pc.id) as total_contacts,
+  count(distinct pso.id) as total_service_offerings
+from providers p
+left join provider_contacts pc on pc.provider_id = p.id
+left join provider_service_offerings pso on pso.provider_id = p.id
+group by
+  p.id,
+  p.name,
+  p.provider_type,
+  p.city,
+  p.country,
+  p.status,
+  p.credit_active,
+  p.credit_amount,
+  p.credit_days;
+
+
+-- =========================================
+-- PROVIDER CONTACT LIST
+-- =========================================
+
+create or replace view provider_contacts_view as
+select
+  pc.id,
+  pc.provider_id,
+  pc.name,
+  pc.email,
+  pc.phone,
+  pc.linkedin_url,
+  pc.position,
+  pc.status,
+  pc.created_at,
+  pc.updated_at,
+  p.name as provider_name
+from provider_contacts pc
+join providers p on p.id = pc.provider_id;
+
+
+-- =========================================
+-- PROVIDER SERVICE OFFERINGS
+-- =========================================
+
+create or replace view provider_service_offering_view as
+select
+  pso.id,
+  pso.provider_id,
+  p.name as provider_name,
+  pso.service_transport_type_id,
+  stt.service_type,
+  stt.transport_type,
+  pso.terms_and_conditions,
+  pso.created_at,
+  pso.updated_at
+from provider_service_offerings pso
+join providers p on p.id = pso.provider_id
+join service_transport_types stt on stt.id = pso.service_transport_type_id;
+
+
+-- =========================================
+-- UN/LOCODE LOOKUP
+-- =========================================
+
+create or replace view unlocode_lookup_view as
+select
+  u.id,
+  u.source_id,
+  u.country_code,
+  u.location_code,
+  u.unlocode,
+  u.country_name,
+  u.name,
+  u.name_without_diacritics,
+  u.subdivision_code,
+  u.function_classifier,
+  u.status,
+  u.change_indicator,
+  u.date_code,
+  u.iata_code,
+  u.coordinates,
+  u.remarks,
+  u.source_page_url,
+  u.created_at,
+  u.updated_at,
+  case
+    when coalesce(u.subdivision_code, '') <> '' then u.unlocode || ' - ' || u.name || ' (' || u.subdivision_code || ')'
+    else u.unlocode || ' - ' || u.name
+  end as display_name,
+  u.search_text
+from unlocodes u;
+
+
+-- =========================================
+-- SERVICE TRANSPORT TYPE LOOKUP
+-- =========================================
+
+create or replace view service_transport_type_lookup_view as
+select
+  stt.id,
+  stt.service_type,
+  stt.transport_type,
+  stt.created_at,
+  stt.updated_at
+from service_transport_types stt
+order by stt.service_type asc, stt.transport_type asc;
+
+
+-- =========================================
+-- SALES ACCOUNTING CONCEPT LOOKUP
+-- =========================================
+
+create or replace view sales_accounting_concept_lookup_view as
+select
+  sac.id,
+  sac.concept,
+  sac.service_type,
+  sac.operation_type,
+  sac.vat_rate,
+  sac.sat_code,
+  sac.created_at,
+  sac.updated_at
+from sales_accounting_concepts sac
+order by sac.service_type asc, sac.operation_type asc, sac.concept asc;
+
+
+-- =========================================
+-- EXCHANGE RATE LOOKUP
+-- =========================================
+
+create or replace view exchange_rate_lookup_view as
+select
+  er.id,
+  er.rate_date,
+  er.base_currency,
+  er.quote_currency,
+  er.rate_value,
+  er.source,
+  er.source_series_code,
+  er.created_at,
+  er.updated_at
+from exchange_rates er
+order by er.rate_date desc, er.base_currency asc, er.quote_currency asc;
+
+
+-- =========================================
+-- PERMISSION RESOURCE CATALOG
+-- =========================================
+
+create or replace view permission_resource_catalog_view as
+select
+  pm.id as module_id,
+  pm.code as module_code,
+  pm.name as module_name,
+  pm.icon_key as module_icon_key,
+  pm.sort_order as module_sort_order,
+  pm.active as module_active,
+  ps.id as submodule_id,
+  ps.code as submodule_code,
+  ps.name as submodule_name,
+  ps.route_path,
+  ps.route_matchers,
+  ps.sort_order as submodule_sort_order,
+  ps.active as submodule_active,
+  pr.id as resource_id,
+  pr.resource_key,
+  pr.name as resource_name,
+  pr.resource_type,
+  pr.resource_group,
+  pr.table_name,
+  pr.view_name,
+  pr.rpc_name,
+  pr.entity_owner_field,
+  pr.entity_branch_field,
+  pr.sort_order as resource_sort_order,
+  pr.active as resource_active,
+  pr.created_at,
+  pr.updated_at
+from permission_resources pr
+join permission_modules pm on pm.id = pr.module_id
+left join permission_submodules ps on ps.id = pr.submodule_id
+order by
+  pm.sort_order asc,
+  coalesce(ps.sort_order, 0) asc,
+  pr.sort_order asc,
+  pr.name asc;
+
+
+-- =========================================
+-- PERMISSION FIELD CATALOG
+-- =========================================
+
+create or replace view permission_field_catalog_view as
+select
+  pr.resource_key,
+  pr.name as resource_name,
+  pf.id as field_id,
+  pf.resource_id,
+  pf.field_key,
+  pf.label,
+  pf.data_type,
+  pf.field_group,
+  pf.sort_order,
+  pf.active,
+  pf.created_at,
+  pf.updated_at
+from permission_fields pf
+join permission_resources pr on pr.id = pf.resource_id
+order by
+  pr.sort_order asc,
+  pf.field_group asc,
+  pf.sort_order asc,
+  pf.label asc;
+
+
+-- =========================================
+-- ROLE RESOURCE PERMISSION MATRIX
+-- =========================================
+
+create or replace view role_resource_permission_matrix_view as
+select
+  r.id as role_id,
+  r.name as role_name,
+  prc.module_id,
+  prc.module_code,
+  prc.module_name,
+  prc.module_icon_key,
+  prc.module_sort_order,
+  prc.submodule_id,
+  prc.submodule_code,
+  prc.submodule_name,
+  prc.route_path,
+  prc.route_matchers,
+  prc.submodule_sort_order,
+  prc.resource_id,
+  prc.resource_key,
+  prc.resource_name,
+  prc.resource_type,
+  prc.resource_group,
+  pa.id as action_id,
+  pa.code as action_code,
+  pa.name as action_name,
+  coalesce(rrp.allowed, false) as allowed,
+  pc.id as condition_id,
+  coalesce(pc.code, 'none') as condition_code,
+  coalesce(pc.name, 'None') as condition_name,
+  rrp.id as role_permission_id
+from roles r
+cross join permission_resource_catalog_view prc
+cross join permission_actions pa
+left join role_resource_permissions rrp
+  on rrp.role_id = r.id
+ and rrp.resource_id = prc.resource_id
+ and rrp.action_id = pa.id
+left join permission_conditions pc
+  on pc.id = rrp.condition_id
+where pa.active = true
+  and pa.scope_type in ('resource', 'both')
+  and prc.resource_active = true
+order by
+  r.name asc,
+  prc.module_sort_order asc,
+  coalesce(prc.submodule_sort_order, 0) asc,
+  prc.resource_sort_order asc,
+  pa.name asc;
+
+
+-- =========================================
+-- ROLE FIELD PERMISSION MATRIX
+-- =========================================
+
+create or replace view role_field_permission_matrix_view as
+select
+  r.id as role_id,
+  r.name as role_name,
+  pfc.resource_key,
+  pfc.resource_name,
+  pfc.field_id,
+  pfc.field_key,
+  pfc.label as field_label,
+  pfc.data_type,
+  pfc.field_group,
+  pfc.sort_order as field_sort_order,
+  pa.id as action_id,
+  pa.code as action_code,
+  pa.name as action_name,
+  coalesce(rfp.allowed, false) as allowed,
+  pc.id as condition_id,
+  coalesce(pc.code, 'none') as condition_code,
+  coalesce(pc.name, 'None') as condition_name,
+  rfp.id as role_field_permission_id
+from roles r
+cross join permission_field_catalog_view pfc
+cross join permission_actions pa
+left join role_field_permissions rfp
+  on rfp.role_id = r.id
+ and rfp.field_id = pfc.field_id
+ and rfp.action_id = pa.id
+left join permission_conditions pc
+  on pc.id = rfp.condition_id
+where pa.active = true
+  and pa.scope_type in ('field', 'both')
+  and pfc.active = true
+order by
+  r.name asc,
+  pfc.resource_key asc,
+  pfc.field_group asc,
+  pfc.sort_order asc,
+  pa.name asc;
+
+
+-- ===== BEGIN ERP_triggers.sql =====
+
+-- =========================================
+-- ERP AUTOMATION LAYER
+-- =========================================
+
+
+-- =========================================
+-- 1. AUTO TIMESTAMPS
+-- =========================================
+
+create or replace function set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger set_branches_updated_at
+before update on branches
+for each row
+execute function set_updated_at();
+
+create trigger set_roles_updated_at
+before update on roles
+for each row
+execute function set_updated_at();
+
+create trigger set_users_updated_at
+before update on users
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_modules_updated_at
+before update on permission_modules
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_submodules_updated_at
+before update on permission_submodules
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_actions_updated_at
+before update on permission_actions
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_conditions_updated_at
+before update on permission_conditions
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_resources_updated_at
+before update on permission_resources
+for each row
+execute function set_updated_at();
+
+create trigger set_permission_fields_updated_at
+before update on permission_fields
+for each row
+execute function set_updated_at();
+
+create trigger set_role_resource_permissions_updated_at
+before update on role_resource_permissions
+for each row
+execute function set_updated_at();
+
+create trigger set_role_field_permissions_updated_at
+before update on role_field_permissions
+for each row
+execute function set_updated_at();
+
+create trigger set_external_data_sources_updated_at
+before update on external_data_sources
+for each row
+execute function set_updated_at();
+
+create trigger set_unlocodes_updated_at
+before update on unlocodes
+for each row
+execute function set_updated_at();
+
+create trigger set_service_transport_types_updated_at
+before update on service_transport_types
+for each row
+execute function set_updated_at();
+
+create trigger set_sales_accounting_concepts_updated_at
+before update on sales_accounting_concepts
+for each row
+execute function set_updated_at();
+
+create trigger set_exchange_rates_updated_at
+before update on exchange_rates
+for each row
+execute function set_updated_at();
+
+create trigger set_quotation_reference_counters_updated_at
+before update on quotation_reference_counters
+for each row
+execute function set_updated_at();
+
+create trigger set_prospects_updated_at
+before update on prospects
+for each row
+execute function set_updated_at();
+
+create trigger set_clients_updated_at
+before update on clients
+for each row
+execute function set_updated_at();
+
+create trigger set_contacts_updated_at
+before update on contacts
+for each row
+execute function set_updated_at();
+
+create trigger set_client_logistics_parties_updated_at
+before update on client_logistics_parties
+for each row
+execute function set_updated_at();
+
+create trigger set_providers_updated_at
+before update on providers
+for each row
+execute function set_updated_at();
+
+create trigger set_provider_contacts_updated_at
+before update on provider_contacts
+for each row
+execute function set_updated_at();
+
+create trigger set_provider_service_offerings_updated_at
+before update on provider_service_offerings
+for each row
+execute function set_updated_at();
+
+create trigger set_incoterms_updated_at
+before update on incoterms
+for each row
+execute function set_updated_at();
+
+create trigger set_opportunities_updated_at
+before update on opportunities
+for each row
+execute function set_updated_at();
+
+create trigger set_quotations_updated_at
+before update on quotations
+for each row
+execute function set_updated_at();
+
+create trigger set_quotation_rejection_reasons_updated_at
+before update on quotation_rejection_reasons
+for each row
+execute function set_updated_at();
+
+create trigger set_quotation_cargo_lines_updated_at
+before update on quotation_cargo_lines
+for each row
+execute function set_updated_at();
+
+create trigger set_shipments_updated_at
+before update on shipments
+for each row
+execute function set_updated_at();
+
+create trigger set_client_invoices_updated_at
+before update on client_invoices
+for each row
+execute function set_updated_at();
+
+create trigger set_provider_invoices_updated_at
+before update on provider_invoices
+for each row
+execute function set_updated_at();
+
+create trigger set_workspace_saved_views_updated_at
+before update on workspace_saved_views
+for each row
+execute function set_updated_at();
+
+create trigger set_mailboxes_updated_at
+before update on mailboxes
+for each row
+execute function set_updated_at();
+
+create trigger set_mail_threads_updated_at
+before update on mail_threads
+for each row
+execute function set_updated_at();
+
+create trigger set_mail_messages_updated_at
+before update on mail_messages
+for each row
+execute function set_updated_at();
+
+create trigger set_mail_sync_runs_updated_at
+before update on mail_sync_runs
+for each row
+execute function set_updated_at();
+
+
+-- =========================================
+-- 1.0 AUTH USER SYNC
+-- =========================================
+
+create or replace function sync_public_user_from_auth()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  if new.email is null then
+    return new;
+  end if;
+
+  update public.users
+  set
+    auth_user_id = new.id,
+    email = lower(new.email),
+    updated_at = now()
+  where lower(email) = lower(new.email)
+    and (auth_user_id is null or auth_user_id = new.id);
+
+  if not found then
+    insert into public.users (
+      auth_user_id,
+      email,
+      active
+    )
+    values (
+      new.id,
+      lower(new.email),
+      false
+    )
+    on conflict (auth_user_id)
+    do update set
+      email = excluded.email,
+      updated_at = now();
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger sync_public_user_from_auth_trigger
+after insert or update of email on auth.users
+for each row
+execute function sync_public_user_from_auth();
+
+
+-- =========================================
+-- 1.1 UN/LOCODE SEARCH TEXT
+-- =========================================
+
+create or replace function set_unlocode_search_text()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.search_text := lower(
+    regexp_replace(
+      concat_ws(
+        ' ',
+        new.unlocode,
+        new.country_code,
+        new.location_code,
+        new.country_name,
+        new.name,
+        coalesce(new.name_without_diacritics, ''),
+        coalesce(new.subdivision_code, ''),
+        coalesce(new.iata_code, '')
+      ),
+      '\s+',
+      ' ',
+      'g'
+    )
+  );
+
+  return new;
+end;
+$$;
+
+create trigger set_unlocodes_search_text
+before insert or update on unlocodes
+for each row
+execute function set_unlocode_search_text();
+
+
+-- =========================================
+-- 1.2 CLIENT SEARCH TEXT
+-- =========================================
+
+create or replace function set_client_search_text()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.search_text := lower(
+    regexp_replace(
+      concat_ws(
+        ' ',
+        new.company_name,
+        coalesce(new.tax_id, ''),
+        coalesce(new.website, ''),
+        coalesce(new.corporate_phone, ''),
+        coalesce(new.country, ''),
+        coalesce(new.city, ''),
+        coalesce(new.city_unlocode, '')
+      ),
+      '\s+',
+      ' ',
+      'g'
+    )
+  );
+
+  return new;
+end;
+$$;
+
+-- =========================================
+-- 1.3 CLIENT LOCATION FIELDS
+-- =========================================
+
+create or replace function apply_client_location_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  resolved record;
+begin
+  if nullif(btrim(coalesce(new.city_unlocode, '')), '') is null and new.city_unlocode_id is null then
+    new.city_unlocode := null;
+    new.city_unlocode_id := null;
+    new.city := null;
+    new.country := null;
+    return new;
+  end if;
+
+  if nullif(btrim(coalesce(new.city_unlocode, '')), '') is not null then
+    new.city_unlocode := upper(btrim(new.city_unlocode));
+  else
+    new.city_unlocode := null;
+  end if;
+
+  select *
+  into resolved
+  from resolve_unlocode_reference(new.city_unlocode, new.city_unlocode_id);
+
+  if resolved is null then
+    new.city_unlocode_id := null;
+    return new;
+  end if;
+
+  new.city_unlocode_id := resolved.resolved_id;
+  new.city_unlocode := resolved.resolved_unlocode;
+  new.city := resolved.resolved_city;
+  new.country := resolved.resolved_country;
+
+  return new;
+end;
+$$;
+
+create or replace function apply_client_owner_branch_defaults()
+returns trigger
+language plpgsql
+as $$
+declare
+  resolved_branch_id uuid;
+begin
+  if new.account_owner_id is null then
+    new.account_owner_id := public.erp_current_user_id();
+  end if;
+
+  if new.account_owner_id is not null and new.branch_id is null then
+    select u.branch_id
+    into resolved_branch_id
+    from public.users u
+    where u.id = new.account_owner_id;
+
+    new.branch_id := resolved_branch_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_client_owner_branch_defaults on clients;
+
+create trigger set_client_owner_branch_defaults
+before insert or update on clients
+for each row
+execute function apply_client_owner_branch_defaults();
+
+drop trigger if exists set_client_location_fields on clients;
+
+create trigger set_client_location_fields
+before insert or update on clients
+for each row
+execute function apply_client_location_fields();
+
+create trigger set_clients_search_text
+before insert or update on clients
+for each row
+execute function set_client_search_text();
+
+
+-- =========================================
+-- 1.4 CLIENT LOGISTICS PARTY LOCATION FIELDS
+-- =========================================
+
+create or replace function apply_client_logistics_party_location_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  resolved record;
+begin
+  if nullif(btrim(coalesce(new.city_unlocode, '')), '') is null and new.city_unlocode_id is null then
+    new.city_unlocode := null;
+    new.city_unlocode_id := null;
+    new.city := null;
+    new.country := null;
+    return new;
+  end if;
+
+  if nullif(btrim(coalesce(new.city_unlocode, '')), '') is not null then
+    new.city_unlocode := upper(btrim(new.city_unlocode));
+  else
+    new.city_unlocode := null;
+  end if;
+
+  select *
+  into resolved
+  from resolve_unlocode_reference(new.city_unlocode, new.city_unlocode_id);
+
+  if resolved is null then
+    new.city_unlocode_id := null;
+    return new;
+  end if;
+
+  new.city_unlocode_id := resolved.resolved_id;
+  new.city_unlocode := resolved.resolved_unlocode;
+  new.city := resolved.resolved_city;
+  new.country := resolved.resolved_country;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_client_logistics_party_location_fields on client_logistics_parties;
+
+create trigger set_client_logistics_party_location_fields
+before insert or update on client_logistics_parties
+for each row
+execute function apply_client_logistics_party_location_fields();
+
+
+-- =========================================
+-- 1.6 OPPORTUNITY COMPUTED FIELDS
+-- =========================================
+
+create or replace function apply_opportunity_computed_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  origin_reference record;
+  destination_reference record;
+  expired_before_update boolean;
+begin
+  expired_before_update := false;
+
+  if tg_op = 'UPDATE' then
+    expired_before_update := old.expiration_date is not null
+      and old.expiration_date < current_date
+      and old.status not in ('aceptado', 'rechazada', 'vencida');
+  end if;
+
+  if new.start_date is null then
+    new.start_date := coalesce(new.created_at::date, current_date);
+  end if;
+
+  if expired_before_update
+    and coalesce(new.status, '') <> 'vencida'
+    and new.status is distinct from old.status then
+    new.start_date := current_date;
+  end if;
+
+  new.expiration_date := calculate_opportunity_expiration_date(new.start_date);
+
+  if nullif(btrim(coalesce(new.origin_unlocode, '')), '') is not null then
+    new.origin_unlocode := upper(btrim(new.origin_unlocode));
+  else
+    new.origin_unlocode := null;
+  end if;
+
+  if nullif(btrim(coalesce(new.destination_unlocode, '')), '') is not null then
+    new.destination_unlocode := upper(btrim(new.destination_unlocode));
+  else
+    new.destination_unlocode := null;
+  end if;
+
+  if new.origin_unlocode is null and new.origin_unlocode_id is null then
+    new.origin := null;
+  else
+    select *
+    into origin_reference
+    from resolve_unlocode_reference(new.origin_unlocode, new.origin_unlocode_id);
+
+    if origin_reference is not null then
+      new.origin_unlocode_id := origin_reference.resolved_id;
+      new.origin_unlocode := origin_reference.resolved_unlocode;
+      new.origin := origin_reference.resolved_city;
+    end if;
+  end if;
+
+  if new.destination_unlocode is null and new.destination_unlocode_id is null then
+    new.destination := null;
+  else
+    select *
+    into destination_reference
+    from resolve_unlocode_reference(new.destination_unlocode, new.destination_unlocode_id);
+
+    if destination_reference is not null then
+      new.destination_unlocode_id := destination_reference.resolved_id;
+      new.destination_unlocode := destination_reference.resolved_unlocode;
+      new.destination := destination_reference.resolved_city;
+    end if;
+  end if;
+
+  new.trade_lane := case
+    when nullif(btrim(coalesce(new.origin, '')), '') is not null
+      and nullif(btrim(coalesce(new.destination, '')), '') is not null
+      then btrim(new.origin) || ' -> ' || btrim(new.destination)
+    else null
+  end;
+
+  new.estimated_value := case
+    when new.expected_profit_usd is not null and new.service_quantity is not null
+      then new.expected_profit_usd * new.service_quantity
+    else new.estimated_value
+  end;
+
+  new.title := coalesce(
+    nullif(
+      build_opportunity_title(
+        new.client_id,
+        new.service_type,
+        new.transport_type,
+        new.origin,
+        new.destination
+      ),
+      ''
+    ),
+    coalesce(nullif(btrim(new.title), ''), 'Opportunity')
+  );
+
+  return new;
+end;
+$$;
+
+create or replace function apply_opportunity_owner_defaults()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.salesperson_id is null and new.client_id is not null then
+    select c.account_owner_id
+    into new.salesperson_id
+    from public.clients c
+    where c.id = new.client_id
+      and c.is_deleted = false;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_opportunity_owner_defaults on opportunities;
+
+create trigger set_opportunity_owner_defaults
+before insert or update on opportunities
+for each row
+execute function apply_opportunity_owner_defaults();
+
+create trigger set_opportunity_computed_fields
+before insert or update on opportunities
+for each row
+execute function apply_opportunity_computed_fields();
+
+
+-- =========================================
+-- 1.7 QUOTATION COMPUTED FIELDS
+-- =========================================
+
+create or replace function apply_quotation_computed_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  origin_reference record;
+  destination_reference record;
+begin
+  if nullif(btrim(coalesce(new.origin_unlocode, '')), '') is not null then
+    new.origin_unlocode := upper(btrim(new.origin_unlocode));
+  else
+    new.origin_unlocode := null;
+  end if;
+
+  if nullif(btrim(coalesce(new.destination_unlocode, '')), '') is not null then
+    new.destination_unlocode := upper(btrim(new.destination_unlocode));
+  else
+    new.destination_unlocode := null;
+  end if;
+
+  if new.origin_unlocode is null and new.origin_unlocode_id is null then
+    new.origin := null;
+  else
+    select *
+    into origin_reference
+    from resolve_unlocode_reference(new.origin_unlocode, new.origin_unlocode_id);
+
+    if origin_reference is not null then
+      new.origin_unlocode_id := origin_reference.resolved_id;
+      new.origin_unlocode := origin_reference.resolved_unlocode;
+      new.origin := origin_reference.resolved_city;
+    end if;
+  end if;
+
+  if new.destination_unlocode is null and new.destination_unlocode_id is null then
+    new.destination := null;
+  else
+    select *
+    into destination_reference
+    from resolve_unlocode_reference(new.destination_unlocode, new.destination_unlocode_id);
+
+    if destination_reference is not null then
+      new.destination_unlocode_id := destination_reference.resolved_id;
+      new.destination_unlocode := destination_reference.resolved_unlocode;
+      new.destination := destination_reference.resolved_city;
+    end if;
+  end if;
+
+  new.search_text := lower(
+    regexp_replace(
+      concat_ws(
+        ' ',
+        coalesce(new.reference_number, ''),
+        coalesce(new.status, ''),
+        coalesce(new.service_type, ''),
+        coalesce(new.transport_type, ''),
+        coalesce(new.operation_type, ''),
+        coalesce(new.origin, ''),
+        coalesce(new.origin_unlocode, ''),
+        coalesce(new.destination, ''),
+        coalesce(new.destination_unlocode, ''),
+        coalesce(new.pickup_address, ''),
+        coalesce(new.delivery_address, '')
+      ),
+      '\s+',
+      ' ',
+      'g'
+    )
+  );
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_quotation_computed_fields on quotations;
+
+create trigger set_quotation_computed_fields
+before insert or update on quotations
+for each row
+execute function apply_quotation_computed_fields();
+
+
+-- =========================================
+-- 1.8 PROVIDER COMPUTED FIELDS
+-- =========================================
+
+create or replace function apply_provider_location_fields()
+returns trigger
+language plpgsql
+as $$
+declare
+  resolved record;
+begin
+  if nullif(btrim(coalesce(new.city_unlocode, '')), '') is null and new.city_unlocode_id is null then
+    new.city_unlocode := null;
+    new.city_unlocode_id := null;
+    new.city := null;
+    new.country := null;
+    return new;
+  end if;
+
+  if nullif(btrim(coalesce(new.city_unlocode, '')), '') is not null then
+    new.city_unlocode := upper(btrim(new.city_unlocode));
+  else
+    new.city_unlocode := null;
+  end if;
+
+  select *
+  into resolved
+  from resolve_unlocode_reference(new.city_unlocode, new.city_unlocode_id);
+
+  if resolved is null then
+    new.city_unlocode_id := null;
+    return new;
+  end if;
+
+  new.city_unlocode_id := resolved.resolved_id;
+  new.city_unlocode := resolved.resolved_unlocode;
+  new.city := resolved.resolved_city;
+  new.country := resolved.resolved_country;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_provider_location_fields on providers;
+
+create trigger set_provider_location_fields
+before insert or update on providers
+for each row
+execute function apply_provider_location_fields();
+
+create trigger set_commissions_updated_at
+before update on commissions
+for each row
+execute function set_updated_at();
+
+
+-- =========================================
+-- 2. REFERENCE GENERATORS
+-- =========================================
+
+create or replace function generate_reference(prefix text)
+returns text
+language plpgsql
+as $$
+begin
+  return prefix || '-' || to_char(now(), 'YYYYMMDD') || '-' || substr(md5(random()::text), 1, 6);
+end;
+$$;
+
+create or replace function set_quotation_reference()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.reference_number is null then
+    new.reference_number := next_quotation_reference(new.service_type);
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger quotation_reference_trigger
+before insert on quotations
+for each row
+execute function set_quotation_reference();
+
+create or replace function set_shipment_reference()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.shipment_reference is null then
+    new.shipment_reference := generate_reference('SHP');
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger shipment_reference_trigger
+before insert on shipments
+for each row
+execute function set_shipment_reference();
+
+
+-- =========================================
+-- 3. QUOTATION TOTALS SYNC
+-- =========================================
+
+create or replace function sync_quotation_totals_from_cost_lines()
+returns trigger
+language plpgsql
+as $$
+declare
+  quotation_id_value uuid;
+begin
+  quotation_id_value := case
+    when tg_op = 'DELETE' then old.quotation_id
+    else new.quotation_id
+  end;
+
+  if quotation_id_value is not null then
+    perform recalculate_quotation_totals(quotation_id_value);
+  end if;
+
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+drop trigger if exists quotation_cost_totals_trigger on quotation_costs;
+
+create trigger quotation_cost_totals_trigger
+after insert or update or delete on quotation_costs
+for each row
+execute function sync_quotation_totals_from_cost_lines();
+
+
+-- =========================================
+-- 4. SOFT DELETE PROTECTION
+-- =========================================
+
+create or replace function prevent_hard_delete()
+returns trigger
+language plpgsql
+as $$
+begin
+  if current_setting('app.allow_test_hard_delete', true) = 'on' then
+    return old;
+  end if;
+
+  raise exception 'Hard delete not allowed. Use the soft_delete_client() function.';
+  return old;
+end;
+$$;
+
+create trigger prevent_clients_delete
+before delete on clients
+for each row
+execute function prevent_hard_delete();
+
+
+-- =========================================
+-- 5. AUDIT TRAIL
+-- =========================================
+
+create or replace function audit_trigger()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'DELETE' then
+    insert into audit_logs (
+      table_name,
+      record_id,
+      action,
+      user_id,
+      payload
+    )
+    values (
+      tg_table_name,
+      old.id,
+      tg_op,
+      public.erp_current_user_id(),
+      to_jsonb(old)
+    );
+
+    return old;
+  end if;
+
+  insert into audit_logs (
+    table_name,
+    record_id,
+    action,
+    user_id,
+    payload
+  )
+  values (
+    tg_table_name,
+    new.id,
+    tg_op,
+    public.erp_current_user_id(),
+    to_jsonb(new)
+  );
+
+  return new;
+end;
+$$;
+
+create trigger audit_clients
+after insert or update or delete on clients
+for each row
+execute function audit_trigger();
+
+create trigger audit_client_logistics_parties
+after insert or update or delete on client_logistics_parties
+for each row
+execute function audit_trigger();
+
+create trigger audit_providers
+after insert or update or delete on providers
+for each row
+execute function audit_trigger();
+
+create trigger audit_provider_contacts
+after insert or update or delete on provider_contacts
+for each row
+execute function audit_trigger();
+
+create trigger audit_provider_service_offerings
+after insert or update or delete on provider_service_offerings
+for each row
+execute function audit_trigger();
+
+create trigger audit_sales_accounting_concepts
+after insert or update or delete on sales_accounting_concepts
+for each row
+execute function audit_trigger();
+
+create trigger audit_quotation_rejection_reasons
+after insert or update or delete on quotation_rejection_reasons
+for each row
+execute function audit_trigger();
+
+create trigger audit_opportunities
+after insert or update or delete on opportunities
+for each row
+execute function audit_trigger();
+
+create trigger audit_quotations
+after insert or update or delete on quotations
+for each row
+execute function audit_trigger();
+
+create trigger audit_quotation_costs
+after insert or update or delete on quotation_costs
+for each row
+execute function audit_trigger();
+
+create trigger audit_quotation_cargo_lines
+after insert or update or delete on quotation_cargo_lines
+for each row
+execute function audit_trigger();
+
+create trigger audit_shipments
+after insert or update or delete on shipments
+for each row
+execute function audit_trigger();
+
+create trigger audit_client_invoices
+after insert or update or delete on client_invoices
+for each row
+execute function audit_trigger();
+
+create trigger audit_provider_invoices
+after insert or update or delete on provider_invoices
+for each row
+execute function audit_trigger();
+
+
+-- ===== BEGIN ERP_policies.sql =====
+
+-- =========================================
+-- ERP SECURITY POLICIES
+-- CANONICAL ACCESS CONTROL
+-- =========================================
+-- Authentication:
+-- - Supabase Auth handles password verification and sessions.
+-- - public.users stores ERP profile, role, username, and active status.
+--
+-- Authorization:
+-- - all ERP data access requires an authenticated active ERP user
+-- - admin-managed tables require erp_is_admin()
+-- =========================================
+
+
+-- =========================================
+-- ORGANIZATION
+-- =========================================
+
+alter table branches enable row level security;
+alter table roles enable row level security;
+alter table users enable row level security;
+alter table permission_modules enable row level security;
+alter table permission_submodules enable row level security;
+alter table permission_actions enable row level security;
+alter table permission_conditions enable row level security;
+alter table permission_resources enable row level security;
+alter table permission_fields enable row level security;
+alter table role_resource_permissions enable row level security;
+alter table role_field_permissions enable row level security;
+alter table branches force row level security;
+alter table roles force row level security;
+alter table users force row level security;
+alter table permission_modules force row level security;
+alter table permission_submodules force row level security;
+alter table permission_actions force row level security;
+alter table permission_conditions force row level security;
+alter table permission_resources force row level security;
+alter table permission_fields force row level security;
+alter table role_resource_permissions force row level security;
+alter table role_field_permissions force row level security;
+
+create policy "active_select_branches"
+on branches
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_branches"
+on branches
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_branches"
+on branches
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_branches"
+on branches
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_roles"
+on roles
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_roles"
+on roles
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_roles"
+on roles
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_roles"
+on roles
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_users"
+on users
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_users"
+on users
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_users"
+on users
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_users"
+on users
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_permission_modules"
+on permission_modules
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_permission_modules"
+on permission_modules
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_permission_modules"
+on permission_modules
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_permission_modules"
+on permission_modules
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_permission_submodules"
+on permission_submodules
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_permission_submodules"
+on permission_submodules
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_permission_submodules"
+on permission_submodules
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_permission_submodules"
+on permission_submodules
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_permission_actions"
+on permission_actions
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_permission_actions"
+on permission_actions
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_permission_actions"
+on permission_actions
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_permission_actions"
+on permission_actions
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_permission_conditions"
+on permission_conditions
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_permission_conditions"
+on permission_conditions
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_permission_conditions"
+on permission_conditions
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_permission_conditions"
+on permission_conditions
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_permission_resources"
+on permission_resources
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_permission_resources"
+on permission_resources
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_permission_resources"
+on permission_resources
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_permission_resources"
+on permission_resources
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_permission_fields"
+on permission_fields
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_permission_fields"
+on permission_fields
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_permission_fields"
+on permission_fields
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_permission_fields"
+on permission_fields
+for delete
+using (public.erp_is_admin());
+
+create policy "role_select_role_resource_permissions"
+on role_resource_permissions
+for select
+using (
+  public.erp_is_admin()
+  or role_id in (
+    select u.role_id
+    from public.users u
+    where u.auth_user_id = auth.uid()
+      and u.active = true
+      and u.role_id is not null
+  )
+);
+
+create policy "admin_insert_role_resource_permissions"
+on role_resource_permissions
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_role_resource_permissions"
+on role_resource_permissions
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_role_resource_permissions"
+on role_resource_permissions
+for delete
+using (public.erp_is_admin());
+
+create policy "role_select_role_field_permissions"
+on role_field_permissions
+for select
+using (
+  public.erp_is_admin()
+  or role_id in (
+    select u.role_id
+    from public.users u
+    where u.auth_user_id = auth.uid()
+      and u.active = true
+      and u.role_id is not null
+  )
+);
+
+create policy "admin_insert_role_field_permissions"
+on role_field_permissions
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_role_field_permissions"
+on role_field_permissions
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_role_field_permissions"
+on role_field_permissions
+for delete
+using (public.erp_is_admin());
+
+
+-- =========================================
+-- MASTER DATA
+-- =========================================
+
+alter table external_data_sources enable row level security;
+alter table unlocodes enable row level security;
+alter table service_transport_types enable row level security;
+alter table sales_accounting_concepts enable row level security;
+alter table exchange_rates enable row level security;
+alter table incoterms enable row level security;
+alter table external_data_sources force row level security;
+alter table unlocodes force row level security;
+alter table service_transport_types force row level security;
+alter table sales_accounting_concepts force row level security;
+alter table exchange_rates force row level security;
+alter table incoterms force row level security;
+
+create policy "active_select_external_data_sources"
+on external_data_sources
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_external_data_sources"
+on external_data_sources
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_external_data_sources"
+on external_data_sources
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_external_data_sources"
+on external_data_sources
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_unlocodes"
+on unlocodes
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_unlocodes"
+on unlocodes
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_unlocodes"
+on unlocodes
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_unlocodes"
+on unlocodes
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_service_transport_types"
+on service_transport_types
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_service_transport_types"
+on service_transport_types
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_service_transport_types"
+on service_transport_types
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_service_transport_types"
+on service_transport_types
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_sales_accounting_concepts"
+on sales_accounting_concepts
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_sales_accounting_concepts"
+on sales_accounting_concepts
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_sales_accounting_concepts"
+on sales_accounting_concepts
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_sales_accounting_concepts"
+on sales_accounting_concepts
+for delete
+using (public.erp_is_admin());
+
+create policy "active_select_exchange_rates"
+on exchange_rates
+for select
+using (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'view'));
+
+create policy "active_insert_exchange_rates"
+on exchange_rates
+for insert
+with check (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'create'));
+
+create policy "active_update_exchange_rates"
+on exchange_rates
+for update
+using (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'edit'))
+with check (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'edit'));
+
+create policy "active_delete_exchange_rates"
+on exchange_rates
+for delete
+using (public.erp_has_submodule_access('master_data.accounting.exchange_rates', 'delete'));
+
+create policy "active_select_incoterms"
+on incoterms
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "admin_insert_incoterms"
+on incoterms
+for insert
+with check (public.erp_is_admin());
+
+create policy "admin_update_incoterms"
+on incoterms
+for update
+using (public.erp_is_admin())
+with check (public.erp_is_admin());
+
+create policy "admin_delete_incoterms"
+on incoterms
+for delete
+using (public.erp_is_admin());
+
+
+-- =========================================
+-- CRM
+-- =========================================
+
+alter table prospects enable row level security;
+alter table clients enable row level security;
+alter table contacts enable row level security;
+alter table client_logistics_parties enable row level security;
+alter table prospects force row level security;
+alter table clients force row level security;
+alter table contacts force row level security;
+alter table client_logistics_parties force row level security;
+
+create policy "active_select_prospects"
+on prospects
+for select
+using (public.erp_has_module_access('crm', 'view'));
+
+create policy "active_insert_prospects"
+on prospects
+for insert
+with check (public.erp_has_module_access('crm', 'create'));
+
+create policy "active_update_prospects"
+on prospects
+for update
+using (public.erp_has_module_access('crm', 'edit'))
+with check (public.erp_has_module_access('crm', 'edit'));
+
+create policy "active_delete_prospects"
+on prospects
+for delete
+using (public.erp_has_module_access('crm', 'delete'));
+
+create policy "active_select_clients"
+on clients
+for select
+using (
+  public.erp_can_access_client_resource(
+    'crm.clients.list',
+    'view',
+    id
+  )
+);
+
+create policy "active_insert_clients"
+on clients
+for insert
+with check (public.erp_has_submodule_access('crm.clients', 'create'));
+
+create policy "active_update_clients"
+on clients
+for update
+using (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    id
+  )
+)
+with check (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    id
+  )
+);
+
+create policy "active_delete_clients"
+on clients
+for delete
+using (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'delete',
+    id
+  )
+);
+
+create policy "active_select_contacts"
+on contacts
+for select
+using (
+  public.erp_can_access_client_resource(
+    'crm.contacts.list',
+    'view',
+    client_id
+  )
+);
+
+create policy "active_insert_contacts"
+on contacts
+for insert
+with check (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    client_id
+  )
+);
+
+create policy "active_update_contacts"
+on contacts
+for update
+using (
+  public.erp_can_access_client_resource(
+    'crm.contacts.record',
+    'edit',
+    client_id
+  )
+)
+with check (
+  public.erp_can_access_client_resource(
+    'crm.contacts.record',
+    'edit',
+    client_id
+  )
+);
+
+create policy "active_delete_contacts"
+on contacts
+for delete
+using (
+  public.erp_can_access_client_resource(
+    'crm.contacts.record',
+    'delete',
+    client_id
+  )
+);
+
+create policy "active_select_client_logistics_parties"
+on client_logistics_parties
+for select
+using (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'view',
+    client_id
+  )
+);
+
+create policy "active_insert_client_logistics_parties"
+on client_logistics_parties
+for insert
+with check (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    client_id
+  )
+);
+
+create policy "active_update_client_logistics_parties"
+on client_logistics_parties
+for update
+using (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    client_id
+  )
+)
+with check (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    client_id
+  )
+);
+
+create policy "active_delete_client_logistics_parties"
+on client_logistics_parties
+for delete
+using (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'delete',
+    client_id
+  )
+);
+
+
+-- =========================================
+-- COMMERCIAL / PRICING
+-- =========================================
+
+alter table providers enable row level security;
+alter table provider_contacts enable row level security;
+alter table provider_service_offerings enable row level security;
+alter table opportunities enable row level security;
+alter table quotations enable row level security;
+alter table quotation_options enable row level security;
+alter table quotation_costs enable row level security;
+alter table quotation_cargo_lines enable row level security;
+alter table quotation_rejection_reasons enable row level security;
+alter table providers force row level security;
+alter table provider_contacts force row level security;
+alter table provider_service_offerings force row level security;
+alter table opportunities force row level security;
+alter table quotations force row level security;
+alter table quotation_options force row level security;
+alter table quotation_costs force row level security;
+alter table quotation_cargo_lines force row level security;
+alter table quotation_rejection_reasons force row level security;
+
+create policy "active_select_providers"
+on providers
+for select
+using (
+  public.erp_has_submodule_access('pricing.providers', 'view')
+  or public.erp_has_resource_access('crm.quotations.pricing_options', 'view')
+);
+
+create policy "active_insert_providers"
+on providers
+for insert
+with check (public.erp_has_submodule_access('pricing.providers', 'create'));
+
+create policy "active_update_providers"
+on providers
+for update
+using (public.erp_has_submodule_access('pricing.providers', 'edit'))
+with check (public.erp_has_submodule_access('pricing.providers', 'edit'));
+
+create policy "active_delete_providers"
+on providers
+for delete
+using (public.erp_has_submodule_access('pricing.providers', 'delete'));
+
+create policy "active_select_provider_contacts"
+on provider_contacts
+for select
+using (
+  public.erp_has_submodule_access('pricing.providers', 'view')
+  or public.erp_has_resource_access('crm.quotations.pricing_options', 'view')
+);
+
+create policy "active_insert_provider_contacts"
+on provider_contacts
+for insert
+with check (public.erp_has_submodule_access('pricing.providers', 'create'));
+
+create policy "active_update_provider_contacts"
+on provider_contacts
+for update
+using (public.erp_has_submodule_access('pricing.providers', 'edit'))
+with check (public.erp_has_submodule_access('pricing.providers', 'edit'));
+
+create policy "active_delete_provider_contacts"
+on provider_contacts
+for delete
+using (public.erp_has_submodule_access('pricing.providers', 'delete'));
+
+create policy "active_select_provider_service_offerings"
+on provider_service_offerings
+for select
+using (
+  public.erp_has_submodule_access('pricing.providers', 'view')
+  or public.erp_has_resource_access('crm.quotations.pricing_options', 'view')
+);
+
+create policy "active_insert_provider_service_offerings"
+on provider_service_offerings
+for insert
+with check (public.erp_has_submodule_access('pricing.providers', 'create'));
+
+create policy "active_update_provider_service_offerings"
+on provider_service_offerings
+for update
+using (public.erp_has_submodule_access('pricing.providers', 'edit'))
+with check (public.erp_has_submodule_access('pricing.providers', 'edit'));
+
+create policy "active_delete_provider_service_offerings"
+on provider_service_offerings
+for delete
+using (public.erp_has_submodule_access('pricing.providers', 'delete'));
+
+create policy "active_select_opportunities"
+on opportunities
+for select
+using (
+  public.erp_can_access_opportunity_resource(
+    'crm.opportunities.list',
+    'view',
+    salesperson_id,
+    client_id
+  )
+);
+
+create policy "active_insert_opportunities"
+on opportunities
+for insert
+with check (
+  public.erp_can_access_client_resource(
+    'crm.clients.record',
+    'edit',
+    client_id
+  )
+);
+
+create policy "active_update_opportunities"
+on opportunities
+for update
+using (
+  public.erp_can_access_opportunity_resource(
+    'crm.opportunities.record',
+    'edit',
+    salesperson_id,
+    client_id
+  )
+)
+with check (
+  public.erp_can_access_opportunity_resource(
+    'crm.opportunities.record',
+    'edit',
+    salesperson_id,
+    client_id
+  )
+);
+
+create policy "active_delete_opportunities"
+on opportunities
+for delete
+using (
+  public.erp_can_access_opportunity_resource(
+    'crm.opportunities.record',
+    'delete',
+    salesperson_id,
+    client_id
+  )
+);
+
+create policy "active_select_quotations"
+on quotations
+for select
+using (
+  public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'view',
+    created_by,
+    client_id
+  )
+  or public.erp_can_access_pricing_quotation(
+    'view',
+    status,
+    pricing_owner_id
+  )
+  or public.erp_can_access_operations_shipment(
+    'view',
+    client_id
+  )
+);
+
+create policy "active_insert_quotations"
+on quotations
+for insert
+with check (public.erp_has_submodule_access('crm.quotations', 'create'));
+
+create policy "active_update_quotations"
+on quotations
+for update
+using (
+  public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'edit',
+    created_by,
+    client_id
+  )
+  or public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.customer_actions',
+    'edit',
+    created_by,
+    client_id
+  )
+  or public.erp_can_access_pricing_quotation(
+    'edit',
+    status,
+    pricing_owner_id
+  )
+)
+with check (
+  public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'edit',
+    created_by,
+    client_id
+  )
+  or public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.customer_actions',
+    'edit',
+    created_by,
+    client_id
+  )
+  or public.erp_can_access_pricing_quotation(
+    'edit',
+    status,
+    pricing_owner_id
+  )
+);
+
+create policy "active_delete_quotations"
+on quotations
+for delete
+using (
+  public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.record',
+    'delete',
+    created_by,
+    client_id
+  )
+);
+
+create policy "active_select_quotation_options"
+on quotation_options
+for select
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_options.quotation_id
+      and (
+        public.erp_has_resource_access(
+          'pricing.quotations.cost_section',
+          'view',
+          q.pricing_owner_id,
+          null
+        )
+        or public.erp_can_access_crm_quotation_resource(
+          'crm.quotations.pricing_options',
+          'view',
+          q.created_by,
+          q.client_id
+        )
+      )
+  )
+);
+
+create policy "active_update_quotation_options"
+on quotation_options
+for update
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_options.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.customer_actions',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_options.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.customer_actions',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  )
+);
+
+create policy "active_select_quotation_costs"
+on quotation_costs
+for select
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_costs.quotation_id
+      and (
+        public.erp_has_resource_access(
+          'pricing.quotations.cost_section',
+          'view',
+          q.pricing_owner_id,
+          null
+        )
+        or public.erp_can_access_crm_quotation_resource(
+          'crm.quotations.pricing_options',
+          'view',
+          q.created_by,
+          q.client_id
+        )
+      )
+  )
+);
+
+create policy "active_insert_quotation_costs"
+on quotation_costs
+for insert
+with check (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_costs.quotation_id
+      and public.erp_has_resource_access(
+        'pricing.quotations.cost_section',
+        'create',
+        q.pricing_owner_id,
+        null
+      )
+  )
+);
+
+create policy "active_update_quotation_costs"
+on quotation_costs
+for update
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_costs.quotation_id
+      and public.erp_has_resource_access(
+        'pricing.quotations.cost_section',
+        'edit',
+        q.pricing_owner_id,
+        null
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_costs.quotation_id
+      and public.erp_has_resource_access(
+        'pricing.quotations.cost_section',
+        'edit',
+        q.pricing_owner_id,
+        null
+      )
+  )
+);
+
+create policy "active_delete_quotation_costs"
+on quotation_costs
+for delete
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_costs.quotation_id
+      and public.erp_has_resource_access(
+        'pricing.quotations.cost_section',
+        'delete',
+        q.pricing_owner_id,
+        null
+      )
+  )
+);
+
+create policy "active_select_quotation_cargo_lines"
+on quotation_cargo_lines
+for select
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_cargo_lines.quotation_id
+      and (
+        public.erp_can_access_crm_quotation_resource(
+          'crm.quotations.record',
+          'view',
+          q.created_by,
+          q.client_id
+        )
+        or public.erp_can_access_pricing_quotation(
+          'view',
+          q.status,
+          q.pricing_owner_id
+        )
+      )
+  )
+);
+
+create policy "active_insert_quotation_cargo_lines"
+on quotation_cargo_lines
+for insert
+with check (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_cargo_lines.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.record',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  )
+);
+
+create policy "active_update_quotation_cargo_lines"
+on quotation_cargo_lines
+for update
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_cargo_lines.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.record',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_cargo_lines.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.record',
+        'edit',
+        q.created_by,
+        q.client_id
+      )
+  )
+);
+
+create policy "active_delete_quotation_cargo_lines"
+on quotation_cargo_lines
+for delete
+using (
+  exists (
+    select 1
+    from quotations q
+    where q.id = quotation_cargo_lines.quotation_id
+      and public.erp_can_access_crm_quotation_resource(
+        'crm.quotations.record',
+        'delete',
+        q.created_by,
+        q.client_id
+      )
+  )
+);
+
+create policy "active_select_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for select
+using (public.erp_is_authenticated_active_user());
+
+create policy "active_insert_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for insert
+with check (public.erp_has_submodule_access('master_data.sales.rejection_reasons', 'create'));
+
+create policy "active_update_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for update
+using (public.erp_has_submodule_access('master_data.sales.rejection_reasons', 'edit'))
+with check (public.erp_has_submodule_access('master_data.sales.rejection_reasons', 'edit'));
+
+create policy "active_delete_quotation_rejection_reasons"
+on quotation_rejection_reasons
+for delete
+using (public.erp_has_submodule_access('master_data.sales.rejection_reasons', 'delete'));
+
+
+-- =========================================
+-- OPERATIONS / FINANCE
+-- =========================================
+
+alter table shipments enable row level security;
+alter table shipment_events enable row level security;
+alter table client_invoices enable row level security;
+alter table provider_invoices enable row level security;
+alter table commissions enable row level security;
+alter table shipments force row level security;
+alter table shipment_events force row level security;
+alter table client_invoices force row level security;
+alter table provider_invoices force row level security;
+alter table commissions force row level security;
+
+create policy "active_select_shipments"
+on shipments
+for select
+using (
+  public.erp_can_access_operations_shipment(
+    'view',
+    client_id
+  )
+  or public.erp_can_access_crm_quotation_resource(
+    'crm.quotations.customer_actions',
+    'view',
+    (
+      select q.created_by
+      from quotations q
+      where q.id = shipments.quotation_id
+    ),
+    client_id
+  )
+);
+
+create policy "active_insert_shipments"
+on shipments
+for insert
+with check (
+  public.erp_can_access_operations_shipment(
+    'create',
+    client_id
+  )
+);
+
+create policy "active_update_shipments"
+on shipments
+for update
+using (
+  public.erp_can_access_operations_shipment(
+    'edit',
+    client_id
+  )
+)
+with check (
+  public.erp_can_access_operations_shipment(
+    'edit',
+    client_id
+  )
+);
+
+create policy "active_delete_shipments"
+on shipments
+for delete
+using (
+  public.erp_can_access_operations_shipment(
+    'delete',
+    client_id
+  )
+);
+
+create policy "active_select_shipment_events"
+on shipment_events
+for select
+using (
+  exists (
+    select 1
+    from shipments s
+    where s.id = shipment_events.shipment_id
+      and public.erp_can_access_operations_shipment(
+        'view',
+        s.client_id
+      )
+  )
+);
+
+create policy "active_insert_shipment_events"
+on shipment_events
+for insert
+with check (
+  exists (
+    select 1
+    from shipments s
+    where s.id = shipment_events.shipment_id
+      and public.erp_can_access_operations_shipment(
+        'create',
+        s.client_id
+      )
+  )
+);
+
+create policy "active_update_shipment_events"
+on shipment_events
+for update
+using (
+  exists (
+    select 1
+    from shipments s
+    where s.id = shipment_events.shipment_id
+      and public.erp_can_access_operations_shipment(
+        'edit',
+        s.client_id
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from shipments s
+    where s.id = shipment_events.shipment_id
+      and public.erp_can_access_operations_shipment(
+        'edit',
+        s.client_id
+      )
+  )
+);
+
+create policy "active_delete_shipment_events"
+on shipment_events
+for delete
+using (
+  exists (
+    select 1
+    from shipments s
+    where s.id = shipment_events.shipment_id
+      and public.erp_can_access_operations_shipment(
+        'delete',
+        s.client_id
+      )
+  )
+);
+
+create policy "active_select_client_invoices"
+on client_invoices
+for select
+using (
+  public.erp_has_module_access('finance', 'view')
+  or public.erp_is_admin()
+);
+
+create policy "active_insert_client_invoices"
+on client_invoices
+for insert
+with check (
+  public.erp_has_module_access('finance', 'create')
+  or public.erp_is_admin()
+);
+
+create policy "active_update_client_invoices"
+on client_invoices
+for update
+using (
+  public.erp_has_module_access('finance', 'edit')
+  or public.erp_is_admin()
+)
+with check (
+  public.erp_has_module_access('finance', 'edit')
+  or public.erp_is_admin()
+);
+
+create policy "active_delete_client_invoices"
+on client_invoices
+for delete
+using (
+  public.erp_has_module_access('finance', 'delete')
+  or public.erp_is_admin()
+);
+
+create policy "active_select_provider_invoices"
+on provider_invoices
+for select
+using (
+  public.erp_has_module_access('finance', 'view')
+  or public.erp_is_admin()
+);
+
+create policy "active_insert_provider_invoices"
+on provider_invoices
+for insert
+with check (
+  public.erp_has_module_access('finance', 'create')
+  or public.erp_is_admin()
+);
+
+create policy "active_update_provider_invoices"
+on provider_invoices
+for update
+using (
+  public.erp_has_module_access('finance', 'edit')
+  or public.erp_is_admin()
+)
+with check (
+  public.erp_has_module_access('finance', 'edit')
+  or public.erp_is_admin()
+);
+
+create policy "active_delete_provider_invoices"
+on provider_invoices
+for delete
+using (
+  public.erp_has_module_access('finance', 'delete')
+  or public.erp_is_admin()
+);
+
+create policy "active_select_commissions"
+on commissions
+for select
+using (
+  public.erp_has_module_access('finance', 'view')
+  or public.erp_is_admin()
+);
+
+create policy "active_insert_commissions"
+on commissions
+for insert
+with check (
+  public.erp_has_module_access('finance', 'create')
+  or public.erp_is_admin()
+);
+
+create policy "active_update_commissions"
+on commissions
+for update
+using (
+  public.erp_has_module_access('finance', 'edit')
+  or public.erp_is_admin()
+)
+with check (
+  public.erp_has_module_access('finance', 'edit')
+  or public.erp_is_admin()
+);
+
+create policy "active_delete_commissions"
+on commissions
+for delete
+using (
+  public.erp_has_module_access('finance', 'delete')
+  or public.erp_is_admin()
+);
+
+
+-- =========================================
+-- WORKSPACE PREFERENCES
+-- =========================================
+
+alter table workspace_saved_views enable row level security;
+alter table workspace_saved_views force row level security;
+
+create policy "active_select_workspace_saved_views"
+on workspace_saved_views
+for select
+using (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+create policy "active_insert_workspace_saved_views"
+on workspace_saved_views
+for insert
+with check (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+create policy "active_update_workspace_saved_views"
+on workspace_saved_views
+for update
+using (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+)
+with check (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+create policy "active_delete_workspace_saved_views"
+on workspace_saved_views
+for delete
+using (
+  public.erp_is_authenticated_active_user()
+  and owner_user_id = public.erp_current_user_id()
+);
+
+
+-- =========================================
+-- COMMUNICATIONS
+-- =========================================
+
+alter table mailboxes enable row level security;
+alter table mailbox_role_access enable row level security;
+alter table mail_threads enable row level security;
+alter table mail_messages enable row level security;
+alter table mail_entity_links enable row level security;
+alter table mail_sync_runs enable row level security;
+
+alter table mailboxes force row level security;
+alter table mailbox_role_access force row level security;
+alter table mail_threads force row level security;
+alter table mail_messages force row level security;
+alter table mail_entity_links force row level security;
+alter table mail_sync_runs force row level security;
+
+create policy "active_select_mailboxes"
+on mailboxes
+for select
+using (
+  public.erp_can_access_mailbox(id, 'view')
+  or public.erp_can_manage_mailboxes()
+);
+
+create policy "admin_insert_mailboxes"
+on mailboxes
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mailboxes"
+on mailboxes
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mailboxes"
+on mailboxes
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "admin_select_mailbox_role_access"
+on mailbox_role_access
+for select
+using (public.erp_can_manage_mailboxes());
+
+create policy "admin_insert_mailbox_role_access"
+on mailbox_role_access
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mailbox_role_access"
+on mailbox_role_access
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mailbox_role_access"
+on mailbox_role_access
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_threads"
+on mail_threads
+for select
+using (public.erp_can_access_mailbox(mailbox_id, 'view'));
+
+create policy "admin_insert_mail_threads"
+on mail_threads
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_threads"
+on mail_threads
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_threads"
+on mail_threads
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_messages"
+on mail_messages
+for select
+using (public.erp_can_access_mailbox(mailbox_id, 'view'));
+
+create policy "admin_insert_mail_messages"
+on mail_messages
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_messages"
+on mail_messages
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_messages"
+on mail_messages
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_entity_links"
+on mail_entity_links
+for select
+using (public.erp_can_access_mailbox(mailbox_id, 'view'));
+
+create policy "admin_insert_mail_entity_links"
+on mail_entity_links
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_entity_links"
+on mail_entity_links
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_entity_links"
+on mail_entity_links
+for delete
+using (public.erp_can_manage_mailboxes());
+
+create policy "active_select_mail_sync_runs"
+on mail_sync_runs
+for select
+using (
+  public.erp_can_access_mailbox(mailbox_id, 'view')
+  or public.erp_can_manage_mailboxes()
+);
+
+create policy "admin_insert_mail_sync_runs"
+on mail_sync_runs
+for insert
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_update_mail_sync_runs"
+on mail_sync_runs
+for update
+using (public.erp_can_manage_mailboxes())
+with check (public.erp_can_manage_mailboxes());
+
+create policy "admin_delete_mail_sync_runs"
+on mail_sync_runs
+for delete
+using (public.erp_can_manage_mailboxes());
+
+
+-- =========================================
+-- OBSERVABILITY
+-- =========================================
+
+alter table audit_logs enable row level security;
+alter table automation_logs enable row level security;
+alter table audit_logs force row level security;
+alter table automation_logs force row level security;
+
+create policy "admin_select_audit_logs"
+on audit_logs
+for select
+using (public.erp_is_admin());
+
+create policy "active_insert_audit_logs"
+on audit_logs
+for insert
+with check (public.erp_is_authenticated_active_user());
+
+create policy "admin_select_automation_logs"
+on automation_logs
+for select
+using (public.erp_is_admin());
+
+create policy "active_insert_automation_logs"
+on automation_logs
+for insert
+with check (public.erp_is_authenticated_active_user());
+
+
+-- =========================================
+-- PRIVILEGE HARDENING
+-- =========================================
+
+revoke all on all tables in schema public from anon;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+
+revoke execute on all functions in schema public from anon;
+grant execute on all functions in schema public to authenticated;
+grant execute on function public.resolve_login_identity(text) to anon;
+grant execute on function public.erp_current_branch_id() to authenticated;
+grant execute on function public.erp_current_role_id() to authenticated;
+grant execute on function public.erp_has_role(text) to authenticated;
+grant execute on function public.erp_condition_allows(text, uuid, uuid) to authenticated;
+grant execute on function public.erp_access_scope(text, text) to authenticated;
+grant execute on function public.erp_has_resource_access(text, text, uuid, uuid) to authenticated;
+grant execute on function public.erp_has_module_access(text, text) to authenticated;
+grant execute on function public.erp_has_submodule_access(text, text) to authenticated;
+grant execute on function public.erp_can_manage_mailboxes() to authenticated;
+grant execute on function public.erp_can_access_mailbox(uuid, text) to authenticated;
+grant execute on function public.erp_has_field_access(text, text, text, uuid, uuid) to authenticated;
+grant execute on function public.erp_can_access_client_resource(text, text, uuid) to authenticated;
+grant execute on function public.erp_can_access_opportunity_resource(text, text, uuid, uuid) to authenticated;
+grant execute on function public.erp_can_access_crm_quotation_resource(text, text, uuid, uuid) to authenticated;
+grant execute on function public.erp_can_access_pricing_quotation(text, text, uuid) to authenticated;
+grant execute on function public.erp_can_access_operations_shipment(text, uuid) to authenticated;
+grant execute on function public.erp_can_view_quotation_cost() to authenticated;
+grant execute on function public.erp_can_edit_quotation_purchase_amount() to authenticated;
+grant execute on function public.erp_can_view_quotation_sale_price() to authenticated;
+grant execute on function public.erp_can_edit_quotation_sale_price() to authenticated;
+grant execute on function public.erp_can_view_quotation_expected_profit() to authenticated;
+grant execute on function public.erp_can_access_route(text, text) to authenticated;
+grant execute on function public.get_current_navigation_items() to authenticated;

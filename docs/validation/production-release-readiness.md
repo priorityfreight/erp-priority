@@ -1,6 +1,6 @@
 # Production Release Readiness
 
-Generated at: `2026-04-08T05:39:21.944Z`
+Generated at: `2026-04-08T08:08:33.197Z`
 Target kind: `train`
 Target project ref: `chnxpajsawbfevuakhsm`
 Failures: `0`
@@ -19,8 +19,8 @@ Failures: `0`
 - `env:GMAIL_OAUTH_REDIRECT_URI shape`: ok in 0ms
 - `env:MAIL_ENCRYPTION_KEY length`: ok in 0ms
 - `env:CRON_SECRET length`: ok in 0ms
-- `file:vercel.json cron`: ok in 1ms
-- `file:signature proxy route`: ok in 0ms
-- `db:workspace_saved_views`: ok in 235ms
-- `db:mailboxes signature_image_url`: ok in 354ms
-- `db:search_quotations extended signature`: ok in 369ms
+- `file:vercel.json cron`: ok in 3ms
+- `file:signature proxy route`: ok in 2ms
+- `db:workspace_saved_views`: ok in 878ms
+- `db:mailboxes signature_image_url`: ok in 882ms
+- `db:search_quotations extended signature`: ok in 957ms

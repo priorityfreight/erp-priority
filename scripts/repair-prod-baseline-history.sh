@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <expected-linked-project-ref>" >&2
+  exit 1
+fi
+
+EXPECTED_REF="$1"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_REF_FILE="$ROOT_DIR/supabase/.temp/project-ref"
+
+if [[ ! -f "$PROJECT_REF_FILE" ]]; then
+  echo "Missing $PROJECT_REF_FILE. Link the repo to the target PROD project first." >&2
+  exit 1
+fi
+
+LINKED_REF="$(cat "$PROJECT_REF_FILE")"
+
+if [[ "$LINKED_REF" != "$EXPECTED_REF" ]]; then
+  echo "Ref mismatch. Linked project is '$LINKED_REF' but expected '$EXPECTED_REF'." >&2
+  echo "Refusing to repair migration history on the wrong project." >&2
+  exit 1
+fi
+
+LEGACY_VERSIONS=(
+  20260307000432
+  20260322093000
+  20260322101500
+  20260322113000
+  20260322124500
+  20260322143000
+  20260322160000
+  20260322173000
+  20260322190000
+  20260322194500
+  20260322203000
+  20260322214000
+  20260322232000
+  20260322235500
+  20260323103000
+  20260323110000
+  20260323112000
+  20260323114500
+  20260323121500
+  20260323153000
+  20260323160000
+  20260323161500
+  20260323170000
+  20260323182000
+  20260323193000
+  20260323201500
+  20260323213000
+  20260324091500
+  20260324103000
+  20260324121500
+  20260324124500
+  20260324143000
+  20260324150000
+  20260325093000
+  20260325143000
+  20260325223000
+  20260325233000
+  20260325234500
+  20260326000000
+  20260326101500
+  20260327113000
+  20260327190000
+  20260327221500
+  20260327233000
+  20260404113000
+  20260404234500
+  20260405103000
+  20260407113000
+)
+
+supabase migration repair "${LEGACY_VERSIONS[@]}" --status applied --linked
+
+echo "Marked legacy bootstrap migrations as applied for linked project: $LINKED_REF"

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-08T05:39:21.944Z",
+  "generatedAt": "2026-04-08T08:08:33.197Z",
   "target": {
     "kind": "train",
     "projectRef": "chnxpajsawbfevuakhsm",
@@ -132,7 +132,7 @@
     {
       "name": "file:vercel.json cron",
       "ok": true,
-      "durationMs": 1,
+      "durationMs": 3,
       "details": {
         "cronPaths": [
           "/api/cron/exchange-rates?days=7"
@@ -142,7 +142,7 @@
     {
       "name": "file:signature proxy route",
       "ok": true,
-      "durationMs": 0,
+      "durationMs": 2,
       "details": {
         "routePath": "/Users/joseadanrodriguez/Priority ERP/priority-logistics-erp/frontend/app/api/mail/signature-image/route.ts"
       }
@@ -150,7 +150,7 @@
     {
       "name": "db:workspace_saved_views",
       "ok": true,
-      "durationMs": 235,
+      "durationMs": 878,
       "details": {
         "rows": 1
       }
@@ -158,7 +158,7 @@
     {
       "name": "db:mailboxes signature_image_url",
       "ok": true,
-      "durationMs": 354,
+      "durationMs": 882,
       "details": {
         "rows": 1
       }
@@ -166,7 +166,7 @@
     {
       "name": "db:search_quotations extended signature",
       "ok": true,
-      "durationMs": 369,
+      "durationMs": 957,
       "details": {
         "rows": 0
       }

@@ -772,6 +772,36 @@ create index idx_commissions_user_id on commissions(user_id);
 
 
 -- =========================================================
+-- WORKSPACE PREFERENCES
+-- =========================================================
+
+create table workspace_saved_views (
+  id uuid primary key default gen_random_uuid(),
+  workspace_key text not null,
+  owner_user_id uuid not null references users(id) on delete cascade,
+  name text not null,
+  search_query text,
+  status_lane text,
+  filters_json jsonb not null default '{}'::jsonb,
+  sort_json jsonb not null default '{}'::jsonb,
+  visible_columns_json jsonb not null default '[]'::jsonb,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index idx_workspace_saved_views_owner_workspace
+  on workspace_saved_views(owner_user_id, workspace_key);
+
+create unique index idx_workspace_saved_views_single_default
+  on workspace_saved_views(owner_user_id, workspace_key)
+  where is_default = true;
+
+create index idx_workspace_saved_views_name
+  on workspace_saved_views(owner_user_id, workspace_key, name);
+
+
+-- =========================================================
 -- COMMUNICATIONS LAYER
 -- =========================================================
 
@@ -787,6 +817,7 @@ create table mailboxes (
   gmail_scope text,
   connected_email text,
   connected_by_user_id uuid references users(id),
+  signature_image_url text,
   last_synced_at timestamptz,
   last_sync_status text,
   last_sync_error text,
@@ -802,6 +833,9 @@ create table mailboxes (
 
 create index idx_mailboxes_status on mailboxes(status);
 create index idx_mailboxes_provider on mailboxes(provider);
+
+comment on column mailboxes.signature_image_url is
+  'Public image URL appended as the outbound email signature for this mailbox.';
 
 create table mailbox_role_access (
   id uuid primary key default gen_random_uuid(),
